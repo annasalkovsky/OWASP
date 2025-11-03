@@ -138,19 +138,19 @@ function renderReport(items){
     </div>
 
     <div class="metrics">
-      <div class="metric">
+      <div class="metric critical">
         <strong>${counts.CRITICAL}</strong>
         <div class="small">CRITICAL</div>
       </div>
-      <div class="metric">
+      <div class="metric high">
         <strong>${counts.HIGH}</strong>
         <div class="small">HIGH</div>
       </div>
-      <div class="metric">
+      <div class="metric medium">
         <strong>${counts.MEDIUM}</strong>
         <div class="small">MEDIUM</div>
       </div>
-      <div class="metric">
+      <div class="metric low">
         <strong>${counts.LOW}</strong>
         <div class="small">LOW</div>
       </div>
