@@ -18,12 +18,14 @@
     <section class="upload-row">
       <div class="dropzone" id="report-drop">
         <input type="file" id="report-file" accept=".xml" />
-        <p>Dependency Check Report<br/><small>Upload dependency-check XML</small></p>
+        <p class="drop-text">Dependency Check Report<br/><small>Upload dependency-check XML</small></p>
+        <div class="uploaded-msg" id="report-uploaded" aria-hidden="true">✓ Uploaded</div>
       </div>
 
       <div class="dropzone" id="suppressions-drop">
         <input type="file" id="suppressions-file" accept=".xml" />
-        <p>Suppressions File<br/><small>Upload suppressions.xml (optional)</small></p>
+        <p class="drop-text">Suppressions File<br/><small>Upload suppressions.xml (optional)</small></p>
+        <div class="uploaded-msg" id="suppressions-uploaded" aria-hidden="true">✓ Uploaded</div>
       </div>
     </section>
 

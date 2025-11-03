@@ -17,10 +17,43 @@ let suppressionsXml = null;
 reportInput.addEventListener('change', e => { loadFile(e.target.files[0], xml => dependencyXml = xml); });
 suppressionsInput.addEventListener('change', e => { loadFile(e.target.files[0], xml => suppressionsXml = xml); });
 
+// Toggle uploaded visual state
+reportInput.addEventListener('change', () => setUploadedState('report', !!reportInput.files.length));
+suppressionsInput.addEventListener('change', () => setUploadedState('suppressions', !!suppressionsInput.files.length));
+
+function setUploadedState(which, state){
+  if(which === 'report'){
+    const zone = document.getElementById('report-drop');
+    const msg = document.getElementById('report-uploaded');
+    if(state){ zone.classList.add('uploaded'); if(msg) msg.setAttribute('aria-hidden','false'); }
+    else { zone.classList.remove('uploaded'); if(msg) msg.setAttribute('aria-hidden','true'); }
+  }
+  if(which === 'suppressions'){
+    const zone = document.getElementById('suppressions-drop');
+    const msg = document.getElementById('suppressions-uploaded');
+    if(state){ zone.classList.add('uploaded'); if(msg) msg.setAttribute('aria-hidden','false'); }
+    else { zone.classList.remove('uploaded'); if(msg) msg.setAttribute('aria-hidden','true'); }
+  }
+}
+
 // drag styling (optional UX)
 ;['dragenter','dragover'].forEach(ev => {
   reportDrop.addEventListener(ev, e => e.preventDefault());
   suppressionsDrop.addEventListener(ev, e => e.preventDefault());
+});
+
+// Handle drop events to load files and set uploaded state
+['drop'].forEach(ev => {
+  reportDrop.addEventListener(ev, e => {
+    e.preventDefault();
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f){ reportInput.files = e.dataTransfer.files; loadFile(f, xml => dependencyXml = xml); setUploadedState('report', true); }
+  });
+  suppressionsDrop.addEventListener(ev, e => {
+    e.preventDefault();
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f){ suppressionsInput.files = e.dataTransfer.files; loadFile(f, xml => suppressionsXml = xml); setUploadedState('suppressions', true); }
+  });
 });
 
 function loadFile(file, cb){

@@ -20,6 +20,9 @@ body{
 }
 .dropzone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer}
 .dropzone p{margin:0;color:var(--muted)}
+.dropzone .uploaded-msg{position:absolute;left:16px;bottom:12px;color:var(--accent);font-weight:700;display:none}
+.dropzone.uploaded{border-color:rgba(59,130,246,0.6);background:linear-gradient(180deg,#f8fbff,#ffffff)}
+.dropzone.uploaded .uploaded-msg{display:block}
 .actions{display:flex;gap:12px;margin:12px 0}
 .btn{background:var(--accent);color:#fff;border:none;padding:10px 16px;border-radius:8px;cursor:pointer}
 .btn.secondary{background:#e5e7eb;color:#111}
