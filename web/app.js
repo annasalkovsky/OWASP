@@ -97,30 +97,58 @@ exportBtn.addEventListener('click', async () => {
     // Try to find the current stylesheet href
     const link = document.querySelector('link[rel="stylesheet"]');
     const href = link ? link.getAttribute('href') : './styles.css';
-    let cssText = '';
-    try {
-      const res = await fetch(href);
-      if (res.ok) cssText = await res.text();
-    } catch (e) {
-      // If fetch fails, fallback to empty CSS
-      console.warn('Could not fetch stylesheet for export:', e);
-      cssText = '';
+
+    // Helper: try fetch first, otherwise fall back to reading document.styleSheets
+    async function collectCssText(){
+      let css = '';
+      if(href){
+        try{
+          const res = await fetch(href);
+          if(res.ok){ css = await res.text(); }
+        } catch(e){
+          // fetch failed, will try styleSheets next
+          console.warn('Stylesheet fetch failed, will try document.styleSheets:', e);
+        }
+      }
+      if(!css){
+        // Fallback: aggregate rules from accessible stylesheets
+        for(const sheet of Array.from(document.styleSheets)){
+          try{
+            if(!sheet.cssRules) continue;
+            for(const rule of Array.from(sheet.cssRules)){
+              css += rule.cssText + '\n';
+            }
+          }catch(_){ /* cross-origin or inaccessible stylesheet */ }
+        }
+      }
+      return css;
     }
+
+    const cssText = await collectCssText();
 
     // Inline small script to re-enable interactivity in the exported file
     const interactiveScript = `
-      // Toggle detail panels on row click
-      document.querySelectorAll('.vuln-row').forEach(r => {
-        r.addEventListener('click', () => {
-          const idx = r.getAttribute('data-idx');
-          const panel = document.getElementById('panel-'+idx);
-          if(panel) panel.classList.toggle('show');
-          // scroll into view if opening
-          if(panel && panel.classList.contains('show')) panel.scrollIntoView({behavior:'smooth', block:'center'});
+      (function(){
+        // Toggle detail panels on row click
+        document.querySelectorAll('.vuln-row').forEach(r => {
+          r.addEventListener('click', () => {
+            const idx = r.getAttribute('data-idx');
+            const panel = document.getElementById('panel-'+idx);
+            if(panel) panel.classList.toggle('show');
+            if(panel && panel.classList.contains('show')) panel.scrollIntoView({behavior:'smooth', block:'center'});
+          });
         });
-      });
-      // Make sure links don't navigate when opened
-      document.querySelectorAll('a').forEach(a=>a.addEventListener('click', e=>e.preventDefault()));
+        // Make sure links don't navigate when opened
+        document.querySelectorAll('a').forEach(a=>a.addEventListener('click', e=>e.preventDefault()));
+        // Small accessibility: allow Enter to toggle rows
+        document.addEventListener('keydown', function(e){
+          if(e.key === 'Enter' && document.activeElement && document.activeElement.classList.contains('vuln-row')){
+            const idx = document.activeElement.getAttribute('data-idx');
+            const panel = document.getElementById('panel-'+idx);
+            if(panel) panel.classList.toggle('show');
+          }
+        });
+      })();
     `;
 
     const html = `<!doctype html>
