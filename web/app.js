@@ -160,15 +160,37 @@ function renderReport(items){
     <table class="table" id="vuln-table">
       <thead><tr><th>#</th><th>VULNERABILITY</th><th>SEVERITY</th><th>CVSS SCORE</th><th>DESCRIPTION</th><th>FILE</th></tr></thead>
       <tbody>
-        ${items.map((it,idx) => `
-          <tr>
-            <td>${idx+1}</td>
-            <td><a href="#" onclick="return false">${escapeHtml(it.name)}</a></td>
-            <td>${renderBadge(it.severity)}</td>
-            <td>${escapeHtml(it.cvss || '')}</td>
-            <td>${escapeHtml(truncate(it.description,240))}</td>
-            <td>${escapeHtml(it.file)}</td>
-          </tr>`).join('')}
+          ${items.map((it,idx) => `
+            <tr class="vuln-row" data-idx="${idx}">
+              <td>${idx+1}</td>
+              <td><a href="#" onclick="return false">${escapeHtml(it.name)}</a></td>
+              <td>${renderBadge(it.severity)}</td>
+              <td>${renderCvss(it.cvss)}</td>
+              <td>${escapeHtml(truncate(it.description,240))}</td>
+              <td>${escapeHtml(it.file)}</td>
+            </tr>
+            <tr class="vuln-details" id="details-${idx}">
+              <td colspan="6">
+                <div class="vuln-details-panel" id="panel-${idx}">
+                  <div class="vuln-details-grid">
+                    <div>
+                      <h4 style="margin:0 0 8px 0">${escapeHtml(it.name)}</h4>
+                      <div class="vuln-meta">
+                        <div><strong>Severity:</strong> ${escapeHtml(it.severity)}</div>
+                        <div><strong>CVSS:</strong> ${escapeHtml(it.cvss || 'N/A')}</div>
+                        <div style="margin-top:8px">${escapeHtml(it.description)}</div>
+                      </div>
+                    </div>
+                    <div>
+                      <div style="background:#f8fafc;padding:12px;border-radius:8px">
+                        <div class="small" style="margin-bottom:8px">File</div>
+                        <div style="font-weight:600">${escapeHtml(it.file)}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>`).join('')}
       </tbody>
     </table>
     <div class="footer">Exported from OWASP Dependency Audit Tool</div>
@@ -183,6 +205,30 @@ function renderBadge(sev){
   const cls = s==='CRITICAL' ? 'critical' : s==='HIGH' ? 'high' : s==='MEDIUM' ? 'medium' : 'low';
   return `<span class="badge ${cls}">${escapeHtml(s)}</span>`;
 }
+
+function renderCvss(cvss){
+  const score = parseFloat(cvss);
+  let cls = 'cvss-none';
+  if(!isNaN(score)){
+    if(score >= 9) cls = 'cvss-critical';
+    else if(score >= 7) cls = 'cvss-high';
+    else if(score >= 4) cls = 'cvss-medium';
+    else cls = 'cvss-low';
+  }
+  const label = isNaN(score) ? (cvss || '') : score.toFixed(1);
+  return `<div class="cvss"><span class="cvss-dot ${cls}" aria-hidden="true"></span><span class="small">${escapeHtml(label)}</span></div>`;
+}
+
+// Make rows expandable: attach click handlers after rendering
+setTimeout(()=>{
+  document.querySelectorAll('.vuln-row').forEach(r => {
+    r.addEventListener('click', () => {
+      const idx = r.getAttribute('data-idx');
+      const panel = document.getElementById('panel-'+idx);
+      if(panel) panel.classList.toggle('show');
+    });
+  });
+}, 50);
 
 // Expose for debug (not needed)
 window._debug = {parseDependencyCheck, parseSuppressions, filterSuppressions};

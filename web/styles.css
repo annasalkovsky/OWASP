@@ -193,3 +193,26 @@ body{
   font-size: 0.6rem;
 }
 .footer{font-size:0.85rem;color:var(--muted);margin-top:12px}
+
+/* Interactive vulnerability rows */
+.table tbody tr.vuln-row{cursor:pointer;transition:background 0.15s ease}
+.table tbody tr.vuln-row:hover{background:linear-gradient(90deg, rgba(99,102,241,0.04), rgba(59,130,246,0.02))}
+
+/* Details panel shown when row is clicked */
+.vuln-details-panel{display:none;background:linear-gradient(180deg, #ffffff, #fbfdff);padding:16px;border-left:4px solid rgba(99,102,241,0.12)}
+.vuln-details-panel.show{display:block}
+.vuln-details-grid{display:grid;grid-template-columns:1fr 320px;gap:12px}
+.vuln-meta{font-size:0.9rem;color:var(--muted)}
+
+/* CVSS score indicator */
+.cvss{display:inline-flex;align-items:center;gap:8px}
+.cvss-dot{width:12px;height:12px;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,0.06)}
+.cvss-critical{background:linear-gradient(135deg,#dc2626,#b91c1c)}
+.cvss-high{background:linear-gradient(135deg,#ea580c,#dc2626)}
+.cvss-medium{background:linear-gradient(135deg,#f59e0b,#d97706)}
+.cvss-low{background:linear-gradient(135deg,#10b981,#059669)}
+.cvss-none{background:linear-gradient(135deg,#94a3b8,#cbd5e1)}
+
+/* Small helper link style in table */
+.table a { color: #3b82f6; text-decoration: none; font-weight:600 }
+.table a:hover { text-decoration: underline }
