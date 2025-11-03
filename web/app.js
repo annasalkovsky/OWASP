@@ -129,25 +129,50 @@ exportBtn.addEventListener('click', async () => {
     // Inline small script to re-enable interactivity in the exported file
     const interactiveScript = `
       (function(){
-        // Toggle detail panels on row click
-        document.querySelectorAll('.vuln-row').forEach(r => {
-          r.addEventListener('click', () => {
-            const idx = r.getAttribute('data-idx');
-            const panel = document.getElementById('panel-'+idx);
-            if(panel) panel.classList.toggle('show');
-            if(panel && panel.classList.contains('show')) panel.scrollIntoView({behavior:'smooth', block:'center'});
+        // Row toggles and keyboard support
+        function wireRowToggles(){
+          document.querySelectorAll('.vuln-row').forEach(r => {
+            r.setAttribute('tabindex','0');
+            r.addEventListener('click', ()=>{
+              const idx = r.getAttribute('data-idx');
+              const panel = document.getElementById('panel-'+idx);
+              if(panel) panel.classList.toggle('show');
+            });
+            r.addEventListener('keydown', e=>{ if(e.key==='Enter'){ r.click(); } });
           });
-        });
-        // Make sure links don't navigate when opened
-        document.querySelectorAll('a').forEach(a=>a.addEventListener('click', e=>e.preventDefault()));
-        // Small accessibility: allow Enter to toggle rows
-        document.addEventListener('keydown', function(e){
-          if(e.key === 'Enter' && document.activeElement && document.activeElement.classList.contains('vuln-row')){
-            const idx = document.activeElement.getAttribute('data-idx');
-            const panel = document.getElementById('panel-'+idx);
-            if(panel) panel.classList.toggle('show');
+        }
+
+        // Filtering logic used in exported report
+        function wireFilters(){
+          const severityFilter = document.getElementById('severity-filter');
+          const searchFilter = document.getElementById('search-filter');
+          const resetBtn = document.getElementById('reset-filters');
+          function applyFilters(){
+            const sev = severityFilter ? severityFilter.value : 'ALL';
+            const q = searchFilter ? searchFilter.value.trim().toLowerCase() : '';
+            document.querySelectorAll('#vuln-table tbody tr.vuln-row').forEach(r=>{
+              const idx = r.getAttribute('data-idx');
+              const name = r.querySelector('td:nth-child(2)') ? r.querySelector('td:nth-child(2)').textContent.toLowerCase() : '';
+              const file = r.querySelector('td:nth-child(6)') ? r.querySelector('td:nth-child(6)').textContent.toLowerCase() : '';
+              const sevCell = r.querySelector('td:nth-child(3)') ? r.querySelector('td:nth-child(3)').textContent.toUpperCase() : '';
+              let hide = false;
+              if(sev !== 'ALL' && sevCell !== sev) hide = true;
+              if(q && !(name.includes(q) || file.includes(q))) hide = true;
+              const details = document.getElementById('details-'+idx);
+              if(hide){ r.style.display='none'; if(details) details.style.display='none'; }
+              else { r.style.display='table-row'; if(details) details.style.display='table-row'; }
+            });
           }
-        });
+          if(severityFilter) severityFilter.addEventListener('change', applyFilters);
+          if(searchFilter) searchFilter.addEventListener('input', applyFilters);
+          if(resetBtn) resetBtn.addEventListener('click', ()=>{ if(severityFilter) severityFilter.value='ALL'; if(searchFilter) searchFilter.value=''; applyFilters(); });
+        }
+
+        // Prevent links from navigating when offline
+        document.querySelectorAll('a').forEach(a=>a.addEventListener('click', e=>e.preventDefault()));
+        // Wire functionality
+        wireRowToggles();
+        wireFilters();
       })();
     `;
 
@@ -259,6 +284,22 @@ function renderReport(items){
       <div class="small">Generated: ${new Date().toLocaleString()} &nbsp; Total Vulnerabilities: <strong>${total}</strong></div>
     </div>
 
+    <div class="report-controls" style="display:flex;justify-content:space-between;align-items:center;margin:16px 0;gap:12px">
+      <div style="display:flex;gap:8px;align-items:center">
+        <label class="small" for="severity-filter">Severity:</label>
+        <select id="severity-filter" style="padding:8px;border-radius:6px;border:1px solid #e6e9ef">
+          <option value="ALL">All</option>
+          <option value="CRITICAL">Critical</option>
+          <option value="HIGH">High</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="LOW">Low</option>
+        </select>
+        <input id="search-filter" placeholder="Search vulnerability or file" style="padding:8px;border-radius:6px;border:1px solid #e6e9ef;min-width:220px;margin-left:8px">
+        <button id="reset-filters" class="btn secondary" style="padding:8px 12px;margin-left:8px">Reset</button>
+      </div>
+      <div id="summary-chart-container" style="min-width:260px"></div>
+    </div>
+
     <div class="metrics">
       <div class="metric critical">
         <strong>${counts.CRITICAL}</strong>
@@ -317,6 +358,36 @@ function renderReport(items){
     </table>
     <div class="footer">Exported from OWASP Dependency Audit Tool</div>
   `;
+
+  // After render, insert summary chart SVG
+  const chartContainer = document.getElementById('summary-chart-container');
+  if(chartContainer){ chartContainer.innerHTML = renderSummaryChart(counts); }
+  // Attach interactivity for filtering and expandable rows
+  attachInteractivity();
+}
+
+function renderSummaryChart(counts){
+  const total = counts.CRITICAL + counts.HIGH + counts.MEDIUM + counts.LOW;
+  const w = 240, h = 48;
+  // simple proportional bars
+  const parts = [
+    {k:'CRITICAL', v:counts.CRITICAL, color:'#fef2f2', inner:'#dc2626'},
+    {k:'HIGH', v:counts.HIGH, color:'#fff7ed', inner:'#ea580c'},
+    {k:'MEDIUM', v:counts.MEDIUM, color:'#fffbeb', inner:'#f59e0b'},
+    {k:'LOW', v:counts.LOW, color:'#ecfdf5', inner:'#10b981'}
+  ];
+  let x=0; let svgParts='';
+  parts.forEach(p=>{
+    const wpart = total ? Math.max(1, Math.round((p.v/total)*w)) : 0;
+    svgParts += `<rect x="${x}" y="0" width="${wpart}" height="24" fill="${p.color}" stroke="rgba(0,0,0,0.03)" />`;
+    x += wpart;
+  });
+  // labels
+  let labels='';
+  parts.forEach((p,i)=>{
+    labels += `<tspan x="${10 + i*56}" dy="1.2em" style="font-size:12px;fill:#374151;font-weight:700">${p.v}</tspan>`;
+  });
+  return `<svg width="${w}" height="48" role="img" aria-label="Severity distribution"><g>${svgParts}</g><text x="0" y="30">${labels}</text></svg>`;
 }
 
 function escapeHtml(s){ if(!s) return ''; return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
@@ -351,6 +422,44 @@ setTimeout(()=>{
     });
   });
 }, 50);
+
+function attachInteractivity(){
+  // Row toggles
+  document.querySelectorAll('.vuln-row').forEach(r => {
+    r.setAttribute('tabindex','0');
+    r.addEventListener('click', ()=>{
+      const idx = r.getAttribute('data-idx');
+      const panel = document.getElementById('panel-'+idx);
+      if(panel) panel.classList.toggle('show');
+    });
+    r.addEventListener('keydown', e=>{ if(e.key==='Enter'){ r.click(); } });
+  });
+
+  // Filtering
+  const severityFilter = document.getElementById('severity-filter');
+  const searchFilter = document.getElementById('search-filter');
+  const resetBtn = document.getElementById('reset-filters');
+  function applyFilters(){
+    const sev = severityFilter ? severityFilter.value : 'ALL';
+    const q = searchFilter ? searchFilter.value.trim().toLowerCase() : '';
+    document.querySelectorAll('#vuln-table tbody tr.vuln-row').forEach(r=>{
+      const idx = r.getAttribute('data-idx');
+      const name = r.querySelector('td:nth-child(2)') ? r.querySelector('td:nth-child(2)').textContent.toLowerCase() : '';
+      const file = r.querySelector('td:nth-child(6)') ? r.querySelector('td:nth-child(6)').textContent.toLowerCase() : '';
+      const sevCell = r.querySelector('td:nth-child(3)') ? r.querySelector('td:nth-child(3)').textContent.toUpperCase() : '';
+      let hide = false;
+      if(sev !== 'ALL' && sevCell !== sev) hide = true;
+      if(q && !(name.includes(q) || file.includes(q))) hide = true;
+      // toggle row and its details
+      const details = document.getElementById('details-'+idx);
+      if(hide){ r.style.display='none'; if(details) details.style.display='none'; }
+      else { r.style.display='table-row'; if(details) details.style.display='table-row'; }
+    });
+  }
+  if(severityFilter) severityFilter.addEventListener('change', applyFilters);
+  if(searchFilter) searchFilter.addEventListener('input', applyFilters);
+  if(resetBtn) resetBtn.addEventListener('click', ()=>{ if(severityFilter) severityFilter.value='ALL'; if(searchFilter) searchFilter.value=''; applyFilters(); });
+}
 
 // Expose for debug (not needed)
 window._debug = {parseDependencyCheck, parseSuppressions, filterSuppressions};
