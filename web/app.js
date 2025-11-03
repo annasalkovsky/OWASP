@@ -1,0 +1,188 @@
+// Minimal parser and report generator for OWASP dependency-check XML + suppressions
+// Assumes dependency-check-report XML uses <dependency> -> <vulnerability> elements
+// and suppressions.xml uses <suppress><note> with <cpe> or <name> or <cvss> matching rules.
+// This is intentionally simple and may need expansion for other shapes.
+
+const reportDrop = document.getElementById('report-drop');
+const suppressionsDrop = document.getElementById('suppressions-drop');
+const reportInput = document.getElementById('report-file');
+const suppressionsInput = document.getElementById('suppressions-file');
+const generateBtn = document.getElementById('generate-btn');
+const exportBtn = document.getElementById('export-btn');
+const reportArea = document.getElementById('report-area');
+
+let dependencyXml = null;
+let suppressionsXml = null;
+
+reportInput.addEventListener('change', e => { loadFile(e.target.files[0], xml => dependencyXml = xml); });
+suppressionsInput.addEventListener('change', e => { loadFile(e.target.files[0], xml => suppressionsXml = xml); });
+
+// drag styling (optional UX)
+;['dragenter','dragover'].forEach(ev => {
+  reportDrop.addEventListener(ev, e => e.preventDefault());
+  suppressionsDrop.addEventListener(ev, e => e.preventDefault());
+});
+
+function loadFile(file, cb){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(reader.result, "application/xml");
+    cb(xml);
+  };
+  reader.readAsText(file);
+}
+
+generateBtn.addEventListener('click', () => {
+  if(!dependencyXml) return alert('Please upload a dependency-check XML report');
+  const findings = parseDependencyCheck(dependencyXml);
+  const suppressedRules = suppressionsXml ? parseSuppressions(suppressionsXml) : [];
+  const unsuppressed = filterSuppressions(findings, suppressedRules);
+  renderReport(unsuppressed);
+  exportBtn.disabled = false;
+});
+
+exportBtn.addEventListener('click', () => {
+  // export current report-area as an HTML file
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Audit Report</title>
+<link rel="stylesheet" href="./styles.css"></head><body>${reportArea.innerHTML}</body></html>`;
+  const blob = new Blob([html], {type: 'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'owasp-audit-report.html'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+// Parse dependency-check output to array of {id, name, severity, cvss, description, file}
+function parseDependencyCheck(xml){
+  const deps = [];
+  // dependency elements
+  const depEls = Array.from(xml.getElementsByTagName('dependency'));
+  depEls.forEach(dep => {
+    const fileName = safeText(dep.getElementsByTagName('fileName')[0]) || safeText(dep.getElementsByTagName('filePath')[0]) || '';
+    const vulnEls = Array.from(dep.getElementsByTagName('vulnerability'));
+    vulnEls.forEach(v => {
+      const name = safeText(v.getElementsByTagName('name')[0]) || 'UNKNOWN';
+      const severity = (safeText(v.getElementsByTagName('severity')[0]) || 'UNKNOWN').toUpperCase();
+      const description = safeText(v.getElementsByTagName('description')[0]) || '';
+      // attempt CVSS score
+      let cvss = '';
+      const cvssV3 = v.getElementsByTagName('cvssV3')[0];
+      if(cvssV3) cvss = safeText(cvssV3.getElementsByTagName('score')[0]) || '';
+      if(!cvss){
+        const cvssV2 = v.getElementsByTagName('cvssV2')[0];
+        if(cvssV2) cvss = safeText(cvssV2.getElementsByTagName('score')[0]) || '';
+      }
+      deps.push({ id: name, name, severity, description, cvss, file: fileName });
+    });
+  });
+  return deps;
+}
+
+function safeText(node){ return node && node.textContent ? node.textContent.trim() : ''; }
+
+// Rough parse of suppressions.xml: collect names or cpes to suppress
+function parseSuppressions(xml){
+  const rules = [];
+  // find suppression items: <suppress> with <note> or <name> or <cpe> children (format differs)
+  const suppressEls = Array.from(xml.getElementsByTagName('suppress'));
+  suppressEls.forEach(s => {
+    const name = safeText(s.getElementsByTagName('name')[0]);
+    const cpe = safeText(s.getElementsByTagName('cpe')[0]);
+    const note = safeText(s.getElementsByTagName('notes')[0]) || safeText(s.getElementsByTagName('note')[0]);
+    if(name) rules.push({type:'name', value:name});
+    if(cpe) rules.push({type:'cpe', value:cpe});
+    if(note) rules.push({type:'note', value:note});
+  });
+  // Some suppressions use <suppress><artifact><name>... pattern
+  const artifactNames = Array.from(xml.getElementsByTagName('artifactName'));
+  artifactNames.forEach(n => {
+    const v = safeText(n);
+    if(v) rules.push({type:'name', value:v});
+  });
+  return rules;
+}
+
+function filterSuppressions(findings, suppressions){
+  if(!suppressions || suppressions.length===0) return findings;
+  return findings.filter(f => {
+    // If any suppression rule matches ID, file or name substring -> suppress
+    for(const r of suppressions){
+      if(r.type === 'name' && f.name.includes(r.value)) return false;
+      if(r.type === 'cpe' && f.description.includes(r.value)) return false;
+      if(r.type === 'note' && (f.description + f.name + f.file).includes(r.value)) return false;
+    }
+    return true;
+  });
+}
+
+function severityCounts(items){
+  const counts = {CRITICAL:0,HIGH:0,MEDIUM:0,LOW:0,UNKNOWN:0};
+  items.forEach(i => {
+    const s = (i.severity || 'UNKNOWN').toUpperCase();
+    if(counts[s]!==undefined) counts[s]++;
+    else counts.UNKNOWN++;
+  });
+  return counts;
+}
+
+function renderReport(items){
+  const counts = severityCounts(items);
+  const total = items.length;
+  reportArea.hidden = false;
+  reportArea.innerHTML = `
+    <div class="report-header">
+      <h2>OWASP Dependency Check</h2>
+      <div class="small">Generated: ${new Date().toLocaleString()} &nbsp; Total Vulnerabilities: <strong>${total}</strong></div>
+    </div>
+
+    <div class="metrics">
+      <div class="metric">
+        <strong>${counts.CRITICAL}</strong>
+        <div class="small">CRITICAL</div>
+      </div>
+      <div class="metric">
+        <strong>${counts.HIGH}</strong>
+        <div class="small">HIGH</div>
+      </div>
+      <div class="metric">
+        <strong>${counts.MEDIUM}</strong>
+        <div class="small">MEDIUM</div>
+      </div>
+      <div class="metric">
+        <strong>${counts.LOW}</strong>
+        <div class="small">LOW</div>
+      </div>
+    </div>
+
+    <h3>Unsuppressed Vulnerabilities</h3>
+    <table class="table" id="vuln-table">
+      <thead><tr><th>#</th><th>VULNERABILITY</th><th>SEVERITY</th><th>CVSS SCORE</th><th>DESCRIPTION</th><th>FILE</th></tr></thead>
+      <tbody>
+        ${items.map((it,idx) => `
+          <tr>
+            <td>${idx+1}</td>
+            <td><a href="#" onclick="return false">${escapeHtml(it.name)}</a></td>
+            <td>${renderBadge(it.severity)}</td>
+            <td>${escapeHtml(it.cvss || '')}</td>
+            <td>${escapeHtml(truncate(it.description,240))}</td>
+            <td>${escapeHtml(it.file)}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>
+    <div class="footer">Exported from OWASP Dependency Audit Tool</div>
+  `;
+}
+
+function escapeHtml(s){ if(!s) return ''; return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+function truncate(s,n){ if(!s) return ''; return s.length>n ? s.slice(0,n-1)+'…' : s; }
+function renderBadge(sev){
+  if(!sev) return `<span class="small">${sev||''}</span>`;
+  const s = sev.toUpperCase();
+  const cls = s==='CRITICAL' ? 'critical' : s==='HIGH' ? 'high' : s==='MEDIUM' ? 'medium' : 'low';
+  return `<span class="badge ${cls}">${escapeHtml(s)}</span>`;
+}
+
+// Expose for debug (not needed)
+window._debug = {parseDependencyCheck, parseSuppressions, filterSuppressions};

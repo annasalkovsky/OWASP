@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>OWASP Dependency Audit Tool</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="container">
+      <h1>OWASP Dependency Audit Tool</h1>
+      <p class="lead">Generate audit-ready reports from dependency-check XML</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="upload-row">
+      <div class="dropzone" id="report-drop">
+        <input type="file" id="report-file" accept=".xml" />
+        <p>Dependency Check Report<br/><small>Upload dependency-check XML</small></p>
+      </div>
+
+      <div class="dropzone" id="suppressions-drop">
+        <input type="file" id="suppressions-file" accept=".xml" />
+        <p>Suppressions File<br/><small>Upload suppressions.xml (optional)</small></p>
+      </div>
+    </section>
+
+    <div class="actions">
+      <button id="generate-btn" class="btn">Generate Audit Report</button>
+      <button id="export-btn" class="btn secondary" disabled>Export Report</button>
+    </div>
+
+    <section id="report-area" class="report-area" hidden>
+      <!-- Report will be injected here -->
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
