@@ -14,6 +14,7 @@ const baselineSuppressionsInput = document.getElementById('baseline-suppressions
 const deltaToggle = document.getElementById('delta-mode-toggle');
 const generateBtn = document.getElementById('generate-btn');
 const exportBtn = document.getElementById('export-btn');
+const emailBtn = document.getElementById('email-btn');
 const reportArea = document.getElementById('report-area');
 
 let dependencyXml = null;
@@ -138,6 +139,7 @@ generateBtn.addEventListener('click', () => {
   }
   
   exportBtn.disabled = false;
+  emailBtn.disabled = false;
 });
 
 function generateDeltaReport(){
@@ -311,6 +313,81 @@ exportBtn.addEventListener('click', async () => {
   } catch (err) {
     console.error('Export failed', err);
     alert('Export failed: ' + err.message);
+  }
+});
+
+emailBtn.addEventListener('click', async () => {
+  // Email report using mailto with HTML content embedded
+  try {
+    const reportContent = reportArea.innerHTML;
+    const timestamp = new Date().toLocaleString();
+    const isDelta = reportContent.includes('OWASP Delta Report');
+    const subject = isDelta ? 'OWASP Delta Security Report' : 'OWASP Security Audit Report';
+    
+    // Create a simplified text version for email body
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(reportContent, 'text/html');
+    
+    // Extract key metrics
+    const header = doc.querySelector('.report-header');
+    const headerText = header ? header.textContent.trim() : '';
+    
+    // Extract summary counts
+    let summaryText = '';
+    if (isDelta) {
+      const deltaSection = doc.querySelector('.delta-summary');
+      if (deltaSection) {
+        const fixed = deltaSection.textContent.match(/Fixed Vulnerabilities \((\d+)\)/)?.[1] || '0';
+        const newVulns = deltaSection.textContent.match(/New Vulnerabilities \((\d+)\)/)?.[1] || '0';
+        summaryText = `\n📊 Delta Summary:\n- Fixed: ${fixed} vulnerabilities\n- New: ${newVulns} vulnerabilities\n`;
+      }
+    } else {
+      const metrics = doc.querySelectorAll('.metric');
+      if (metrics.length > 0) {
+        summaryText = '\n📊 Vulnerability Summary:\n';
+        metrics.forEach(metric => {
+          const count = metric.querySelector('strong')?.textContent || '0';
+          const severity = metric.querySelector('.small')?.textContent || '';
+          if (severity) summaryText += `- ${severity}: ${count}\n`;
+        });
+      }
+    }
+    
+    const emailBody = `Hello,
+
+Please find the ${subject} generated on ${timestamp}.
+
+${headerText}${summaryText}
+
+📋 Full interactive report is available for download from the OWASP Security Tool.
+
+Best regards,
+OWASP Dependency Audit Tool
+    `.trim();
+
+    // Create mailto link
+    const mailtoLink = `mailto:anna.salkovsky@imd-soft.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+    
+    // Check if mailto link is too long (some email clients have limits)
+    if (mailtoLink.length > 2000) {
+      // Fallback to shorter version
+      const shortBody = `Hello,
+
+Please find the ${subject} generated on ${timestamp}.
+
+${summaryText}
+
+Best regards,
+OWASP Tool`;
+      const shortMailto = `mailto:anna.salkovsky@imd-soft.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(shortBody)}`;
+      window.open(shortMailto, '_blank');
+    } else {
+      window.open(mailtoLink, '_blank');
+    }
+    
+  } catch (err) {
+    console.error('Email failed', err);
+    alert('Failed to open email client: ' + err.message);
   }
 });
 
