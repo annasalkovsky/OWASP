@@ -36,6 +36,21 @@ function setUploadedState(which, state){
   }
 }
 
+// Ensure uploaded message display matches aria-hidden (fix for pre-rendered visibility)
+function refreshUploadedDisplay(){
+  const rmsg = document.getElementById('report-uploaded');
+  if(rmsg) rmsg.style.display = rmsg.getAttribute('aria-hidden') === 'false' ? 'block' : 'none';
+  const smsg = document.getElementById('suppressions-uploaded');
+  if(smsg) smsg.style.display = smsg.getAttribute('aria-hidden') === 'false' ? 'block' : 'none';
+}
+
+// Initialize states based on existing inputs (hidden by default)
+document.addEventListener('DOMContentLoaded', () => {
+  setUploadedState('report', !!reportInput.files.length);
+  setUploadedState('suppressions', !!suppressionsInput.files.length);
+  refreshUploadedDisplay();
+});
+
 // drag styling (optional UX)
 ;['dragenter','dragover'].forEach(ev => {
   reportDrop.addEventListener(ev, e => e.preventDefault());
