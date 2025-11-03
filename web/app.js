@@ -43,15 +43,61 @@ generateBtn.addEventListener('click', () => {
   exportBtn.disabled = false;
 });
 
-exportBtn.addEventListener('click', () => {
-  // export current report-area as an HTML file
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Audit Report</title>
-<link rel="stylesheet" href="./styles.css"></head><body>${reportArea.innerHTML}</body></html>`;
-  const blob = new Blob([html], {type: 'text/html'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'owasp-audit-report.html'; a.click();
-  URL.revokeObjectURL(url);
+exportBtn.addEventListener('click', async () => {
+  // Export current report-area as a self-contained HTML file with inline CSS and JS
+  try {
+    // Try to find the current stylesheet href
+    const link = document.querySelector('link[rel="stylesheet"]');
+    const href = link ? link.getAttribute('href') : './styles.css';
+    let cssText = '';
+    try {
+      const res = await fetch(href);
+      if (res.ok) cssText = await res.text();
+    } catch (e) {
+      // If fetch fails, fallback to empty CSS
+      console.warn('Could not fetch stylesheet for export:', e);
+      cssText = '';
+    }
+
+    // Inline small script to re-enable interactivity in the exported file
+    const interactiveScript = `
+      // Toggle detail panels on row click
+      document.querySelectorAll('.vuln-row').forEach(r => {
+        r.addEventListener('click', () => {
+          const idx = r.getAttribute('data-idx');
+          const panel = document.getElementById('panel-'+idx);
+          if(panel) panel.classList.toggle('show');
+          // scroll into view if opening
+          if(panel && panel.classList.contains('show')) panel.scrollIntoView({behavior:'smooth', block:'center'});
+        });
+      });
+      // Make sure links don't navigate when opened
+      document.querySelectorAll('a').forEach(a=>a.addEventListener('click', e=>e.preventDefault()));
+    `;
+
+    const html = `<!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <title>OWASP Audit Report</title>
+          <style>${cssText}</style>
+        </head>
+        <body>
+          ${reportArea.innerHTML}
+          <script>${interactiveScript} <\/script>
+        </body>
+      </html>`;
+
+    const blob = new Blob([html], {type: 'text/html'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `OWASP-Audit-Report-${new Date().toISOString().split('T')[0]}.html`; a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Export failed', err);
+    alert('Export failed: ' + err.message);
+  }
 });
 
 // Parse dependency-check output to array of {id, name, severity, cvss, description, file}
