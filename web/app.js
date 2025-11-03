@@ -364,6 +364,114 @@ function renderReport(items){
   if(chartContainer){ chartContainer.innerHTML = renderSummaryChart(counts); }
   // Attach interactivity for filtering and expandable rows
   attachInteractivity();
+
+  // Initialize sorting and pagination
+  initTableControls(items);
+}
+
+// --- Table controls: sorting, pagination, CSV export ---
+function initTableControls(items){
+  const rowsPerPage = 10;
+  let currentPage = 1;
+  let sortKey = null; // 'name' or 'severity' or 'cvss'
+  let sortDir = 1; // 1 asc, -1 desc
+
+  const table = document.getElementById('vuln-table');
+  if(!table) return;
+
+  // Add click handlers on headers
+  const headers = table.querySelectorAll('th');
+  headers.forEach((th, idx)=>{
+    th.addEventListener('click', ()=>{
+      const key = idx===1 ? 'name' : idx===2 ? 'severity' : idx===3 ? 'cvss' : null;
+      if(!key) return;
+      if(sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = -1; }
+      headers.forEach(h=>h.classList.remove('sort-asc','sort-desc'));
+      th.classList.add(sortDir===1? 'sort-asc':'sort-desc');
+      renderTablePage(items, rowsPerPage, currentPage, sortKey, sortDir);
+    });
+  });
+
+  // pagination container
+  const paginationContainer = document.createElement('div');
+  paginationContainer.className = 'pagination';
+  table.parentNode.insertBefore(paginationContainer, table.nextSibling);
+
+  function updatePagination(){
+    const totalPages = Math.max(1, Math.ceil(items.length / rowsPerPage));
+    paginationContainer.innerHTML = '';
+    const prev = document.createElement('button'); prev.textContent='Prev'; prev.disabled = currentPage===1; prev.onclick = ()=>{ currentPage--; renderTablePage(items, rowsPerPage, currentPage, sortKey, sortDir); };
+    const next = document.createElement('button'); next.textContent='Next'; next.disabled = currentPage===totalPages; next.onclick = ()=>{ currentPage++; renderTablePage(items, rowsPerPage, currentPage, sortKey, sortDir); };
+    const info = document.createElement('div'); info.textContent = `Page ${currentPage} / ${totalPages}`;
+    paginationContainer.appendChild(prev); paginationContainer.appendChild(info); paginationContainer.appendChild(next);
+  }
+
+  // CSV export button
+  const csvBtn = document.getElementById('export-csv-btn');
+  if(csvBtn){ csvBtn.disabled = false; csvBtn.addEventListener('click', ()=>{
+    const csv = generateCSVFromTable();
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `owasp-report-${new Date().toISOString().split('T')[0]}.csv`; a.click(); URL.revokeObjectURL(url);
+  }); }
+
+  // initial render
+  renderTablePage(items, rowsPerPage, currentPage, sortKey, sortDir);
+  updatePagination();
+
+  // When filters change, re-run pagination & table (attach listener via existing attachInteractivity)
+  document.getElementById('severity-filter')?.addEventListener('change', ()=>{ currentPage=1; renderTablePage(items, rowsPerPage, currentPage, sortKey, sortDir); updatePagination(); });
+  document.getElementById('search-filter')?.addEventListener('input', ()=>{ currentPage=1; renderTablePage(items, rowsPerPage, currentPage, sortKey, sortDir); updatePagination(); });
+}
+
+function renderTablePage(items, perPage, page, sortKey, sortDir){
+  // Build filtered list according to filters
+  const sev = document.getElementById('severity-filter') ? document.getElementById('severity-filter').value : 'ALL';
+  const q = document.getElementById('search-filter') ? document.getElementById('search-filter').value.trim().toLowerCase() : '';
+  let list = items.filter(it=>{
+    if(sev !== 'ALL' && (it.severity||'').toUpperCase() !== sev) return false;
+    if(q && !((it.name||'').toLowerCase().includes(q) || (it.file||'').toLowerCase().includes(q))) return false;
+    return true;
+  });
+
+  if(sortKey){
+    list.sort((a,b)=>{
+      let va = (sortKey==='cvss') ? parseFloat(a.cvss)||0 : (a[sortKey]||'').toString().toLowerCase();
+      let vb = (sortKey==='cvss') ? parseFloat(b.cvss)||0 : (b[sortKey]||'').toString().toLowerCase();
+      if(va < vb) return -1 * sortDir; if(va > vb) return 1 * sortDir; return 0;
+    });
+  }
+
+  const start = (page-1)*perPage; const pageItems = list.slice(start, start+perPage);
+  const tbody = document.querySelector('#vuln-table tbody');
+  if(!tbody) return;
+  tbody.innerHTML = pageItems.map((it, idx)=>{
+    const globalIdx = start + idx;
+    return `
+      <tr class="vuln-row" data-idx="${globalIdx}">
+        <td>${globalIdx+1}</td>
+        <td><a href="#" onclick="return false">${escapeHtml(it.name)}</a></td>
+        <td>${renderBadge(it.severity)}</td>
+        <td>${renderCvss(it.cvss)}</td>
+        <td>${escapeHtml(truncate(it.description,240))}</td>
+        <td>${escapeHtml(it.file)}</td>
+      </tr>
+      <tr class="vuln-details" id="details-${globalIdx}"><td colspan="6"><div class="vuln-details-panel" id="panel-${globalIdx}"><div class="vuln-details-grid"><div><h4 style="margin:0 0 8px 0">${escapeHtml(it.name)}</h4><div class="vuln-meta"><div><strong>Severity:</strong> ${escapeHtml(it.severity)}</div><div><strong>CVSS:</strong> ${escapeHtml(it.cvss||'N/A')}</div><div style="margin-top:8px">${escapeHtml(it.description)}</div></div></div><div><div style="background:#f8fafc;padding:12px;border-radius:8px"><div class="small" style="margin-bottom:8px">File</div><div style="font-weight:600">${escapeHtml(it.file)}</div></div></div></div></div></td></tr>`;
+  }).join('');
+
+  // re-attach interactivity to newly rendered rows
+  attachInteractivity();
+}
+
+function generateCSVFromTable(){
+  const rows = [];
+  rows.push(['#','Vulnerability','Severity','CVSS','Description','File']);
+  document.querySelectorAll('#vuln-table tbody tr.vuln-row').forEach(r=>{
+    if(r.style.display==='none') return; // skip hidden
+    const cols = r.querySelectorAll('td');
+    rows.push([cols[0].textContent.trim(), cols[1].textContent.trim(), cols[2].textContent.trim(), cols[3].textContent.trim(), cols[4].textContent.trim(), cols[5].textContent.trim()].map(c=>`"${c.replace(/"/g,'""')}"`));
+  });
+  return rows.map(r=>r.join(',')).join('\n');
 }
 
 function renderSummaryChart(counts){

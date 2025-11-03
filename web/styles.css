@@ -219,3 +219,21 @@ body{
 /* Small helper link style in table */
 .table a { color: #3b82f6; text-decoration: none; font-weight:600 }
 .table a:hover { text-decoration: underline }
+
+/* Lovable-like filter control styles */
+.report-controls select, .report-controls input{box-shadow:none;border:1px solid rgba(15,23,42,0.06);padding:10px 12px;border-radius:10px;background:#fff}
+.report-controls input{min-width:280px}
+
+/* Table sorting */
+.table th{cursor:pointer;position:relative}
+.table th.sort-asc::after,.table th.sort-desc::after{content:'';position:absolute;right:12px;top:50%;transform:translateY(-50%);border:6px solid transparent}
+.table th.sort-asc::after{border-bottom-color:#374151}
+.table th.sort-desc::after{border-top-color:#374151}
+
+/* Pagination */
+.pagination{display:flex;gap:8px;align-items:center;margin-top:12px}
+.pagination button{padding:6px 10px;border-radius:8px;border:1px solid #e6e9ef;background:#fff;cursor:pointer}
+
+/* Tooltip for chart */
+.tooltip{position:absolute;background:#111;color:#fff;padding:6px 8px;border-radius:6px;font-size:12px;pointer-events:none;opacity:0;transition:opacity 0.12s}
+.tooltip.show{opacity:1}
