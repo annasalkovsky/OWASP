@@ -15,21 +15,41 @@
   </header>
 
   <main class="container">
+    <div class="comparison-mode" style="margin-bottom: 16px;">
+      <label style="display: flex; align-items: center; gap: 8px; font-weight: 600;">
+        <input type="checkbox" id="delta-mode-toggle" style="margin: 0;">
+        Enable Delta Comparison Mode
+        <small style="color: var(--muted); font-weight: normal;">(Compare two reports to see fixed/new vulnerabilities)</small>
+      </label>
+    </div>
+
     <section class="upload-row">
       <div class="dropzone" id="report-drop">
         <input type="file" id="report-file" accept=".xml" />
-        <p class="drop-text">Dependency Check Report<br/><small>Upload dependency-check XML</small></p>
-  <div class="uploaded-msg" id="report-uploaded" aria-hidden="true" style="display:none">✓ Uploaded</div>
+        <p class="drop-text">Dependency Check Report (Current)<br/><small>Upload dependency-check XML</small></p>
+        <div class="uploaded-msg" id="report-uploaded" aria-hidden="true" style="display:none">✓ Uploaded</div>
       </div>
 
       <div class="dropzone" id="suppressions-drop">
         <input type="file" id="suppressions-file" accept=".xml" />
         <p class="drop-text">Suppressions File<br/><small>Upload suppressions.xml (optional)</small></p>
-  <div class="uploaded-msg" id="suppressions-uploaded" aria-hidden="true" style="display:none">✓ Uploaded</div>
+        <div class="uploaded-msg" id="suppressions-uploaded" aria-hidden="true" style="display:none">✓ Uploaded</div>
       </div>
     </section>
 
-    <div class="actions">
+    <section class="upload-row delta-uploads" id="delta-uploads" style="display: none;">
+      <div class="dropzone" id="baseline-report-drop">
+        <input type="file" id="baseline-report-file" accept=".xml" />
+        <p class="drop-text">Baseline Report (Previous)<br/><small>Upload previous dependency-check XML for comparison</small></p>
+        <div class="uploaded-msg" id="baseline-uploaded" aria-hidden="true" style="display:none">✓ Uploaded</div>
+      </div>
+
+      <div class="dropzone" id="baseline-suppressions-drop">
+        <input type="file" id="baseline-suppressions-file" accept=".xml" />
+        <p class="drop-text">Baseline Suppressions<br/><small>Upload previous suppressions.xml (optional)</small></p>
+        <div class="uploaded-msg" id="baseline-suppressions-uploaded" aria-hidden="true" style="display:none">✓ Uploaded</div>
+      </div>
+    </section>    <div class="actions">
       <button id="generate-btn" class="btn">Generate Audit Report</button>
       <button id="export-btn" class="btn secondary" disabled>Export Report</button>
       <button id="export-csv-btn" class="btn secondary" disabled>Export CSV</button>

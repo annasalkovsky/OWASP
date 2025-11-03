@@ -7,33 +7,63 @@ const reportDrop = document.getElementById('report-drop');
 const suppressionsDrop = document.getElementById('suppressions-drop');
 const reportInput = document.getElementById('report-file');
 const suppressionsInput = document.getElementById('suppressions-file');
+const baselineReportDrop = document.getElementById('baseline-report-drop');
+const baselineSuppressionsDrop = document.getElementById('baseline-suppressions-drop');
+const baselineReportInput = document.getElementById('baseline-report-file');
+const baselineSuppressionsInput = document.getElementById('baseline-suppressions-file');
+const deltaToggle = document.getElementById('delta-mode-toggle');
 const generateBtn = document.getElementById('generate-btn');
 const exportBtn = document.getElementById('export-btn');
 const reportArea = document.getElementById('report-area');
 
 let dependencyXml = null;
 let suppressionsXml = null;
+let baselineDependencyXml = null;
+let baselineSuppressionsXml = null;
+let isDeltaMode = false;
 
 reportInput.addEventListener('change', e => { loadFile(e.target.files[0], xml => dependencyXml = xml); });
 suppressionsInput.addEventListener('change', e => { loadFile(e.target.files[0], xml => suppressionsXml = xml); });
+baselineReportInput.addEventListener('change', e => { loadFile(e.target.files[0], xml => baselineDependencyXml = xml); });
+baselineSuppressionsInput.addEventListener('change', e => { loadFile(e.target.files[0], xml => baselineSuppressionsXml = xml); });
 
 // Toggle uploaded visual state
 reportInput.addEventListener('change', () => setUploadedState('report', !!reportInput.files.length));
 suppressionsInput.addEventListener('change', () => setUploadedState('suppressions', !!suppressionsInput.files.length));
+baselineReportInput.addEventListener('change', () => setUploadedState('baseline', !!baselineReportInput.files.length));
+baselineSuppressionsInput.addEventListener('change', () => setUploadedState('baseline-suppressions', !!baselineSuppressionsInput.files.length));
+
+// Delta mode toggle
+deltaToggle.addEventListener('change', () => {
+  isDeltaMode = deltaToggle.checked;
+  document.getElementById('delta-uploads').style.display = isDeltaMode ? 'flex' : 'none';
+  updateGenerateButtonText();
+});
 
 function setUploadedState(which, state){
-  if(which === 'report'){
-    const zone = document.getElementById('report-drop');
-    const msg = document.getElementById('report-uploaded');
-    if(state){ zone.classList.add('uploaded'); if(msg) msg.setAttribute('aria-hidden','false'); }
-    else { zone.classList.remove('uploaded'); if(msg) msg.setAttribute('aria-hidden','true'); }
+  const configs = {
+    'report': { zone: 'report-drop', msg: 'report-uploaded' },
+    'suppressions': { zone: 'suppressions-drop', msg: 'suppressions-uploaded' },
+    'baseline': { zone: 'baseline-report-drop', msg: 'baseline-uploaded' },
+    'baseline-suppressions': { zone: 'baseline-suppressions-drop', msg: 'baseline-suppressions-uploaded' }
+  };
+  
+  const config = configs[which];
+  if (!config) return;
+  
+  const zone = document.getElementById(config.zone);
+  const msg = document.getElementById(config.msg);
+  if(state){ 
+    zone?.classList.add('uploaded'); 
+    if(msg) { msg.setAttribute('aria-hidden','false'); msg.style.display = 'block'; }
+  } else { 
+    zone?.classList.remove('uploaded'); 
+    if(msg) { msg.setAttribute('aria-hidden','true'); msg.style.display = 'none'; }
   }
-  if(which === 'suppressions'){
-    const zone = document.getElementById('suppressions-drop');
-    const msg = document.getElementById('suppressions-uploaded');
-    if(state){ zone.classList.add('uploaded'); if(msg) msg.setAttribute('aria-hidden','false'); }
-    else { zone.classList.remove('uploaded'); if(msg) msg.setAttribute('aria-hidden','true'); }
-  }
+}
+
+function updateGenerateButtonText(){
+  generateBtn.textContent = isDeltaMode ? 'Generate Delta Report' : 'Generate Audit Report';
 }
 
 // Ensure uploaded message display matches aria-hidden (fix for pre-rendered visibility)
@@ -55,6 +85,8 @@ document.addEventListener('DOMContentLoaded', () => {
 ;['dragenter','dragover'].forEach(ev => {
   reportDrop.addEventListener(ev, e => e.preventDefault());
   suppressionsDrop.addEventListener(ev, e => e.preventDefault());
+  baselineReportDrop?.addEventListener(ev, e => e.preventDefault());
+  baselineSuppressionsDrop?.addEventListener(ev, e => e.preventDefault());
 });
 
 // Handle drop events to load files and set uploaded state
@@ -68,6 +100,16 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     const f = e.dataTransfer.files && e.dataTransfer.files[0];
     if(f){ suppressionsInput.files = e.dataTransfer.files; loadFile(f, xml => suppressionsXml = xml); setUploadedState('suppressions', true); }
+  });
+  baselineReportDrop?.addEventListener(ev, e => {
+    e.preventDefault();
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f){ baselineReportInput.files = e.dataTransfer.files; loadFile(f, xml => baselineDependencyXml = xml); setUploadedState('baseline', true); }
+  });
+  baselineSuppressionsDrop?.addEventListener(ev, e => {
+    e.preventDefault();
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f){ baselineSuppressionsInput.files = e.dataTransfer.files; loadFile(f, xml => baselineSuppressionsXml = xml); setUploadedState('baseline-suppressions', true); }
   });
 });
 
@@ -84,12 +126,80 @@ function loadFile(file, cb){
 
 generateBtn.addEventListener('click', () => {
   if(!dependencyXml) return alert('Please upload a dependency-check XML report');
-  const findings = parseDependencyCheck(dependencyXml);
-  const suppressedRules = suppressionsXml ? parseSuppressions(suppressionsXml) : [];
-  const unsuppressed = filterSuppressions(findings, suppressedRules);
-  renderReport(unsuppressed);
+  
+  if(isDeltaMode) {
+    if(!baselineDependencyXml) return alert('Please upload a baseline report for delta comparison');
+    generateDeltaReport();
+  } else {
+    const findings = parseDependencyCheck(dependencyXml);
+    const suppressedRules = suppressionsXml ? parseSuppressions(suppressionsXml) : [];
+    const unsuppressed = filterSuppressions(findings, suppressedRules);
+    renderReport(unsuppressed);
+  }
+  
   exportBtn.disabled = false;
 });
+
+function generateDeltaReport(){
+  // Parse current and baseline reports
+  const currentFindings = parseDependencyCheck(dependencyXml);
+  const baselineFindings = parseDependencyCheck(baselineDependencyXml);
+  
+  // Parse suppressions
+  const currentSuppressions = suppressionsXml ? parseSuppressions(suppressionsXml) : [];
+  const baselineSuppressions = baselineSuppressionsXml ? parseSuppressions(baselineSuppressionsXml) : [];
+  
+  // Calculate delta
+  const delta = calculateDelta(currentFindings, baselineFindings, currentSuppressions, baselineSuppressions);
+  
+  // Render delta report
+  renderDeltaReport(delta);
+}
+
+function calculateDelta(current, baseline, currentSuppressions, baselineSuppressions){
+  // Create vulnerability signature for comparison (name + file)
+  const createSig = (vuln) => `${vuln.name}|${vuln.file}`;
+  
+  const currentSigs = new Set(current.map(createSig));
+  const baselineSigs = new Set(baseline.map(createSig));
+  
+  // Fixed: in baseline but not in current
+  const fixed = baseline.filter(vuln => !currentSigs.has(createSig(vuln)));
+  
+  // New: in current but not in baseline  
+  const newVulns = current.filter(vuln => !baselineSigs.has(createSig(vuln)));
+  
+  // Apply current suppressions to new vulnerabilities
+  const newUnsuppressed = filterSuppressions(newVulns, currentSuppressions);
+  
+  // Suppression changes
+  const suppressionChanges = {
+    added: currentSuppressions.filter(s => !baselineSuppressions.some(bs => 
+      bs.type === s.type && bs.value === s.value
+    )),
+    removed: baselineSuppressions.filter(s => !currentSuppressions.some(cs => 
+      cs.type === s.type && cs.value === s.value
+    ))
+  };
+  
+  // All current vulnerabilities after applying suppressions (for context)
+  const currentUnsuppressed = filterSuppressions(current, currentSuppressions);
+  
+  return {
+    fixed,
+    newVulns,
+    newUnsuppressed,
+    suppressionChanges,
+    currentUnsuppressed,
+    summary: {
+      totalCurrent: current.length,
+      totalBaseline: baseline.length,
+      fixedCount: fixed.length,
+      newCount: newVulns.length,
+      newUnsuppressedCount: newUnsuppressed.length
+    }
+  };
+}
 
 exportBtn.addEventListener('click', async () => {
   // Export current report-area as a self-contained HTML file with inline CSS and JS
@@ -272,6 +382,117 @@ function severityCounts(items){
     else counts.UNKNOWN++;
   });
   return counts;
+}
+
+function renderDeltaReport(delta){
+  reportArea.hidden = false;
+  
+  const fixedCounts = severityCounts(delta.fixed);
+  const newCounts = severityCounts(delta.newUnsuppressed);
+  
+  reportArea.innerHTML = `
+    <div class="report-header">
+      <h2>OWASP Delta Report</h2>
+      <div class="small">Generated: ${new Date().toLocaleString()} &nbsp; 
+        <strong>Fixed:</strong> ${delta.fixedCount} &nbsp;
+        <strong>New:</strong> ${delta.newUnsuppressedCount} &nbsp;
+        <strong>Current Total:</strong> ${delta.currentUnsuppressed.length}
+      </div>
+    </div>
+
+    <div class="delta-summary" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:24px">
+      <div class="delta-section">
+        <h3 style="color:#10b981;margin-bottom:12px">✅ Fixed Vulnerabilities (${delta.fixedCount})</h3>
+        <div class="metrics">
+          <div class="metric critical"><strong>${fixedCounts.CRITICAL}</strong><div class="small">CRITICAL</div></div>
+          <div class="metric high"><strong>${fixedCounts.HIGH}</strong><div class="small">HIGH</div></div>
+          <div class="metric medium"><strong>${fixedCounts.MEDIUM}</strong><div class="small">MEDIUM</div></div>
+          <div class="metric low"><strong>${fixedCounts.LOW}</strong><div class="small">LOW</div></div>
+        </div>
+      </div>
+      
+      <div class="delta-section">
+        <h3 style="color:#f59e0b;margin-bottom:12px">🆕 New Vulnerabilities (${delta.newUnsuppressedCount})</h3>
+        <div class="metrics">
+          <div class="metric critical"><strong>${newCounts.CRITICAL}</strong><div class="small">CRITICAL</div></div>
+          <div class="metric high"><strong>${newCounts.HIGH}</strong><div class="small">HIGH</div></div>
+          <div class="metric medium"><strong>${newCounts.MEDIUM}</strong><div class="small">MEDIUM</div></div>
+          <div class="metric low"><strong>${newCounts.LOW}</strong><div class="small">LOW</div></div>
+        </div>
+      </div>
+      
+      <div class="delta-section">
+        <h3 style="color:#6366f1;margin-bottom:12px">📊 Suppression Changes</h3>
+        <div style="padding:16px;background:#f8fafc;border-radius:8px">
+          <div><strong>Added:</strong> ${delta.suppressionChanges.added.length} suppressions</div>
+          <div><strong>Removed:</strong> ${delta.suppressionChanges.removed.length} suppressions</div>
+        </div>
+      </div>
+    </div>
+
+    ${delta.fixedCount > 0 ? `
+    <h3>Fixed Vulnerabilities</h3>
+    <table class="table">
+      <thead><tr><th>Vulnerability</th><th>Severity</th><th>CVSS</th><th>File</th></tr></thead>
+      <tbody>
+        ${delta.fixed.map(vuln => `
+          <tr>
+            <td>${escapeHtml(vuln.name)}</td>
+            <td>${renderBadge(vuln.severity)}</td>
+            <td>${renderCvss(vuln.cvss)}</td>
+            <td>${escapeHtml(vuln.file)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    ` : ''}
+
+    ${delta.newUnsuppressedCount > 0 ? `
+    <h3>New Vulnerabilities (Unhandled)</h3>
+    <table class="table" id="new-vuln-table">
+      <thead><tr><th>#</th><th>VULNERABILITY</th><th>SEVERITY</th><th>CVSS SCORE</th><th>DESCRIPTION</th><th>FILE</th></tr></thead>
+      <tbody>
+        ${delta.newUnsuppressed.map((it,idx) => `
+          <tr class="vuln-row" data-idx="${idx}">
+            <td>${idx+1}</td>
+            <td><a href="#" onclick="return false">${escapeHtml(it.name)}</a></td>
+            <td>${renderBadge(it.severity)}</td>
+            <td>${renderCvss(it.cvss)}</td>
+            <td>${escapeHtml(truncate(it.description,240))}</td>
+            <td>${escapeHtml(it.file)}</td>
+          </tr>
+          <tr class="vuln-details" id="details-${idx}">
+            <td colspan="6">
+              <div class="vuln-details-panel" id="panel-${idx}">
+                <div class="vuln-details-grid">
+                  <div>
+                    <h4 style="margin:0 0 8px 0">${escapeHtml(it.name)}</h4>
+                    <div class="vuln-meta">
+                      <div><strong>Severity:</strong> ${escapeHtml(it.severity)}</div>
+                      <div><strong>CVSS:</strong> ${escapeHtml(it.cvss || 'N/A')}</div>
+                      <div style="margin-top:8px">${escapeHtml(it.description)}</div>
+                    </div>
+                  </div>
+                  <div>
+                    <div style="background:#f8fafc;padding:12px;border-radius:8px">
+                      <div class="small" style="margin-bottom:8px">File</div>
+                      <div style="font-weight:600">${escapeHtml(it.file)}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    ` : '<h3>No New Vulnerabilities Found</h3>'}
+
+    <div class="footer">Delta Report from OWASP Dependency Audit Tool</div>
+  `;
+
+  // Attach interactivity to new vulnerability rows  
+  attachInteractivity();
 }
 
 function renderReport(items){
