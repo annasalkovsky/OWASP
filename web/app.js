@@ -191,6 +191,9 @@ function calculateDelta(current, baseline, currentSuppressions, baselineSuppress
     newUnsuppressed,
     suppressionChanges,
     currentUnsuppressed,
+    fixedCount: fixed.length,
+    newCount: newVulns.length,
+    newUnsuppressedCount: newUnsuppressed.length,
     summary: {
       totalCurrent: current.length,
       totalBaseline: baseline.length,
