@@ -291,25 +291,53 @@ function generateDeltaReport(){
   });
   
   try {
+    // Validate XML inputs
+    if (!dependencyXml) {
+      throw new Error('Current dependency XML is missing');
+    }
+    if (!baselineDependencyXml) {
+      throw new Error('Baseline dependency XML is missing');
+    }
+    
     // Parse current and baseline reports
     console.log('Parsing current findings...');
     const currentFindings = parseDependencyCheck(dependencyXml);
-    console.log('Current findings parsed:', currentFindings.length);
+    console.log('Current findings parsed:', currentFindings?.length || 'undefined');
+    
+    if (!Array.isArray(currentFindings)) {
+      throw new Error('Failed to parse current dependency check - invalid XML format');
+    }
     
     console.log('Parsing baseline findings...');
     const baselineFindings = parseDependencyCheck(baselineDependencyXml);
-    console.log('Baseline findings parsed:', baselineFindings.length);
+    console.log('Baseline findings parsed:', baselineFindings?.length || 'undefined');
     
-    // Parse suppressions
+    if (!Array.isArray(baselineFindings)) {
+      throw new Error('Failed to parse baseline dependency check - invalid XML format');
+    }
+    
+    // Parse suppressions with validation
     console.log('Parsing suppressions...');
     const currentSuppressions = suppressionsXml ? parseSuppressions(suppressionsXml) : [];
     const baselineSuppressions = baselineSuppressionsXml ? parseSuppressions(baselineSuppressionsXml) : [];
+    
+    if (!Array.isArray(currentSuppressions)) {
+      throw new Error('Failed to parse current suppressions - invalid XML format');
+    }
+    if (!Array.isArray(baselineSuppressions)) {
+      throw new Error('Failed to parse baseline suppressions - invalid XML format');
+    }
+    
     console.log('Suppressions parsed:', { current: currentSuppressions.length, baseline: baselineSuppressions.length });
     
-    // Calculate delta
+    // Calculate delta with validation
     console.log('Calculating delta...');
     const delta = calculateDelta(currentFindings, baselineFindings, currentSuppressions, baselineSuppressions);
     console.log('Delta calculated:', delta);
+    
+    if (!delta) {
+      throw new Error('Failed to calculate delta - calculateDelta returned null/undefined');
+    }
     
     // Render delta report
     console.log('Rendering delta report...');
@@ -322,7 +350,21 @@ function generateDeltaReport(){
     
   } catch (error) {
     console.error('Error in generateDeltaReport:', error);
-    alert('Error generating delta report: ' + error.message + '\n\nPlease check the console for more details.');
+    console.error('Stack trace:', error.stack);
+    
+    // Show more helpful error message
+    let errorMsg = `Error generating delta report: ${error.message}`;
+    
+    // Add specific guidance based on error type
+    if (error.message.includes('invalid XML format')) {
+      errorMsg += '\n\nThis usually means:\n• The uploaded file is not a valid OWASP dependency-check XML\n• The file may be corrupted or empty\n• Try re-running your dependency check and uploading a fresh XML file';
+    } else if (error.message.includes('missing')) {
+      errorMsg += '\n\nPlease ensure all required files are uploaded:\n• Current dependency check XML\n• Baseline dependency check XML';
+    }
+    
+    errorMsg += '\n\nPlease check the console for more details.';
+    
+    alert(errorMsg);
   }
 }
 
@@ -1274,52 +1316,98 @@ Anna Salkovsky`;
 
 // Parse dependency-check output to array of {id, name, severity, cvss, description, file}
 function parseDependencyCheck(xml){
+  if (!xml) {
+    console.error('parseDependencyCheck: xml parameter is null/undefined');
+    return [];
+  }
+  
+  // Check if XML has parser errors
+  const parserError = xml.querySelector("parsererror");
+  if (parserError) {
+    console.error('parseDependencyCheck: XML parsing error', parserError.textContent);
+    throw new Error('Invalid XML format - parsing failed');
+  }
+  
   const deps = [];
-  // dependency elements
-  const depEls = Array.from(xml.getElementsByTagName('dependency'));
-  depEls.forEach(dep => {
-    const fileName = safeText(dep.getElementsByTagName('fileName')[0]) || safeText(dep.getElementsByTagName('filePath')[0]) || '';
-    const vulnEls = Array.from(dep.getElementsByTagName('vulnerability'));
-    vulnEls.forEach(v => {
-      const name = safeText(v.getElementsByTagName('name')[0]) || 'UNKNOWN';
-      const severity = (safeText(v.getElementsByTagName('severity')[0]) || 'UNKNOWN').toUpperCase();
-      const description = safeText(v.getElementsByTagName('description')[0]) || '';
-      // attempt CVSS score
-      let cvss = '';
-      const cvssV3 = v.getElementsByTagName('cvssV3')[0];
-      if(cvssV3) cvss = safeText(cvssV3.getElementsByTagName('score')[0]) || '';
-      if(!cvss){
-        const cvssV2 = v.getElementsByTagName('cvssV2')[0];
-        if(cvssV2) cvss = safeText(cvssV2.getElementsByTagName('score')[0]) || '';
-      }
-      deps.push({ id: name, name, severity, description, cvss, file: fileName });
+  try {
+    // dependency elements
+    const depEls = Array.from(xml.getElementsByTagName('dependency'));
+    console.log(`Found ${depEls.length} dependency elements`);
+    
+    depEls.forEach(dep => {
+      const fileName = safeText(dep.getElementsByTagName('fileName')[0]) || safeText(dep.getElementsByTagName('filePath')[0]) || '';
+      const vulnEls = Array.from(dep.getElementsByTagName('vulnerability'));
+      
+      vulnEls.forEach(v => {
+        const name = safeText(v.getElementsByTagName('name')[0]) || 'UNKNOWN';
+        const severity = (safeText(v.getElementsByTagName('severity')[0]) || 'UNKNOWN').toUpperCase();
+        const description = safeText(v.getElementsByTagName('description')[0]) || '';
+        // attempt CVSS score
+        let cvss = '';
+        const cvssV3 = v.getElementsByTagName('cvssV3')[0];
+        if(cvssV3) cvss = safeText(cvssV3.getElementsByTagName('score')[0]) || '';
+        if(!cvss){
+          const cvssV2 = v.getElementsByTagName('cvssV2')[0];
+          if(cvssV2) cvss = safeText(cvssV2.getElementsByTagName('score')[0]) || '';
+        }
+        deps.push({ id: name, name, severity, description, cvss, file: fileName });
+      });
     });
-  });
-  return deps;
+    
+    console.log(`Parsed ${deps.length} vulnerabilities from dependency check XML`);
+    return deps;
+    
+  } catch (error) {
+    console.error('Error parsing dependency check XML:', error);
+    throw new Error('Failed to parse dependency check XML: ' + error.message);
+  }
 }
 
 function safeText(node){ return node && node.textContent ? node.textContent.trim() : ''; }
 
 // Rough parse of suppressions.xml: collect names or cpes to suppress
 function parseSuppressions(xml){
+  if (!xml) {
+    console.warn('parseSuppressions: xml parameter is null/undefined, returning empty array');
+    return [];
+  }
+  
+  // Check if XML has parser errors
+  const parserError = xml.querySelector("parsererror");
+  if (parserError) {
+    console.error('parseSuppressions: XML parsing error', parserError.textContent);
+    throw new Error('Invalid suppressions XML format - parsing failed');
+  }
+  
   const rules = [];
-  // find suppression items: <suppress> with <note> or <name> or <cpe> children (format differs)
-  const suppressEls = Array.from(xml.getElementsByTagName('suppress'));
-  suppressEls.forEach(s => {
-    const name = safeText(s.getElementsByTagName('name')[0]);
-    const cpe = safeText(s.getElementsByTagName('cpe')[0]);
-    const note = safeText(s.getElementsByTagName('notes')[0]) || safeText(s.getElementsByTagName('note')[0]);
-    if(name) rules.push({type:'name', value:name});
-    if(cpe) rules.push({type:'cpe', value:cpe});
-    if(note) rules.push({type:'note', value:note});
-  });
-  // Some suppressions use <suppress><artifact><name>... pattern
-  const artifactNames = Array.from(xml.getElementsByTagName('artifactName'));
-  artifactNames.forEach(n => {
-    const v = safeText(n);
-    if(v) rules.push({type:'name', value:v});
-  });
-  return rules;
+  try {
+    // find suppression items: <suppress> with <note> or <name> or <cpe> children (format differs)
+    const suppressEls = Array.from(xml.getElementsByTagName('suppress'));
+    console.log(`Found ${suppressEls.length} suppression elements`);
+    
+    suppressEls.forEach(s => {
+      const name = safeText(s.getElementsByTagName('name')[0]);
+      const cpe = safeText(s.getElementsByTagName('cpe')[0]);
+      const note = safeText(s.getElementsByTagName('notes')[0]) || safeText(s.getElementsByTagName('note')[0]);
+      if(name) rules.push({type:'name', value:name});
+      if(cpe) rules.push({type:'cpe', value:cpe});
+      if(note) rules.push({type:'note', value:note});
+    });
+    
+    // Some suppressions use <suppress><artifact><name>... pattern
+    const artifactNames = Array.from(xml.getElementsByTagName('artifactName'));
+    artifactNames.forEach(n => {
+      const v = safeText(n);
+      if(v) rules.push({type:'name', value:v});
+    });
+    
+    console.log(`Parsed ${rules.length} suppression rules`);
+    return rules;
+    
+  } catch (error) {
+    console.error('Error parsing suppressions XML:', error);
+    throw new Error('Failed to parse suppressions XML: ' + error.message);
+  }
 }
 
 function filterSuppressions(findings, suppressions){
