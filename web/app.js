@@ -13,6 +13,7 @@ const baselineReportInput = document.getElementById('baseline-report-file');
 const baselineSuppressionsInput = document.getElementById('baseline-suppressions-file');
 const deltaToggle = document.getElementById('delta-mode-toggle');
 const generateBtn = document.getElementById('generate-btn');
+const debugBtn = document.getElementById('debug-btn');
 const exportBtn = document.getElementById('export-btn');
 const emailBtn = document.getElementById('email-btn');
 const reportArea = document.getElementById('report-area');
@@ -251,6 +252,71 @@ function loadFile(file, cb, progressId = null){
   
   reader.readAsText(file);
 }
+
+// Debug button for troubleshooting delta issues
+debugBtn.addEventListener('click', () => {
+  console.log('=== DEBUG DELTA BUTTON CLICKED ===');
+  
+  // Check all variables
+  console.log('Global variables state:');
+  console.log('dependencyXml:', dependencyXml ? 'LOADED' : 'NULL');
+  console.log('baselineDependencyXml:', baselineDependencyXml ? 'LOADED' : 'NULL');
+  console.log('suppressionsXml:', suppressionsXml ? 'LOADED' : 'NULL');
+  console.log('baselineSuppressionsXml:', baselineSuppressionsXml ? 'LOADED' : 'NULL');
+  console.log('deltaToggle.checked:', deltaToggle.checked);
+  
+  if (!dependencyXml) {
+    alert('❌ Current dependency XML is not loaded');
+    return;
+  }
+  
+  if (!baselineDependencyXml) {
+    alert('❌ Baseline dependency XML is not loaded');
+    return;
+  }
+  
+  try {
+    console.log('Testing XML parsing...');
+    
+    // Test current XML parsing
+    console.log('Testing current XML...');
+    const currentTest = parseDependencyCheck(dependencyXml);
+    console.log('✅ Current XML parsed:', currentTest.length, 'vulnerabilities');
+    
+    // Test baseline XML parsing
+    console.log('Testing baseline XML...');
+    const baselineTest = parseDependencyCheck(baselineDependencyXml);
+    console.log('✅ Baseline XML parsed:', baselineTest.length, 'vulnerabilities');
+    
+    // Test suppressions parsing
+    console.log('Testing suppressions...');
+    const currentSupTest = suppressionsXml ? parseSuppressions(suppressionsXml) : [];
+    const baselineSupTest = baselineSuppressionsXml ? parseSuppressions(baselineSuppressionsXml) : [];
+    console.log('✅ Suppressions parsed:', {current: currentSupTest.length, baseline: baselineSupTest.length});
+    
+    // Test sample vulnerability structure
+    if (currentTest.length > 0) {
+      console.log('Sample current vulnerability:', currentTest[0]);
+    }
+    if (baselineTest.length > 0) {
+      console.log('Sample baseline vulnerability:', baselineTest[0]);
+    }
+    
+    // Test createSig function
+    if (currentTest.length > 0) {
+      const testVuln = currentTest[0];
+      const sig = `${testVuln.name || 'UNKNOWN'}|${testVuln.file || 'UNKNOWN'}`;
+      console.log('✅ Signature test:', sig);
+    }
+    
+    alert(`✅ Debug Complete!\nCurrent: ${currentTest.length} vulns\nBaseline: ${baselineTest.length} vulns\nCheck console for details.`);
+    
+  } catch (error) {
+    console.error('❌ Debug failed:', error);
+    console.error('Stack:', error.stack);
+    alert(`❌ Debug failed: ${error.message}\nCheck console for details.`);
+  }
+});
 
 generateBtn.addEventListener('click', () => {
   if(!dependencyXml) return alert('Please upload a dependency-check XML report');
