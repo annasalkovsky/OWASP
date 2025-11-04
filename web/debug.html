@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug OWASP Tool</title>
+</head>
+<body>
+    <h1>Debug Console</h1>
+    <p>Check console for any JavaScript errors</p>
+    <button onclick="testElements()">Test Elements</button>
+    <div id="debug-output"></div>
+    
+    <script>
+        console.log('Debug script loaded');
+        
+        function testElements() {
+            console.log('Testing elements...');
+            const output = document.getElementById('debug-output');
+            
+            // Test if main elements exist
+            const tests = [
+                'report-drop',
+                'report-file', 
+                'generate-btn',
+                'report-area'
+            ];
+            
+            let results = '<h3>Element Test Results:</h3>';
+            tests.forEach(id => {
+                const element = document.getElementById(id);
+                results += `<p>${id}: ${element ? '✓ Found' : '✗ Missing'}</p>`;
+            });
+            
+            output.innerHTML = results;
+        }
+        
+        // Try to load the main app.js and catch any errors
+        try {
+            console.log('Loading main app.js...');
+            const script = document.createElement('script');
+            script.src = 'app.js';
+            script.onerror = function(e) {
+                console.error('Error loading app.js:', e);
+                document.getElementById('debug-output').innerHTML = '<p style="color: red;">Error loading app.js - check console</p>';
+            };
+            script.onload = function() {
+                console.log('app.js loaded successfully');
+                testElements();
+            };
+            document.head.appendChild(script);
+        } catch (e) {
+            console.error('Error with app.js:', e);
+        }
+    </script>
+</body>
+</html>
