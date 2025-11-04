@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OWASP Dependency Audit Tool - Interactive Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .demo-container {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .slide {
+            display: none;
+            width: 90%;
+            max-width: 1200px;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 0.8s ease;
+            position: absolute;
+        }
+
+        .slide.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .slide h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #fff, #e0e7ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .slide h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            color: #e0e7ff;
+        }
+
+        .slide p {
+            font-size: 1.3rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+            color: #f1f5f9;
+        }
+
+        .screenshot-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            margin: 2rem auto;
+            max-width: 1000px;
+            transform: scale(0.95);
+            transition: transform 0.8s ease;
+        }
+
+        .screenshot-container.zoom {
+            transform: scale(1);
+        }
+
+        .screenshot {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .metrics-highlight {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            margin: 0.5rem;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.8s ease forwards;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+            z-index: 1000;
+        }
+
+        .btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid white;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: #60a5fa;
+            transition: width 0.8s ease;
+            z-index: 1000;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .feature-card {
+            background: rgba(255,255,255,0.1);
+            padding: 2rem;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transform: translateY(20px);
+            opacity: 0;
+            transition: all 0.6s ease;
+        }
+
+        .feature-card.animate {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .cta {
+            background: linear-gradient(45deg, #10b981, #059669);
+            padding: 1rem 2rem;
+            border-radius: 30px;
+            display: inline-block;
+            margin-top: 2rem;
+            text-decoration: none;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+        }
+
+        .cta:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(16, 185, 129, 0.4);
+        }
+
+        .slide-number {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.3);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .auto-play-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        @media (max-width: 768px) {
+            .slide h1 { font-size: 2.5rem; }
+            .slide h2 { font-size: 2rem; }
+            .slide p { font-size: 1.1rem; }
+            .controls { bottom: 20px; }
+            .btn { padding: 0.6rem 1.2rem; font-size: 0.9rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progressBar"></div>
+    
+    <div class="auto-play-toggle">
+        <button class="btn" id="autoPlayBtn">⏸️ Auto Play</button>
+    </div>
+
+    <div class="demo-container">
+        <!-- Slide 1: Opening -->
+        <div class="slide active" data-slide="1">
+            <div class="slide-number">1/7</div>
+            <h1 class="fade-in-up">OWASP Dependency Audit Tool</h1>
+            <p class="fade-in-up" style="animation-delay: 0.3s;">Managing security vulnerabilities in your dependencies shouldn't be overwhelming.<br>Meet your solution for clear, actionable security reporting.</p>
+            <div class="feature-grid">
+                <div class="feature-card" style="animation-delay: 0.6s;">
+                    <span class="feature-icon">🛡️</span>
+                    <h3>Security First</h3>
+                    <p>OWASP standard compliance</p>
+                </div>
+                <div class="feature-card" style="animation-delay: 0.8s;">
+                    <span class="feature-icon">📊</span>
+                    <h3>Beautiful Reports</h3>
+                    <p>Audit-ready visualizations</p>
+                </div>
+                <div class="feature-card" style="animation-delay: 1.0s;">
+                    <span class="feature-icon">🔄</span>
+                    <h3>Delta Analysis</h3>
+                    <p>Track progress over time</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: Upload Process -->
+        <div class="slide" data-slide="2">
+            <div class="slide-number">2/7</div>
+            <h2>Simple Upload Process</h2>
+            <p>Simply upload your OWASP dependency-check XML files and optional suppressions to generate comprehensive reports in seconds.</p>
+            <div class="screenshot-container">
+                <div style="padding: 2rem; background: #6366f1; color: white; text-align: center;">
+                    <h2>OWASP Dependency Audit Tool</h2>
+                    <p>Generate audit-ready reports from dependency-check XML</p>
+                </div>
+                <div style="padding: 2rem; background: #f8fafc; color: #1e293b;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                        <div style="border: 2px dashed #cbd5e1; padding: 2rem; border-radius: 8px; text-align: center;">
+                            <p>📁 Dependency Check Report (Current)</p>
+                            <p style="color: #059669; font-weight: bold;">✓ Uploaded</p>
+                        </div>
+                        <div style="border: 2px dashed #cbd5e1; padding: 2rem; border-radius: 8px; text-align: center;">
+                            <p>📝 Suppressions File</p>
+                            <p style="color: #059669; font-weight: bold;">✓ Uploaded</p>
+                        </div>
+                    </div>
+                    <button style="background: #6366f1; color: white; padding: 1rem 2rem; border: none; border-radius: 8px; font-size: 1.1rem;">Generate Audit Report</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: Normal Report -->
+        <div class="slide" data-slide="3">
+            <div class="slide-number">3/7</div>
+            <h2>Beautiful Security Dashboard</h2>
+            <p>Get a comprehensive overview with color-coded severity levels and interactive filtering.</p>
+            <div class="screenshot-container">
+                <div style="padding: 2rem; background: white; color: #1e293b;">
+                    <h2 style="color: #1e293b; margin-bottom: 1rem;">OWASP Dependency Check</h2>
+                    <p style="color: #64748b;">Generated: 11/3/2025, 10:48:17 PM &nbsp; Total Vulnerabilities: <strong>170</strong></p>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 2rem 0;">
+                        <div style="text-align: center; padding: 1.5rem; border-left: 4px solid #dc2626;">
+                            <div style="font-size: 2.5rem; font-weight: bold; color: #dc2626;">19</div>
+                            <div style="color: #64748b;">CRITICAL</div>
+                        </div>
+                        <div style="text-align: center; padding: 1.5rem; border-left: 4px solid #ea580c;">
+                            <div style="font-size: 2.5rem; font-weight: bold; color: #ea580c;">99</div>
+                            <div style="color: #64748b;">HIGH</div>
+                        </div>
+                        <div style="text-align: center; padding: 1.5rem; border-left: 4px solid #d97706;">
+                            <div style="font-size: 2.5rem; font-weight: bold; color: #d97706;">47</div>
+                            <div style="color: #64748b;">MEDIUM</div>
+                        </div>
+                        <div style="text-align: center; padding: 1.5rem; border-left: 4px solid #059669;">
+                            <div style="font-size: 2.5rem; font-weight: bold; color: #059669;">5</div>
+                            <div style="color: #64748b;">LOW</div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: #f1f5f9; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                        <p><strong>Filter by severity, search vulnerabilities, and explore detailed CVSS scores</strong></p>
+                    </div>
+                </div>
+            </div>
+            <div class="metrics-highlight">170 Total Vulnerabilities</div>
+            <div class="metrics-highlight">CVSS Integration</div>
+            <div class="metrics-highlight">Interactive Filtering</div>
+        </div>
+
+        <!-- Slide 4: Delta Mode Introduction -->
+        <div class="slide" data-slide="4">
+            <div class="slide-number">4/7</div>
+            <h2>Powerful Delta Comparison</h2>
+            <p>Track your security progress over time by comparing current reports with baseline reports.</p>
+            <div class="screenshot-container">
+                <div style="padding: 2rem; background: #6366f1; color: white; text-align: center;">
+                    <h2>OWASP Dependency Audit Tool</h2>
+                    <p>Generate audit-ready reports from dependency-check XML</p>
+                </div>
+                <div style="padding: 2rem; background: #f8fafc; color: #1e293b;">
+                    <div style="margin-bottom: 2rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: bold;">
+                            <input type="checkbox" checked style="transform: scale(1.2);"> 
+                            Enable Delta Comparison Mode
+                        </label>
+                        <p style="color: #64748b; margin-top: 0.5rem;">Compare two reports to see fixed/new vulnerabilities</p>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                        <div style="border: 2px dashed #3b82f6; padding: 1.5rem; border-radius: 8px; text-align: center; background: #eff6ff;">
+                            <p><strong>Baseline Report (Previous)</strong></p>
+                            <p style="color: #3b82f6; font-weight: bold;">✓ Uploaded</p>
+                        </div>
+                        <div style="border: 2px dashed #3b82f6; padding: 1.5rem; border-radius: 8px; text-align: center; background: #eff6ff;">
+                            <p><strong>Baseline Suppressions</strong></p>
+                            <p style="color: #3b82f6; font-weight: bold;">✓ Uploaded</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Delta Results -->
+        <div class="slide" data-slide="5">
+            <div class="slide-number">5/7</div>
+            <h2>Delta Analysis Results</h2>
+            <p>See exactly what's been fixed, what's new, and track suppression changes - complete visibility into security improvements.</p>
+            <div class="screenshot-container">
+                <div style="padding: 2rem; background: white; color: #1e293b;">
+                    <h2 style="color: #1e293b; margin-bottom: 1rem;">OWASP Delta Report</h2>
+                    <p style="color: #64748b; margin-bottom: 2rem;">Generated: 11/4/2025, 8:01:31 AM &nbsp; Fixed: <strong>27</strong> &nbsp; New: <strong>15</strong> &nbsp; Current Total: <strong>170</strong></p>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                        <!-- Fixed Section -->
+                        <div>
+                            <h3 style="color: #059669; margin-bottom: 1rem;">✅ Fixed Vulnerabilities (27)</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                                <div style="text-align: center; padding: 1rem; border-left: 3px solid #dc2626; background: #fef2f2;">
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: #dc2626;">1</div>
+                                    <div style="font-size: 0.8rem; color: #64748b;">CRITICAL</div>
+                                </div>
+                                <div style="text-align: center; padding: 1rem; border-left: 3px solid #ea580c; background: #fff7ed;">
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: #ea580c;">7</div>
+                                    <div style="font-size: 0.8rem; color: #64748b;">HIGH</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- New Section -->
+                        <div>
+                            <h3 style="color: #d97706; margin-bottom: 1rem;">🆕 New Vulnerabilities (15)</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                                <div style="text-align: center; padding: 1rem; border-left: 3px solid #dc2626; background: #fef2f2;">
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: #dc2626;">6</div>
+                                    <div style="font-size: 0.8rem; color: #64748b;">CRITICAL</div>
+                                </div>
+                                <div style="text-align: center; padding: 1rem; border-left: 3px solid #ea580c; background: #fff7ed;">
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: #ea580c;">5</div>
+                                    <div style="font-size: 0.8rem; color: #64748b;">HIGH</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Suppressions Section -->
+                        <div>
+                            <h3 style="color: #6366f1; margin-bottom: 1rem;">📊 Suppression Changes</h3>
+                            <div style="background: #f8fafc; padding: 1rem; border-radius: 8px;">
+                                <div style="margin-bottom: 0.5rem;"><strong>Added:</strong> 25 suppressions</div>
+                                <div><strong>Removed:</strong> 0 suppressions</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="metrics-highlight">27 Fixed Issues</div>
+            <div class="metrics-highlight">15 New Vulnerabilities</div>
+            <div class="metrics-highlight">Suppression Tracking</div>
+        </div>
+
+        <!-- Slide 6: Export Features -->
+        <div class="slide" data-slide="6">
+            <div class="slide-number">6/7</div>
+            <h2>Export & Share</h2>
+            <p>Export reports as interactive HTML files, CSV data, or email summaries directly to your team. Everything works offline with no external dependencies.</p>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <span class="feature-icon">📄</span>
+                    <h3>Interactive HTML</h3>
+                    <p>Self-contained reports with full functionality</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">📊</span>
+                    <h3>CSV Export</h3>
+                    <p>Data-ready format for analysis</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">📧</span>
+                    <h3>Email Integration</h3>
+                    <p>Send summaries directly to your team</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">🔒</span>
+                    <h3>Privacy First</h3>
+                    <p>All processing happens in your browser</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: Call to Action -->
+        <div class="slide" data-slide="7">
+            <div class="slide-number">7/7</div>
+            <h1>Transform Your Security Reporting</h1>
+            <p>The OWASP Dependency Audit Tool is free, open-source, and ready to use.<br>No setup required - works directly in your browser.</p>
+            <div class="feature-grid" style="margin: 3rem 0;">
+                <div class="feature-card">
+                    <span class="feature-icon">🚀</span>
+                    <h3>Quick Start</h3>
+                    <p>Upload XML files and get instant reports</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">📈</span>
+                    <h3>Track Progress</h3>
+                    <p>Delta comparison shows security improvements</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">👥</span>
+                    <h3>Team Ready</h3>
+                    <p>Export and share with stakeholders</p>
+                </div>
+            </div>
+            <a href="https://github.com/annasalkovsky/OWASP" class="cta" target="_blank">
+                🚀 Get Started on GitHub
+            </a>
+            <p style="margin-top: 2rem; font-size: 1.1rem;">
+                <strong>github.com/annasalkovsky/OWASP</strong><br>
+                Live Demo: <strong>annasalkovsky.github.io/OWASP</strong>
+            </p>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn" id="prevBtn">⬅️ Previous</button>
+        <button class="btn" id="nextBtn">Next ➡️</button>
+        <button class="btn" id="restartBtn">🔄 Restart</button>
+    </div>
+
+    <script>
+        let currentSlide = 1;
+        const totalSlides = 7;
+        let autoPlay = true;
+        let autoPlayInterval;
+
+        const slides = document.querySelectorAll('.slide');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const autoPlayBtn = document.getElementById('autoPlayBtn');
+        const progressBar = document.getElementById('progressBar');
+
+        function updateSlide(slideNumber) {
+            slides.forEach(slide => {
+                slide.classList.remove('active');
+            });
+            
+            const targetSlide = document.querySelector(`[data-slide="${slideNumber}"]`);
+            if (targetSlide) {
+                targetSlide.classList.add('active');
+            }
+
+            // Update progress bar
+            const progress = (slideNumber / totalSlides) * 100;
+            progressBar.style.width = progress + '%';
+
+            // Update controls
+            prevBtn.disabled = slideNumber === 1;
+            nextBtn.disabled = slideNumber === totalSlides;
+
+            // Animate feature cards if present
+            setTimeout(() => {
+                const featureCards = targetSlide.querySelectorAll('.feature-card');
+                featureCards.forEach((card, index) => {
+                    setTimeout(() => {
+                        card.classList.add('animate');
+                    }, index * 200);
+                });
+
+                // Zoom screenshot containers
+                const screenshotContainer = targetSlide.querySelector('.screenshot-container');
+                if (screenshotContainer) {
+                    setTimeout(() => {
+                        screenshotContainer.classList.add('zoom');
+                    }, 300);
+                }
+            }, 100);
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides) {
+                currentSlide++;
+                updateSlide(currentSlide);
+            } else if (autoPlay) {
+                currentSlide = 1;
+                updateSlide(currentSlide);
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 1) {
+                currentSlide--;
+                updateSlide(currentSlide);
+            }
+        }
+
+        function restartDemo() {
+            currentSlide = 1;
+            updateSlide(currentSlide);
+            if (autoPlay) {
+                startAutoPlay();
+            }
+        }
+
+        function toggleAutoPlay() {
+            autoPlay = !autoPlay;
+            autoPlayBtn.textContent = autoPlay ? '⏸️ Auto Play' : '▶️ Auto Play';
+            
+            if (autoPlay) {
+                startAutoPlay();
+            } else {
+                clearInterval(autoPlayInterval);
+            }
+        }
+
+        function startAutoPlay() {
+            clearInterval(autoPlayInterval);
+            autoPlayInterval = setInterval(() => {
+                nextSlide();
+            }, 5000); // 5 seconds per slide
+        }
+
+        // Event listeners
+        nextBtn.addEventListener('click', () => {
+            nextSlide();
+            if (autoPlay) startAutoPlay(); // Reset timer
+        });
+
+        prevBtn.addEventListener('click', () => {
+            prevSlide();
+            if (autoPlay) startAutoPlay(); // Reset timer
+        });
+
+        restartBtn.addEventListener('click', restartDemo);
+        autoPlayBtn.addEventListener('click', toggleAutoPlay);
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowRight':
+                case ' ':
+                    e.preventDefault();
+                    nextSlide();
+                    if (autoPlay) startAutoPlay();
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    prevSlide();
+                    if (autoPlay) startAutoPlay();
+                    break;
+                case 'Home':
+                    e.preventDefault();
+                    restartDemo();
+                    break;
+                case 'p':
+                case 'P':
+                    e.preventDefault();
+                    toggleAutoPlay();
+                    break;
+            }
+        });
+
+        // Initialize
+        updateSlide(1);
+        startAutoPlay();
+
+        // Pause auto-play when user interacts
+        document.addEventListener('click', () => {
+            if (autoPlay) startAutoPlay();
+        });
+    </script>
+</body>
+</html>
