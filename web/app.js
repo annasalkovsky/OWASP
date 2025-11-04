@@ -23,21 +23,34 @@ let baselineDependencyXml = null;
 let baselineSuppressionsXml = null;
 let isDeltaMode = false;
 
-reportInput.addEventListener('change', e => { loadFile(e.target.files[0], xml => dependencyXml = xml, 'report-progress'); });
-suppressionsInput.addEventListener('change', e => { loadFile(e.target.files[0], xml => suppressionsXml = xml, 'suppressions-progress'); });
+reportInput.addEventListener('change', e => { 
+  loadFile(e.target.files[0], xml => {
+    dependencyXml = xml;
+    setUploadedState('report', true);
+  }, 'report-progress'); 
+});
+suppressionsInput.addEventListener('change', e => { 
+  loadFile(e.target.files[0], xml => {
+    suppressionsXml = xml;
+    setUploadedState('suppressions', true);
+  }, 'suppressions-progress'); 
+});
 baselineReportInput.addEventListener('change', e => { 
   loadFile(e.target.files[0], xml => {
     baselineDependencyXml = xml;
     console.log('Baseline report loaded:', !!baselineDependencyXml);
+    setUploadedState('baseline', true);
   }, 'baseline-progress'); 
 });
-baselineSuppressionsInput.addEventListener('change', e => { loadFile(e.target.files[0], xml => baselineSuppressionsXml = xml, 'baseline-suppressions-progress'); });
+baselineSuppressionsInput.addEventListener('change', e => { 
+  loadFile(e.target.files[0], xml => {
+    baselineSuppressionsXml = xml;
+    setUploadedState('baseline-suppressions', true);
+  }, 'baseline-suppressions-progress'); 
+});
 
-// Toggle uploaded visual state
-reportInput.addEventListener('change', () => setUploadedState('report', !!reportInput.files.length));
-suppressionsInput.addEventListener('change', () => setUploadedState('suppressions', !!suppressionsInput.files.length));
-baselineReportInput.addEventListener('change', () => setUploadedState('baseline', !!baselineReportInput.files.length));
-baselineSuppressionsInput.addEventListener('change', () => setUploadedState('baseline-suppressions', !!baselineSuppressionsInput.files.length));
+// Toggle uploaded visual state - now handled in loadFile callbacks
+// Removed immediate setUploadedState calls as they were causing timing issues
 
 // Delta mode toggle
 deltaToggle.addEventListener('change', () => {
@@ -100,22 +113,46 @@ document.addEventListener('DOMContentLoaded', () => {
   reportDrop.addEventListener(ev, e => {
     e.preventDefault();
     const f = e.dataTransfer.files && e.dataTransfer.files[0];
-    if(f){ reportInput.files = e.dataTransfer.files; loadFile(f, xml => dependencyXml = xml, 'report-progress'); setUploadedState('report', true); }
+    if(f){ 
+      reportInput.files = e.dataTransfer.files; 
+      loadFile(f, xml => {
+        dependencyXml = xml;
+        setUploadedState('report', true);
+      }, 'report-progress'); 
+    }
   });
   suppressionsDrop.addEventListener(ev, e => {
     e.preventDefault();
     const f = e.dataTransfer.files && e.dataTransfer.files[0];
-    if(f){ suppressionsInput.files = e.dataTransfer.files; loadFile(f, xml => suppressionsXml = xml, 'suppressions-progress'); setUploadedState('suppressions', true); }
+    if(f){ 
+      suppressionsInput.files = e.dataTransfer.files; 
+      loadFile(f, xml => {
+        suppressionsXml = xml;
+        setUploadedState('suppressions', true);
+      }, 'suppressions-progress'); 
+    }
   });
   baselineReportDrop?.addEventListener(ev, e => {
     e.preventDefault();
     const f = e.dataTransfer.files && e.dataTransfer.files[0];
-    if(f){ baselineReportInput.files = e.dataTransfer.files; loadFile(f, xml => baselineDependencyXml = xml, 'baseline-progress'); setUploadedState('baseline', true); }
+    if(f){ 
+      baselineReportInput.files = e.dataTransfer.files; 
+      loadFile(f, xml => {
+        baselineDependencyXml = xml;
+        setUploadedState('baseline', true);
+      }, 'baseline-progress'); 
+    }
   });
   baselineSuppressionsDrop?.addEventListener(ev, e => {
     e.preventDefault();
     const f = e.dataTransfer.files && e.dataTransfer.files[0];
-    if(f){ baselineSuppressionsInput.files = e.dataTransfer.files; loadFile(f, xml => baselineSuppressionsXml = xml, 'baseline-suppressions-progress'); setUploadedState('baseline-suppressions', true); }
+    if(f){ 
+      baselineSuppressionsInput.files = e.dataTransfer.files; 
+      loadFile(f, xml => {
+        baselineSuppressionsXml = xml;
+        setUploadedState('baseline-suppressions', true);
+      }, 'baseline-suppressions-progress'); 
+    }
   });
 });
 
@@ -245,23 +282,48 @@ generateBtn.addEventListener('click', () => {
 });
 
 function generateDeltaReport(){
-  // Parse current and baseline reports
-  const currentFindings = parseDependencyCheck(dependencyXml);
-  const baselineFindings = parseDependencyCheck(baselineDependencyXml);
+  console.log('generateDeltaReport called');
+  console.log('Dependencies:', { 
+    dependencyXml: !!dependencyXml, 
+    baselineDependencyXml: !!baselineDependencyXml,
+    suppressionsXml: !!suppressionsXml,
+    baselineSuppressionsXml: !!baselineSuppressionsXml 
+  });
   
-  // Parse suppressions
-  const currentSuppressions = suppressionsXml ? parseSuppressions(suppressionsXml) : [];
-  const baselineSuppressions = baselineSuppressionsXml ? parseSuppressions(baselineSuppressionsXml) : [];
-  
-  // Calculate delta
-  const delta = calculateDelta(currentFindings, baselineFindings, currentSuppressions, baselineSuppressions);
-  
-  // Render delta report
-  renderDeltaReport(delta);
-  
-  // Enable export buttons for delta reports
-  exportBtn.disabled = false;
-  emailBtn.disabled = false;
+  try {
+    // Parse current and baseline reports
+    console.log('Parsing current findings...');
+    const currentFindings = parseDependencyCheck(dependencyXml);
+    console.log('Current findings parsed:', currentFindings.length);
+    
+    console.log('Parsing baseline findings...');
+    const baselineFindings = parseDependencyCheck(baselineDependencyXml);
+    console.log('Baseline findings parsed:', baselineFindings.length);
+    
+    // Parse suppressions
+    console.log('Parsing suppressions...');
+    const currentSuppressions = suppressionsXml ? parseSuppressions(suppressionsXml) : [];
+    const baselineSuppressions = baselineSuppressionsXml ? parseSuppressions(baselineSuppressionsXml) : [];
+    console.log('Suppressions parsed:', { current: currentSuppressions.length, baseline: baselineSuppressions.length });
+    
+    // Calculate delta
+    console.log('Calculating delta...');
+    const delta = calculateDelta(currentFindings, baselineFindings, currentSuppressions, baselineSuppressions);
+    console.log('Delta calculated:', delta);
+    
+    // Render delta report
+    console.log('Rendering delta report...');
+    renderDeltaReport(delta);
+    console.log('Delta report rendered successfully');
+    
+    // Enable export buttons for delta reports
+    exportBtn.disabled = false;
+    emailBtn.disabled = false;
+    
+  } catch (error) {
+    console.error('Error in generateDeltaReport:', error);
+    alert('Error generating delta report: ' + error.message + '\n\nPlease check the console for more details.');
+  }
 }
 
 function calculateDelta(current, baseline, currentSuppressions, baselineSuppressions){
