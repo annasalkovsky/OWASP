@@ -1,19 +1,115 @@
-# OWASP Dependency Audit Tool (Static)
+# OWASP Dependency Audit Tool
 
-This is a minimal static web app that generates an audit-ready report from an
-OWASP dependency-check report XML and a suppressions XML.
+A professional web-based tool that transforms OWASP dependency-check XML reports into beautiful, audit-ready security reports with powerful delta comparison capabilities.
 
-How it works:
-- Upload your `dependency-check-report.xml` (the OWASP dependency-check output)
-- Upload your `suppressions.xml` (optional)
-- Click "Generate Audit Report"
-- The page parses and shows counts and a table of unsuppressed vulnerabilities
-- Use "Export Report" to save a single HTML file to share with managers
+## 🚀 **Live Demo**
+- **Try it now**: [annasalkovsky.github.io/OWASP](https://annasalkovsky.github.io/OWASP/)
+- **Interactive Demo**: [View Demo Presentation](https://annasalkovsky.github.io/OWASP/demo/)
 
-Deploy:
-- This is a static site. You can host it on GitHub Pages, Netlify, Vercel, or any static host.
-- An example GitHub Actions workflow is included at `.github/workflows/deploy.yml` to deploy to GitHub Pages.
+## ✨ **Key Features**
 
-Notes:
-- This is a starting point. You may want to improve XML parsing robustness (support multiple XML shape variants),
-  add sorting, filtering, CSV/PDF export, and accessibility improvements.
+### 📊 **Beautiful Security Reports**
+- Color-coded vulnerability severity levels (Critical, High, Medium, Low)
+- Interactive filtering and search capabilities
+- Detailed CVSS score integration
+- Professional audit-ready formatting
+
+### 🔄 **Delta Comparison Mode**
+- **Track Progress**: Compare current vs baseline reports
+- **Fixed Vulnerabilities**: See exactly what issues were resolved
+- **New Vulnerabilities**: Identify newly discovered security issues
+- **Suppression Changes**: Monitor configuration modifications
+
+### 📤 **Export & Sharing**
+- **Interactive HTML Export**: Self-contained reports with full functionality
+- **CSV Export**: Data-ready format for analysis
+- **Email Integration**: Send summaries directly to your team
+- **Offline Capable**: All processing happens in your browser
+
+### 🛡️ **Privacy & Security**
+- **Client-side Processing**: Your data never leaves your browser
+- **No External Dependencies**: Works completely offline
+- **OWASP Standards**: Built for OWASP dependency-check compliance
+
+## 🎯 **How It Works**
+
+1. **Upload Files**: Drag & drop your `dependency-check-report.xml` and optional `suppressions.xml`
+2. **Generate Report**: Click to create your professional security dashboard  
+3. **Delta Analysis** *(Optional)*: Enable delta mode and upload baseline files for comparison
+4. **Export & Share**: Download HTML reports, export CSV data, or email summaries
+
+## 🔧 **Delta Comparison Workflow**
+
+Perfect for tracking security improvements across development cycles:
+
+```
+Baseline Scan → Apply Fixes → New Scan → Delta Report
+     ↓              ↓            ↓          ↓
+  Upload as     Fix Issues    Upload as   See What's
+  Baseline                    Current     Fixed/New
+```
+
+## 📁 **File Structure**
+
+```
+├── web/
+│   ├── index.html          # Main application
+│   ├── app.js             # Core logic & delta comparison
+│   └── styles.css         # Professional styling
+├── demo/
+│   ├── index.html         # Interactive demo presentation
+│   └── README.md         # Demo documentation
+├── .github/workflows/
+│   └── deploy.yml        # Auto-deployment to GitHub Pages
+└── README.md             # This file
+```
+
+## 🚀 **Quick Start**
+
+### Option 1: Use Online (Recommended)
+Visit [annasalkovsky.github.io/OWASP](https://annasalkovsky.github.io/OWASP/) - no setup required!
+
+### Option 2: Local Development
+```bash
+git clone https://github.com/annasalkovsky/OWASP.git
+cd OWASP
+# Open web/index.html in your browser
+```
+
+### Option 3: Deploy Your Own
+- Fork this repository
+- Enable GitHub Pages in your repository settings
+- Point to the `web/` folder as your source
+
+## 📋 **Sample Workflow**
+
+1. **Run OWASP Dependency Check** on your project
+2. **Generate XML Report**: `dependency-check-report.xml`
+3. **Create Suppressions** *(if needed)*: `suppressions.xml`
+4. **Upload to Tool**: Drag files to upload zones
+5. **Generate Report**: Professional dashboard with metrics
+6. **Export Results**: Share with stakeholders
+7. **Track Progress**: Use delta mode for continuous monitoring
+
+## 🎬 **Demo & Showcase**
+
+- **Interactive Demo**: [View the presentation](https://annasalkovsky.github.io/OWASP/demo/)
+- **Live Tool**: [Try with your own files](https://annasalkovsky.github.io/OWASP/)
+
+## 🤝 **Contributing**
+
+This is an open-source project. Contributions welcome!
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes  
+4. Push to the branch
+5. Open a Pull Request
+
+## 📜 **License**
+
+This project is open source and available under the MIT License.
+
+## 🙋‍♀️ **About**
+
+Created by Anna Salkovsky at iMD-soft for streamlined security vulnerability reporting and delta analysis. Perfect for development teams who need professional, audit-ready security reports with progress tracking capabilities.
