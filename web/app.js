@@ -268,10 +268,10 @@ generateBtn.addEventListener('click', () => {
     }
     generateDeltaReport();
   } else {
-    const findings = parseDependencyCheck(dependencyXml);
+    const result = parseDependencyCheck(dependencyXml);
     const suppressedRules = suppressionsXml ? parseSuppressions(suppressionsXml) : [];
-    const unsuppressed = filterSuppressions(findings, suppressedRules);
-    renderReport(unsuppressed);
+    const unsuppressed = filterSuppressions(result.vulnerabilities, suppressedRules);
+    renderReport(unsuppressed, result.metadata);
   }
   
   exportBtn.disabled = false;
@@ -302,18 +302,18 @@ function generateDeltaReport(){
     
     // Parse current and baseline reports
     console.log('Parsing current findings...');
-    const currentFindings = parseDependencyCheck(dependencyXml);
-    console.log('Current findings parsed:', currentFindings?.length || 'undefined');
+    const currentResult = parseDependencyCheck(dependencyXml);
+    console.log('Current findings parsed:', currentResult.vulnerabilities?.length || 'undefined');
     
-    if (!Array.isArray(currentFindings)) {
+    if (!Array.isArray(currentResult.vulnerabilities)) {
       throw new Error('Failed to parse current dependency check - invalid XML format');
     }
     
     console.log('Parsing baseline findings...');
-    const baselineFindings = parseDependencyCheck(baselineDependencyXml);
-    console.log('Baseline findings parsed:', baselineFindings?.length || 'undefined');
+    const baselineResult = parseDependencyCheck(baselineDependencyXml);
+    console.log('Baseline findings parsed:', baselineResult.vulnerabilities?.length || 'undefined');
     
-    if (!Array.isArray(baselineFindings)) {
+    if (!Array.isArray(baselineResult.vulnerabilities)) {
       throw new Error('Failed to parse baseline dependency check - invalid XML format');
     }
     
@@ -333,7 +333,7 @@ function generateDeltaReport(){
     
     // Calculate delta with validation
     console.log('Calculating delta...');
-    const delta = calculateDelta(currentFindings, baselineFindings, currentSuppressions, baselineSuppressions);
+    const delta = calculateDelta(currentResult.vulnerabilities, baselineResult.vulnerabilities, currentSuppressions, baselineSuppressions);
     console.log('Delta calculated:', delta);
     
     if (!delta) {
@@ -342,7 +342,7 @@ function generateDeltaReport(){
     
     // Render delta report
     console.log('Rendering delta report...');
-    renderDeltaReport(delta);
+    renderDeltaReport(delta, currentResult.metadata);
     console.log('Delta report rendered successfully');
     
     // Enable export buttons for delta reports
@@ -1129,7 +1129,7 @@ function generateBeautifulReportHTML(reportData) {
         
         <div class="content">
             <h2 class="section-title">
-                ${isDelta ? 'New Vulnerabilities Detected' : 'Security Vulnerabilities'} 
+                ${isDelta ? 'Unhandled Vulnerabilities Detected' : 'Security Vulnerabilities'} 
                 (${totalVulns} total)
             </h2>
             
@@ -1209,7 +1209,7 @@ emailBtn.addEventListener('click', async () => {
 🔄 DELTA ANALYSIS RESULTS:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ Fixed Vulnerabilities: ${fixedCount}
-🆕 New Vulnerabilities: ${newCount}  
+🆕 Unhandled Vulnerabilities: ${newCount}  
 📊 Current Total: ${totalCount}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -1220,7 +1220,7 @@ to show what vulnerabilities were fixed and what new ones were discovered.
       // Extract new vulnerabilities details
       const newVulnTable = doc.querySelector('#new-vuln-table');
       if (newVulnTable) {
-        vulnerabilityList = '\n🚨 NEW VULNERABILITIES REQUIRING ATTENTION:\n';
+        vulnerabilityList = '\n🚨 UNHANDLED VULNERABILITIES REQUIRING ATTENTION:\n';
         vulnerabilityList += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
         const rows = newVulnTable.querySelectorAll('tbody tr.vuln-row');
         rows.forEach((row, index) => {
@@ -1365,7 +1365,7 @@ Anna Salkovsky`;
 function parseDependencyCheck(xml){
   if (!xml) {
     console.error('parseDependencyCheck: xml parameter is null/undefined');
-    return [];
+    return { vulnerabilities: [], metadata: {} };
   }
   
   // Check if XML has parser errors
@@ -1376,7 +1376,31 @@ function parseDependencyCheck(xml){
   }
   
   const deps = [];
+  const metadata = {};
+  
   try {
+    // Extract metadata from scan info
+    const scanInfo = xml.querySelector('scanInfo');
+    if (scanInfo) {
+      metadata.version = safeText(scanInfo.querySelector('engineVersion'));
+      metadata.scanDate = safeText(scanInfo.querySelector('reportDate'));
+    }
+    
+    // Extract project info
+    const projectInfo = xml.querySelector('projectInfo');
+    if (projectInfo) {
+      metadata.projectName = safeText(projectInfo.querySelector('name'));
+    }
+    
+    // Extract summary statistics
+    const summary = xml.querySelector('summary');
+    if (summary) {
+      metadata.dependenciesScanned = parseInt(safeText(summary.querySelector('dependencies')) || '0');
+      metadata.vulnerableDependencies = parseInt(safeText(summary.querySelector('vulnerableDependencies')) || '0');
+      metadata.vulnerabilitiesFound = parseInt(safeText(summary.querySelector('vulnerabilitiesFound')) || '0');
+      metadata.vulnerabilitiesSuppressed = parseInt(safeText(summary.querySelector('vulnerabilitiesSuppressed')) || '0');
+    }
+    
     // dependency elements
     const depEls = Array.from(xml.getElementsByTagName('dependency'));
     console.log(`Found ${depEls.length} dependency elements`);
@@ -1402,7 +1426,9 @@ function parseDependencyCheck(xml){
     });
     
     console.log(`Parsed ${deps.length} vulnerabilities from dependency check XML`);
-    return deps;
+    console.log('Extracted metadata:', metadata);
+    
+    return { vulnerabilities: deps, metadata };
     
   } catch (error) {
     console.error('Error parsing dependency check XML:', error);
@@ -1518,7 +1544,7 @@ function severityCounts(items){
   return counts;
 }
 
-function renderDeltaReport(delta){
+function renderDeltaReport(delta, metadata = {}){
   reportArea.hidden = false;
 
   // Extra defensive logging to help diagnose issues
@@ -1559,13 +1585,28 @@ function renderDeltaReport(delta){
         <p style="font-size: 1.1rem; opacity: 0.9; margin: 0;">Generated: ${new Date().toLocaleString()}</p>
       </div>
 
+      ${metadata.projectName || metadata.version || metadata.scanDate ? `
+      <div class="metadata-section" style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; margin: 0 2rem; border-left: 4px solid #6366f1;">
+        <h3 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1.1rem;">📋 Scan Information</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
+          ${metadata.projectName ? `<div><strong>Project:</strong> ${escapeHtml(metadata.projectName)}</div>` : ''}
+          ${metadata.version ? `<div><strong>Dependency-check version:</strong> ${escapeHtml(metadata.version)}</div>` : ''}
+          ${metadata.scanDate ? `<div><strong>Report Generated On:</strong> ${escapeHtml(metadata.scanDate)}</div>` : ''}
+          ${metadata.dependenciesScanned ? `<div><strong>Dependencies Scanned:</strong> ${metadata.dependenciesScanned}${metadata.dependenciesScanned ? ' (' + (metadata.dependenciesScanned - (metadata.vulnerableDependencies || 0)) + ' unique)' : ''}</div>` : ''}
+          ${metadata.vulnerableDependencies !== undefined ? `<div><strong>Vulnerable Dependencies:</strong> ${metadata.vulnerableDependencies}</div>` : ''}
+          ${metadata.vulnerabilitiesFound !== undefined ? `<div><strong>Vulnerabilities Found:</strong> ${metadata.vulnerabilitiesFound}</div>` : ''}
+          ${metadata.vulnerabilitiesSuppressed !== undefined ? `<div><strong>Vulnerabilities Suppressed:</strong> ${metadata.vulnerabilitiesSuppressed}</div>` : ''}
+        </div>
+      </div>
+      ` : ''}
+
       <div class="delta-content" style="padding: 2rem;">
         <div class="delta-summary-section" style="background: #f1f5f9; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
           <h2 style="color: #1e293b; margin: 0 0 1rem 0;">📊 Analysis Summary</h2>
           <p style="margin: 0; color: #64748b;">
             <strong>Fixed:</strong> ${window.lastDeltaData.fixedCount} vulnerabilities &nbsp;|&nbsp;
-            <strong>New (Unsuppressed):</strong> ${totalNewUnsuppressed} &nbsp;|&nbsp;
-            <strong>New (Suppressed):</strong> ${suppressedNewCount} &nbsp;|&nbsp;
+            <strong>Unhandled (Unsuppressed):</strong> ${totalNewUnsuppressed} &nbsp;|&nbsp;
+            <strong>Unhandled (Suppressed):</strong> ${suppressedNewCount} &nbsp;|&nbsp;
             <strong>Current Total:</strong> ${Array.isArray(delta.currentUnsuppressed) ? delta.currentUnsuppressed.length : 0} vulnerabilities
           </p>
         </div>
@@ -1597,7 +1638,7 @@ function renderDeltaReport(delta){
           
           <div class="delta-stat-card" style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; border-top: 4px solid #f59e0b;">
             <h3 style="color: #f59e0b; margin: 0 0 1rem 0; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-              🆕 New Vulnerabilities (${delta.newUnsuppressedCount})
+              ⚠️ Unhandled Vulnerabilities (${delta.newUnsuppressedCount})
             </h3>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
               <div style="text-align: center; padding: 1rem; background: #fef2f2; border-radius: 6px; border-left: 3px solid #dc2626;">
@@ -1669,7 +1710,7 @@ function renderDeltaReport(delta){
   ${totalNewUnsuppressed > 0 ? `
         <div class="delta-section" style="margin: 2rem 0;">
           <div class="section-header" style="background: #fff7ed; color: #9a3412; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #f59e0b; font-weight: bold; font-size: 1.2rem;">
-            🆕 New Vulnerabilities (${totalNewUnsuppressed})
+            ⚠️ Unhandled Vulnerabilities (${totalNewUnsuppressed})
           </div>
           <div style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             <table class="table" id="new-vuln-table" style="width: 100%; border-collapse: collapse;">
@@ -1723,7 +1764,7 @@ function renderDeltaReport(delta){
         ` : `
         <div class="delta-section" style="margin: 2rem 0;">
           <div style="text-align: center; padding: 3rem; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
-            <h3 style="color: #065f46; margin: 0 0 1rem 0;">✅ No New Vulnerabilities Found</h3>
+            <h3 style="color: #065f46; margin: 0 0 1rem 0;">✅ No Unhandled Vulnerabilities Found</h3>
             <p style="color: #059669; margin: 0;">All current vulnerabilities are either resolved or already known from the baseline.</p>
           </div>
         </div>
@@ -1760,15 +1801,31 @@ function renderDeltaReport(delta){
   }
 }
 
-function renderReport(items){
+function renderReport(items, metadata = {}){
   const counts = severityCounts(items);
   const total = items.length;
+  const vulnerableDependencies = metadata.vulnerableDependencies || total;
   reportArea.hidden = false;
   reportArea.innerHTML = `
     <div class="report-header">
       <h2>OWASP Dependency Check</h2>
-      <div class="small">Generated: ${new Date().toLocaleString()} &nbsp; Total Vulnerabilities: <strong>${total}</strong></div>
+      <div class="small">Generated: ${new Date().toLocaleString()} &nbsp; Vulnerable Dependencies: <strong>${vulnerableDependencies}</strong></div>
     </div>
+
+    ${metadata.projectName || metadata.version || metadata.scanDate ? `
+    <div class="metadata-section" style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; margin: 1rem 0; border-left: 4px solid #6366f1;">
+      <h3 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1.1rem;">📋 Scan Information</h3>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
+        ${metadata.projectName ? `<div><strong>Project:</strong> ${escapeHtml(metadata.projectName)}</div>` : ''}
+        ${metadata.version ? `<div><strong>Dependency-check version:</strong> ${escapeHtml(metadata.version)}</div>` : ''}
+        ${metadata.scanDate ? `<div><strong>Report Generated On:</strong> ${escapeHtml(metadata.scanDate)}</div>` : ''}
+        ${metadata.dependenciesScanned ? `<div><strong>Dependencies Scanned:</strong> ${metadata.dependenciesScanned}${metadata.dependenciesScanned ? ' (' + (metadata.dependenciesScanned - vulnerableDependencies) + ' unique)' : ''}</div>` : ''}
+        ${metadata.vulnerableDependencies !== undefined ? `<div><strong>Vulnerable Dependencies:</strong> ${metadata.vulnerableDependencies}</div>` : ''}
+        ${metadata.vulnerabilitiesFound !== undefined ? `<div><strong>Vulnerabilities Found:</strong> ${metadata.vulnerabilitiesFound}</div>` : ''}
+        ${metadata.vulnerabilitiesSuppressed !== undefined ? `<div><strong>Vulnerabilities Suppressed:</strong> ${metadata.vulnerabilitiesSuppressed}</div>` : ''}
+      </div>
+    </div>
+    ` : ''}
 
     <div class="report-controls" style="display:flex;justify-content:space-between;align-items:center;margin:16px 0;gap:12px">
       <div style="display:flex;gap:8px;align-items:center">
@@ -2023,7 +2080,7 @@ function generateDeltaCSV(delta){
   rows.push([]);
   rows.push(['SUMMARY', '', '', '', '', '']);
   rows.push(['Fixed Vulnerabilities', delta.fixedCount.toString(), '', '', '', '']);
-  rows.push(['New Vulnerabilities', delta.newUnsuppressedCount.toString(), '', '', '', '']);
+  rows.push(['Unhandled Vulnerabilities', delta.newUnsuppressedCount.toString(), '', '', '', '']);
   rows.push(['Suppressions Added', delta.suppressionChanges.added.length.toString(), '', '', '', '']);
   rows.push(['Suppressions Removed', delta.suppressionChanges.removed.length.toString(), '', '', '', '']);
   rows.push(['Current Total Vulnerabilities', delta.currentUnsuppressed.length.toString(), '', '', '', '']);
