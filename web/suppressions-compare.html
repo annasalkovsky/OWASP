@@ -447,24 +447,165 @@
         }
 
         function exportComparison() {
-            // Create a simple text export of the comparison
-            const added = document.getElementById('added-count').textContent;
-            const removed = document.getElementById('removed-count').textContent;
-            const unchanged = document.getElementById('unchanged-count').textContent;
+            if (!originalSuppressions || !updatedSuppressions) {
+                showError('Please perform a comparison first.');
+                return;
+            }
 
-            const exportContent = `OWASP Suppressions Comparison Report
-Generated: ${new Date().toLocaleString()}
+            // Get the comparison data
+            const comparison = performComparison(originalSuppressions, updatedSuppressions);
+            const { added, removed, unchanged } = comparison;
 
-SUMMARY:
-- Added Suppressions: ${added}
-- Removed Suppressions: ${removed}
-- Unchanged Suppressions: ${unchanged}
-- Total in Updated File: ${document.getElementById('total-count').textContent}
+            // Create beautiful HTML export with inline CSS
+            const exportHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OWASP Suppressions Comparison Report</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6; 
+            color: #1e293b; 
+            background: #f8fafc;
+            padding: 2rem;
+        }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 2rem; text-align: center; }
+        .header h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        .header p { font-size: 1.1rem; opacity: 0.9; }
+        .content { padding: 2rem; }
+        .summary { background: #f1f5f9; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; }
+        .summary h2 { color: #1e293b; margin-bottom: 1rem; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 2rem 0; }
+        .stat-card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; border-top: 4px solid #6366f1; }
+        .stat-number { font-size: 2.5rem; font-weight: bold; margin-bottom: 0.5rem; }
+        .stat-label { color: #64748b; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .added-card { border-top-color: #10b981; }
+        .added-card .stat-number { color: #10b981; }
+        .removed-card { border-top-color: #ef4444; }
+        .removed-card .stat-number { color: #ef4444; }
+        .unchanged-card { border-top-color: #64748b; }
+        .unchanged-card .stat-number { color: #64748b; }
+        .section { margin: 2rem 0; }
+        .section-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; padding: 1rem; border-radius: 8px; font-weight: bold; font-size: 1.2rem; }
+        .added-header { background: #ecfdf5; color: #065f46; border-left: 4px solid #10b981; }
+        .removed-header { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
+        .unchanged-header { background: #f8fafc; color: #374151; border-left: 4px solid #64748b; }
+        .suppression-item { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.5rem; margin: 1rem 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .suppression-notes { background: #f8fafc; padding: 1rem; border-radius: 6px; margin-bottom: 1rem; border-left: 3px solid #6366f1; }
+        .suppression-rules { display: grid; gap: 0.5rem; }
+        .rule-item { display: flex; align-items: center; gap: 1rem; padding: 0.75rem; background: #f8fafc; border-radius: 6px; }
+        .rule-type { font-weight: bold; color: #374151; min-width: 120px; }
+        .rule-value { font-family: 'Courier New', monospace; background: #e2e8f0; padding: 0.25rem 0.5rem; border-radius: 4px; flex: 1; }
+        .rule-regex { background: #fbbf24; color: #92400e; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+        .footer { background: #f1f5f9; padding: 1.5rem; text-align: center; color: #64748b; border-top: 1px solid #e2e8f0; }
+        .no-items { text-align: center; padding: 2rem; color: #64748b; font-style: italic; }
+        h3 { margin: 1.5rem 0 1rem 0; color: #1e293b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 OWASP Suppressions Comparison Report</h1>
+            <p>Generated: ${new Date().toLocaleString()}</p>
+        </div>
+        
+        <div class="content">
+            <div class="summary">
+                <h2>📊 Comparison Summary</h2>
+                <p><strong>Compared:</strong> ${originalSuppressions.length} original suppressions with ${updatedSuppressions.length} updated suppressions</p>
+            </div>
 
-${resultsArea.innerHTML}
-`;
+            <div class="stats-grid">
+                <div class="stat-card added-card">
+                    <div class="stat-number">${added.length}</div>
+                    <div class="stat-label">Added Suppressions</div>
+                </div>
+                <div class="stat-card removed-card">
+                    <div class="stat-number">${removed.length}</div>
+                    <div class="stat-label">Removed Suppressions</div>
+                </div>
+                <div class="stat-card unchanged-card">
+                    <div class="stat-number">${unchanged.length}</div>
+                    <div class="stat-label">Unchanged Suppressions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${updatedSuppressions.length}</div>
+                    <div class="stat-label">Total in Updated File</div>
+                </div>
+            </div>
 
-            const blob = new Blob([exportContent], { type: 'text/html' });
+            ${added.length > 0 ? `
+            <div class="section">
+                <div class="section-header added-header">
+                    ➕ Added Suppressions (${added.length})
+                </div>
+                ${added.map(suppression => generateSuppressionHtml(suppression)).join('')}
+            </div>
+            ` : ''}
+
+            ${removed.length > 0 ? `
+            <div class="section">
+                <div class="section-header removed-header">
+                    ➖ Removed Suppressions (${removed.length})
+                </div>
+                ${removed.map(suppression => generateSuppressionHtml(suppression)).join('')}
+            </div>
+            ` : ''}
+
+            ${unchanged.length > 0 ? `
+            <div class="section">
+                <div class="section-header unchanged-header">
+                    ⚪ Unchanged Suppressions (${unchanged.length})
+                </div>
+                <div class="no-items">Unchanged suppressions are hidden in export for brevity. Total: ${unchanged.length} items.</div>
+            </div>
+            ` : ''}
+
+            ${added.length === 0 && removed.length === 0 ? `
+            <div class="no-items">
+                <h3>✅ No Changes Detected</h3>
+                <p>The suppressions files are identical.</p>
+            </div>
+            ` : ''}
+        </div>
+
+        <div class="footer">
+            <p>Generated by OWASP Suppressions Comparison Tool | <strong>github.com/annasalkovsky/OWASP</strong></p>
+        </div>
+    </div>
+</body>
+</html>`;
+
+            function generateSuppressionHtml(suppression) {
+                const notesHtml = suppression.notes ? `
+                    <div class="suppression-notes">
+                        <strong>Notes:</strong> ${escapeHtml(suppression.notes)}
+                    </div>
+                ` : '';
+
+                const rulesHtml = suppression.rules.map(rule => `
+                    <div class="rule-item">
+                        <div class="rule-type">${escapeHtml(rule.type)}</div>
+                        <div class="rule-value">${escapeHtml(rule.value)}</div>
+                        ${rule.regex ? '<div class="rule-regex">REGEX</div>' : ''}
+                    </div>
+                `).join('');
+
+                return `
+                    <div class="suppression-item">
+                        ${notesHtml}
+                        <div class="suppression-rules">
+                            ${rulesHtml}
+                        </div>
+                    </div>
+                `;
+            }
+
+            const blob = new Blob([exportHtml], { type: 'text/html' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
