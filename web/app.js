@@ -1831,10 +1831,52 @@ function renderDeltaReport(delta, metadata = {}){
   }
 }
 
+function groupVulnerabilitiesByDependency(items) {
+  const dependencyMap = new Map();
+  
+  items.forEach(vuln => {
+    const file = vuln.file || 'Unknown';
+    if (!dependencyMap.has(file)) {
+      dependencyMap.set(file, {
+        file: file,
+        vulnerabilities: [],
+        highestSeverity: 'LOW',
+        totalVulns: 0,
+        severityCounts: { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 }
+      });
+    }
+    
+    const dep = dependencyMap.get(file);
+    dep.vulnerabilities.push(vuln);
+    dep.totalVulns++;
+    
+    // Count by severity
+    const severity = (vuln.severity || 'LOW').toUpperCase();
+    if (dep.severityCounts[severity] !== undefined) {
+      dep.severityCounts[severity]++;
+    }
+    
+    // Track highest severity
+    const severityRank = { 'CRITICAL': 4, 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1 };
+    if (severityRank[severity] > severityRank[dep.highestSeverity]) {
+      dep.highestSeverity = severity;
+    }
+  });
+  
+  return Array.from(dependencyMap.values()).sort((a, b) => {
+    const severityRank = { 'CRITICAL': 4, 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1 };
+    return severityRank[b.highestSeverity] - severityRank[a.highestSeverity];
+  });
+}
+
 function renderReport(items, metadata = {}){
   const counts = severityCounts(items);
   const total = items.length;
   const vulnerableDependencies = metadata.vulnerableDependencies || total;
+  
+  // Group vulnerabilities by dependency/file
+  const groupedDeps = groupVulnerabilitiesByDependency(items);
+  
   reportArea.hidden = false;
   reportArea.innerHTML = `
     <div class="report-header">
@@ -1867,7 +1909,7 @@ function renderReport(items, metadata = {}){
           <option value="MEDIUM">Medium</option>
           <option value="LOW">Low</option>
         </select>
-        <input id="search-filter" placeholder="Search vulnerability or file" style="padding:8px;border-radius:6px;border:1px solid #e6e9ef;min-width:220px;margin-left:8px">
+        <input id="search-filter" placeholder="Search dependency or file" style="padding:8px;border-radius:6px;border:1px solid #e6e9ef;min-width:220px;margin-left:8px">
         <button id="reset-filters" class="btn secondary" style="padding:8px 12px;margin-left:8px">Reset</button>
       </div>
       <div id="summary-chart-container" style="min-width:260px"></div>
@@ -1892,36 +1934,44 @@ function renderReport(items, metadata = {}){
       </div>
     </div>
 
-    <h3>Unsuppressed Vulnerabilities</h3>
+    <h3>Vulnerable Dependencies (${groupedDeps.length})</h3>
     <table class="table" id="vuln-table">
-      <thead><tr><th>#</th><th>VULNERABILITY</th><th>SEVERITY</th><th>CVSS SCORE</th><th>DESCRIPTION</th><th>FILE</th></tr></thead>
+      <thead><tr><th>#</th><th>DEPENDENCY</th><th>HIGHEST SEVERITY</th><th>VULNERABILITIES</th><th>BREAKDOWN</th><th>FILE</th></tr></thead>
       <tbody>
-          ${items.map((it,idx) => `
+          ${groupedDeps.map((dep,idx) => `
             <tr class="vuln-row" data-idx="${idx}">
               <td>${idx+1}</td>
-              <td><a href="#" onclick="return false">${escapeHtml(it.name)}</a></td>
-              <td>${renderBadge(it.severity)}</td>
-              <td>${renderCvss(it.cvss)}</td>
-              <td>${escapeHtml(truncate(it.description,240))}</td>
-              <td>${escapeHtml(it.file)}</td>
+              <td><a href="#" onclick="return false">${escapeHtml(dep.file.split('/').pop() || dep.file)}</a></td>
+              <td>${renderBadge(dep.highestSeverity)}</td>
+              <td><strong>${dep.totalVulns}</strong></td>
+              <td style="font-size: 0.9rem;">
+                ${dep.severityCounts.CRITICAL > 0 ? `<span style="color: #dc2626;">C:${dep.severityCounts.CRITICAL}</span> ` : ''}
+                ${dep.severityCounts.HIGH > 0 ? `<span style="color: #ea580c;">H:${dep.severityCounts.HIGH}</span> ` : ''}
+                ${dep.severityCounts.MEDIUM > 0 ? `<span style="color: #d97706;">M:${dep.severityCounts.MEDIUM}</span> ` : ''}
+                ${dep.severityCounts.LOW > 0 ? `<span style="color: #059669;">L:${dep.severityCounts.LOW}</span>` : ''}
+              </td>
+              <td style="font-family: monospace; font-size: 0.85rem; max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(dep.file)}</td>
             </tr>
             <tr class="vuln-details" id="details-${idx}">
               <td colspan="6">
                 <div class="vuln-details-panel" id="panel-${idx}">
-                  <div class="vuln-details-grid">
-                    <div>
-                      <h4 style="margin:0 0 8px 0">${escapeHtml(it.name)}</h4>
-                      <div class="vuln-meta">
-                        <div><strong>Severity:</strong> ${escapeHtml(it.severity)}</div>
-                        <div><strong>CVSS:</strong> ${escapeHtml(it.cvss || 'N/A')}</div>
-                        <div style="margin-top:8px">${escapeHtml(it.description)}</div>
-                      </div>
-                    </div>
-                    <div>
-                      <div style="background:#f8fafc;padding:12px;border-radius:8px">
-                        <div class="small" style="margin-bottom:8px">File</div>
-                        <div style="font-weight:600">${escapeHtml(it.file)}</div>
-                      </div>
+                  <div style="padding: 1rem;">
+                    <h4 style="margin: 0 0 1rem 0; color: #1e293b;">Vulnerabilities in ${escapeHtml(dep.file)}</h4>
+                    <div style="display: grid; gap: 1rem;">
+                      ${dep.vulnerabilities.map((vuln, vIdx) => `
+                        <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem; background: #fafafa;">
+                          <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 1rem; align-items: start; margin-bottom: 0.5rem;">
+                            <div>
+                              <div style="font-weight: 600; color: #374151; margin-bottom: 0.25rem;">${escapeHtml(vuln.name)}</div>
+                              <div style="font-size: 0.9rem; color: #64748b; line-height: 1.4;">${escapeHtml(vuln.description)}</div>
+                            </div>
+                            <div>${renderBadge(vuln.severity)}</div>
+                            <div style="text-align: right; font-size: 0.9rem; color: #64748b;">
+                              ${renderCvss(vuln.cvss)}
+                            </div>
+                          </div>
+                        </div>
+                      `).join('')}
                     </div>
                   </div>
                 </div>
@@ -1938,8 +1988,8 @@ function renderReport(items, metadata = {}){
   // Attach interactivity for filtering and expandable rows
   attachInteractivity();
 
-  // Initialize sorting and pagination
-  initTableControls(items);
+  // Initialize sorting and pagination with grouped dependencies
+  initTableControls(groupedDeps);
 }
 
 // --- Table controls: sorting, pagination, CSV export ---
@@ -1956,7 +2006,7 @@ function initTableControls(items){
   const headers = table.querySelectorAll('th');
   headers.forEach((th, idx)=>{
     th.addEventListener('click', ()=>{
-      const key = idx===1 ? 'name' : idx===2 ? 'severity' : idx===3 ? 'cvss' : null;
+      const key = idx===1 ? 'file' : idx===2 ? 'severity' : idx===3 ? 'totalVulns' : null;
       if(!key) return;
       if(sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = -1; }
       headers.forEach(h=>h.classList.remove('sort-asc','sort-desc'));
@@ -2002,15 +2052,29 @@ function renderTablePage(items, perPage, page, sortKey, sortDir){
   const sev = document.getElementById('severity-filter') ? document.getElementById('severity-filter').value : 'ALL';
   const q = document.getElementById('search-filter') ? document.getElementById('search-filter').value.trim().toLowerCase() : '';
   let list = items.filter(it=>{
-    if(sev !== 'ALL' && (it.severity||'').toUpperCase() !== sev) return false;
-    if(q && !((it.name||'').toLowerCase().includes(q) || (it.file||'').toLowerCase().includes(q))) return false;
+    // For grouped dependencies, check against highest severity
+    if(sev !== 'ALL' && (it.highestSeverity||'').toUpperCase() !== sev) return false;
+    // For grouped dependencies, search in file name
+    if(q && !(it.file||'').toLowerCase().includes(q)) return false;
     return true;
   });
 
   if(sortKey){
     list.sort((a,b)=>{
-      let va = (sortKey==='cvss') ? parseFloat(a.cvss)||0 : (a[sortKey]||'').toString().toLowerCase();
-      let vb = (sortKey==='cvss') ? parseFloat(b.cvss)||0 : (b[sortKey]||'').toString().toLowerCase();
+      let va, vb;
+      if(sortKey === 'severity') {
+        const severityRank = { 'CRITICAL': 4, 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1 };
+        va = severityRank[a.highestSeverity] || 0;
+        vb = severityRank[b.highestSeverity] || 0;
+      } else if(sortKey === 'file') {
+        va = (a.file||'').toString().toLowerCase();
+        vb = (b.file||'').toString().toLowerCase();
+      } else if(sortKey === 'totalVulns') {
+        va = a.totalVulns || 0;
+        vb = b.totalVulns || 0;
+      } else {
+        va = 0; vb = 0;
+      }
       if(va < vb) return -1 * sortDir; if(va > vb) return 1 * sortDir; return 0;
     });
   }
@@ -2018,18 +2082,47 @@ function renderTablePage(items, perPage, page, sortKey, sortDir){
   const start = (page-1)*perPage; const pageItems = list.slice(start, start+perPage);
   const tbody = document.querySelector('#vuln-table tbody');
   if(!tbody) return;
-  tbody.innerHTML = pageItems.map((it, idx)=>{
+  tbody.innerHTML = pageItems.map((dep, idx)=>{
     const globalIdx = start + idx;
     return `
       <tr class="vuln-row" data-idx="${globalIdx}">
         <td>${globalIdx+1}</td>
-        <td><a href="#" onclick="return false">${escapeHtml(it.name)}</a></td>
-        <td>${renderBadge(it.severity)}</td>
-        <td>${renderCvss(it.cvss)}</td>
-        <td>${escapeHtml(truncate(it.description,240))}</td>
-        <td>${escapeHtml(it.file)}</td>
+        <td><a href="#" onclick="return false">${escapeHtml(dep.file.split('/').pop() || dep.file)}</a></td>
+        <td>${renderBadge(dep.highestSeverity)}</td>
+        <td><strong>${dep.totalVulns}</strong></td>
+        <td style="font-size: 0.9rem;">
+          ${dep.severityCounts.CRITICAL > 0 ? `<span style="color: #dc2626;">C:${dep.severityCounts.CRITICAL}</span> ` : ''}
+          ${dep.severityCounts.HIGH > 0 ? `<span style="color: #ea580c;">H:${dep.severityCounts.HIGH}</span> ` : ''}
+          ${dep.severityCounts.MEDIUM > 0 ? `<span style="color: #d97706;">M:${dep.severityCounts.MEDIUM}</span> ` : ''}
+          ${dep.severityCounts.LOW > 0 ? `<span style="color: #059669;">L:${dep.severityCounts.LOW}</span>` : ''}
+        </td>
+        <td style="font-family: monospace; font-size: 0.85rem; max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(dep.file)}</td>
       </tr>
-      <tr class="vuln-details" id="details-${globalIdx}"><td colspan="6"><div class="vuln-details-panel" id="panel-${globalIdx}"><div class="vuln-details-grid"><div><h4 style="margin:0 0 8px 0">${escapeHtml(it.name)}</h4><div class="vuln-meta"><div><strong>Severity:</strong> ${escapeHtml(it.severity)}</div><div><strong>CVSS:</strong> ${escapeHtml(it.cvss||'N/A')}</div><div style="margin-top:8px">${escapeHtml(it.description)}</div></div></div><div><div style="background:#f8fafc;padding:12px;border-radius:8px"><div class="small" style="margin-bottom:8px">File</div><div style="font-weight:600">${escapeHtml(it.file)}</div></div></div></div></div></td></tr>`;
+      <tr class="vuln-details" id="details-${globalIdx}">
+        <td colspan="6">
+          <div class="vuln-details-panel" id="panel-${globalIdx}">
+            <div style="padding: 1rem;">
+              <h4 style="margin: 0 0 1rem 0; color: #1e293b;">Vulnerabilities in ${escapeHtml(dep.file)}</h4>
+              <div style="display: grid; gap: 1rem;">
+                ${dep.vulnerabilities.map((vuln, vIdx) => `
+                  <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem; background: #fafafa;">
+                    <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 1rem; align-items: start; margin-bottom: 0.5rem;">
+                      <div>
+                        <div style="font-weight: 600; color: #374151; margin-bottom: 0.25rem;">${escapeHtml(vuln.name)}</div>
+                        <div style="font-size: 0.9rem; color: #64748b; line-height: 1.4;">${escapeHtml(vuln.description)}</div>
+                      </div>
+                      <div>${renderBadge(vuln.severity)}</div>
+                      <div style="text-align: right; font-size: 0.9rem; color: #64748b;">
+                        ${renderCvss(vuln.cvss)}
+                      </div>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>`;
   }).join('');
 
   // re-attach interactivity to newly rendered rows
@@ -2049,27 +2142,30 @@ function generateCSVFromTable(){
 
 function generateCSVFromData(items){
   const rows = [];
-  rows.push(['#','Vulnerability','Severity','CVSS','Description','File']);
+  rows.push(['#','Dependency','Highest Severity','Total Vulnerabilities','Critical','High','Medium','Low','File Path']);
   
   // Apply current filters to get the same filtered data that would be shown
   const sev = document.getElementById('severity-filter') ? document.getElementById('severity-filter').value : 'ALL';
   const q = document.getElementById('search-filter') ? document.getElementById('search-filter').value.trim().toLowerCase() : '';
   
   let filteredItems = items.filter(it=>{
-    if(sev !== 'ALL' && (it.severity||'').toUpperCase() !== sev) return false;
-    if(q && !((it.name||'').toLowerCase().includes(q) || (it.file||'').toLowerCase().includes(q))) return false;
+    if(sev !== 'ALL' && (it.highestSeverity||'').toUpperCase() !== sev) return false;
+    if(q && !(it.file||'').toLowerCase().includes(q)) return false;
     return true;
   });
   
   // Export all filtered data (not just current page)
-  filteredItems.forEach((item, index) => {
+  filteredItems.forEach((dep, index) => {
     rows.push([
       (index + 1).toString(),
-      item.name || '',
-      item.severity || '',
-      item.cvss || '',
-      (item.description || '').replace(/\n/g, ' ').substring(0, 500), // Limit description length
-      item.file || ''
+      (dep.file.split('/').pop() || dep.file) || '',
+      dep.highestSeverity || '',
+      dep.totalVulns.toString(),
+      dep.severityCounts.CRITICAL.toString(),
+      dep.severityCounts.HIGH.toString(),
+      dep.severityCounts.MEDIUM.toString(),
+      dep.severityCounts.LOW.toString(),
+      dep.file || ''
     ].map(c => `"${c.replace(/"/g, '""')}"`));
   });
   
