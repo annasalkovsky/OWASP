@@ -464,125 +464,9 @@
             </div>
         </div>
 
-        <!-- Slide 6: Suppressions Comparison Tool -->
+        <!-- Slide 6: Export Features -->
         <div class="slide" data-slide="6">
-            <div class="slide-number">6/10</div>
-            <h2>🔍 Suppressions Comparison Tool</h2>
-            <p>Compare two suppressions XML files to track what security rules have been added or removed between versions.</p>
-            <div class="screenshot-container">
-                <!-- Real suppressions comparison interface -->
-                <div style="padding: 1.5rem; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; text-align: center;">
-                    <h1 style="font-size: 2.2rem; margin: 0 0 0.5rem 0;">OWASP Suppressions Comparison Tool</h1>
-                    <p style="margin: 0; opacity: 0.9; font-size: 1rem;">Compare two suppressions XML files to see what changed</p>
-                </div>
-                <div style="padding: 2rem; background: white; color: #1e293b;">
-                    <!-- Upload Interface -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
-                        <div style="border: 2px dashed #10b981; padding: 2rem; border-radius: 8px; text-align: center; background: #f0fdf4;">
-                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📁</div>
-                            <h3 style="margin: 0 0 1rem 0; color: #374151;">Original Suppressions</h3>
-                            <p style="margin: 0 0 1rem 0; color: #6b7280; font-size: 0.9rem;">Upload your baseline suppressions.xml file</p>
-                            <button style="background: #6b7280; color: white; padding: 0.5rem 1rem; border: none; border-radius: 6px; margin-bottom: 0.5rem;">Choose File</button>
-                            <p style="color: #10b981; font-weight: bold; margin: 0;">✓ Uploaded</p>
-                        </div>
-                        <div style="border: 2px dashed #10b981; padding: 2rem; border-radius: 8px; text-align: center; background: #f0fdf4;">
-                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📁</div>
-                            <h3 style="margin: 0 0 1rem 0; color: #374151;">Updated Suppressions</h3>
-                            <p style="margin: 0 0 1rem 0; color: #6b7280; font-size: 0.9rem;">Upload your new suppressions.xml file</p>
-                            <button style="background: #6b7280; color: white; padding: 0.5rem 1rem; border: none; border-radius: 6px; margin-bottom: 0.5rem;">Choose File</button>
-                            <p style="color: #10b981; font-weight: bold; margin: 0;">✓ Uploaded</p>
-                        </div>
-                    </div>
-                    
-                    <!-- Action Buttons -->
-                    <div style="text-align: center; margin-bottom: 2rem;">
-                        <button style="background: #6366f1; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-weight: 500; margin-right: 1rem;">Compare Suppressions</button>
-                        <button style="background: #e5e7eb; color: #6b7280; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-weight: 500;">Export Comparison</button>
-                    </div>
-
-                    <!-- Results Header -->
-                    <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; text-align: center; border-left: 4px solid #6366f1;">
-                        <h3 style="margin: 0 0 0.5rem 0; color: #1e293b;">Suppressions Comparison Results</h3>
-                        <p style="margin: 0; color: #6b7280;">Compared 153 original suppressions with 181 updated suppressions</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Slide 7: Suppressions Comparison Results -->
-        <div class="slide" data-slide="7">
-            <div class="slide-number">7/10</div>
-            <h2>📊 Suppressions Analysis Results</h2>
-            <p>Detailed breakdown showing exactly which suppressions were added, removed, or unchanged between versions.</p>
-            <div class="screenshot-container">
-                <!-- Real suppressions results interface -->
-                <div style="padding: 1.5rem; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; text-align: center;">
-                    <h1 style="font-size: 2rem; margin: 0 0 0.5rem 0; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                        🔍 OWASP Suppressions Comparison Report
-                    </h1>
-                    <p style="margin: 0; opacity: 0.9; font-size: 1rem;">Generated: 11/4/2025, 8:33:29 AM</p>
-                </div>
-                <div style="padding: 2rem; background: white; color: #1e293b;">
-                    <!-- Comparison Summary -->
-                    <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; border-left: 4px solid #6366f1;">
-                        <h3 style="margin: 0 0 1rem 0; color: #1e293b; display: flex; align-items: center; gap: 0.5rem;">
-                            📊 Comparison Summary
-                        </h3>
-                        <p style="margin: 0; color: #6b7280; font-size: 0.95rem;">
-                            <strong>Compared:</strong> 153 original suppressions with 181 updated suppressions
-                        </p>
-                    </div>
-
-                    <!-- Suppressions Metrics -->
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
-                        <div style="text-align: center; padding: 1.5rem; background: #ecfdf5; border-radius: 8px; border-left: 4px solid #10b981;">
-                            <div style="font-size: 2.5rem; font-weight: bold; color: #10b981; margin-bottom: 0.5rem;">28</div>
-                            <div style="color: #6b7280; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;">ADDED SUPPRESSIONS</div>
-                        </div>
-                        <div style="text-align: center; padding: 1.5rem; background: #fef2f2; border-radius: 8px; border-left: 4px solid #ef4444;">
-                            <div style="font-size: 2.5rem; font-weight: bold; color: #ef4444; margin-bottom: 0.5rem;">0</div>
-                            <div style="color: #6b7280; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;">REMOVED SUPPRESSIONS</div>
-                        </div>
-                        <div style="text-align: center; padding: 1.5rem; background: #f1f5f9; border-radius: 8px; border-left: 4px solid #64748b;">
-                            <div style="font-size: 2.5rem; font-weight: bold; color: #64748b; margin-bottom: 0.5rem;">153</div>
-                            <div style="color: #6b7280; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;">UNCHANGED SUPPRESSIONS</div>
-                        </div>
-                        <div style="text-align: center; padding: 1.5rem; background: #f0f9ff; border-radius: 8px; border-left: 4px solid #3b82f6;">
-                            <div style="font-size: 2.5rem; font-weight: bold; color: #3b82f6; margin-bottom: 0.5rem;">181</div>
-                            <div style="color: #6b7280; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;">TOTAL IN UPDATED FILE</div>
-                        </div>
-                    </div>
-
-                    <!-- Added Suppressions Section -->
-                    <div style="background: #ecfdf5; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #10b981;">
-                        <h3 style="color: #10b981; margin: 0 0 1rem 0; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
-                            ✅ Added Suppressions (28)
-                        </h3>
-                        <div style="background: white; padding: 1rem; border-radius: 6px; font-family: monospace; font-size: 0.9rem;">
-                            <div style="display: grid; grid-template-columns: auto 1fr auto; gap: 1rem; align-items: center; margin-bottom: 0.5rem;">
-                                <span style="font-weight: bold; color: #6b7280;">notes</span>
-                                <span style="background: #e5e7eb; padding: 0.25rem 0.5rem; border-radius: 4px; color: #374151;">file name: DevExpress.Xpf.Layout.v18.1.Core.dll</span>
-                                <span></span>
-                            </div>
-                            <div style="display: grid; grid-template-columns: auto 1fr auto; gap: 1rem; align-items: center; margin-bottom: 0.5rem;">
-                                <span style="font-weight: bold; color: #6b7280;">packageUrl</span>
-                                <span style="background: #e5e7eb; padding: 0.25rem 0.5rem; border-radius: 4px; color: #374151;">^pkg:generic/DevExpress\.Xpf\.Layout\.v18\.1\.Core@.*$</span>
-                                <span style="background: #f59e0b; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">REGEX</span>
-                            </div>
-                            <div style="display: grid; grid-template-columns: auto 1fr auto; gap: 1rem; align-items: center;">
-                                <span style="font-weight: bold; color: #6b7280;">cve</span>
-                                <span style="background: #e5e7eb; padding: 0.25rem 0.5rem; border-radius: 4px; color: #374151;">CVE-2021-36483</span>
-                                <span></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Slide 8: Export Features -->
-        <div class="slide" data-slide="8">
-            <div class="slide-number">8/10</div>
+            <div class="slide-number">6/8</div>
             <h2>📤 Professional Export Features</h2>
             <p>Generate audit-ready reports in multiple formats with comprehensive metadata and professional styling.</p>
             <div class="feature-grid">
@@ -609,9 +493,9 @@
             </div>
         </div>
 
-        <!-- Slide 9: Technical Excellence -->
-        <div class="slide" data-slide="9">
-            <div class="slide-number">9/10</div>
+        <!-- Slide 7: Technical Excellence -->
+        <div class="slide" data-slide="7">
+            <div class="slide-number">7/8</div>
             <h2>🛠️ Technical Excellence</h2>
             <p>Built with modern web technologies for reliability, security, and ease of use.</p>
             <div class="feature-grid">
@@ -638,9 +522,9 @@
             </div>
         </div>
 
-        <!-- Slide 10: Call to Action -->
-        <div class="slide" data-slide="10">
-            <div class="slide-number">10/10</div>
+        <!-- Slide 8: Call to Action -->
+        <div class="slide" data-slide="8">
+            <div class="slide-number">8/8</div>
             <h2>🚀 Ready to Transform Your Security Reports?</h2>
             <p>Start generating professional OWASP dependency audit reports today.</p>
             <div style="margin: 3rem 0;">
@@ -664,7 +548,7 @@
 
     <script>
         let currentSlide = 0;
-        const totalSlides = 10;
+        const totalSlides = 8;
         let autoPlay = true;
         let autoPlayInterval;
 

@@ -1604,6 +1604,15 @@ function renderDeltaReport(delta, metadata = {}){
     summary: delta.summary || {}
   };
 
+  // Debug logging for delta data
+  console.log('Delta data prepared:', {
+    fixedCount: window.lastDeltaData.fixedCount,
+    newVulnerabilitiesCount: window.lastDeltaData.newVulnerabilities.length,
+    totalNewUnsuppressed,
+    deltaNewUnsuppressedCount: delta.newUnsuppressedCount,
+    sampleNewVuln: window.lastDeltaData.newVulnerabilities[0]
+  });
+
   // Guard against undefined arrays before passing to severityCounts
   const fixedCounts = severityCounts(window.lastDeltaData.fixed);
   const newCounts = severityCounts(window.lastDeltaData.newVulnerabilities);
@@ -1668,7 +1677,7 @@ function renderDeltaReport(delta, metadata = {}){
           
           <div class="delta-stat-card" style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; border-top: 4px solid #f59e0b;">
             <h3 style="color: #f59e0b; margin: 0 0 1rem 0; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-              ⚠️ Unhandled Vulnerabilities (${delta.newUnsuppressedCount})
+              ⚠️ Unhandled Vulnerabilities (${totalNewUnsuppressed})
             </h3>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
               <div style="text-align: center; padding: 1rem; background: #fef2f2; border-radius: 6px; border-left: 3px solid #dc2626;">
@@ -1870,12 +1879,18 @@ function groupVulnerabilitiesByDependency(items) {
 }
 
 function renderReport(items, metadata = {}){
-  const counts = severityCounts(items);
-  const total = items.length;
-  const vulnerableDependencies = metadata.vulnerableDependencies || total;
-  
-  // Group vulnerabilities by dependency/file
+  // Group vulnerabilities by dependency/file first
   const groupedDeps = groupVulnerabilitiesByDependency(items);
+  
+  // Calculate severity counts from the vulnerabilities in vulnerable dependencies only
+  const vulnerableDepVulns = [];
+  groupedDeps.forEach(dep => {
+    vulnerableDepVulns.push(...dep.vulnerabilities);
+  });
+  const counts = severityCounts(vulnerableDepVulns);
+  
+  const total = vulnerableDepVulns.length;
+  const vulnerableDependencies = groupedDeps.length;
   
   reportArea.hidden = false;
   reportArea.innerHTML = `
@@ -2000,51 +2015,149 @@ function initTableControls(items){
   let sortDir = 1; // 1 asc, -1 desc
 
   const table = document.getElementById('vuln-table');
-  if(!table) return;
+  if(!table) {
+    console.error('vuln-table not found');
+    return;
+  }
 
-  // Add click handlers on headers
+  // Remove any existing event listeners by cloning table headers
   const headers = table.querySelectorAll('th');
   headers.forEach((th, idx)=>{
+    const newTh = th.cloneNode(true);
+    th.parentNode.replaceChild(newTh, th);
+  });
+
+  // Add click handlers on headers
+  const newHeaders = table.querySelectorAll('th');
+  newHeaders.forEach((th, idx)=>{
     th.addEventListener('click', ()=>{
       const key = idx===1 ? 'file' : idx===2 ? 'severity' : idx===3 ? 'totalVulns' : null;
       if(!key) return;
       if(sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = -1; }
-      headers.forEach(h=>h.classList.remove('sort-asc','sort-desc'));
+      newHeaders.forEach(h=>h.classList.remove('sort-asc','sort-desc'));
       th.classList.add(sortDir===1? 'sort-asc':'sort-desc');
       renderTablePage(items, rowsPerPage, currentPage, sortKey, sortDir);
+      updatePagination();
     });
   });
 
-  // pagination container
-  const paginationContainer = document.createElement('div');
+  // pagination container - remove existing one if present
+  let paginationContainer = table.parentNode.querySelector('.pagination');
+  if (paginationContainer) {
+    paginationContainer.remove();
+  }
+  paginationContainer = document.createElement('div');
   paginationContainer.className = 'pagination';
   table.parentNode.insertBefore(paginationContainer, table.nextSibling);
 
   function updatePagination(){
-    const totalPages = Math.max(1, Math.ceil(items.length / rowsPerPage));
+    // Calculate filtered grouped dependencies count for accurate pagination
+    const sev = document.getElementById('severity-filter') ? document.getElementById('severity-filter').value : 'ALL';
+    const q = document.getElementById('search-filter') ? document.getElementById('search-filter').value.trim().toLowerCase() : '';
+    let filteredItems = items.filter(it=>{
+      if(sev !== 'ALL' && (it.highestSeverity||'').toUpperCase() !== sev) return false;
+      if(q && !(it.file||'').toLowerCase().includes(q)) return false;
+      return true;
+    });
+    
+    const totalPages = Math.max(1, Math.ceil(filteredItems.length / rowsPerPage));
+    
+    // Ensure currentPage is within valid bounds
+    if (currentPage < 1) currentPage = 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+    
+    // Clear and rebuild pagination controls
     paginationContainer.innerHTML = '';
-    const prev = document.createElement('button'); prev.textContent='Prev'; prev.disabled = currentPage===1; prev.onclick = ()=>{ currentPage--; renderTablePage(items, rowsPerPage, currentPage, sortKey, sortDir); };
-    const next = document.createElement('button'); next.textContent='Next'; next.disabled = currentPage===totalPages; next.onclick = ()=>{ currentPage++; renderTablePage(items, rowsPerPage, currentPage, sortKey, sortDir); };
-    const info = document.createElement('div'); info.textContent = `Page ${currentPage} / ${totalPages}`;
-    paginationContainer.appendChild(prev); paginationContainer.appendChild(info); paginationContainer.appendChild(next);
+    
+    const prev = document.createElement('button'); 
+    prev.textContent = 'Prev'; 
+    prev.disabled = (currentPage <= 1); 
+    prev.onclick = ()=>{ 
+      if (currentPage > 1) {
+        currentPage--; 
+        renderTablePage(items, rowsPerPage, currentPage, sortKey, sortDir); 
+        updatePagination(); 
+      }
+    };
+    
+    const next = document.createElement('button'); 
+    next.textContent = 'Next'; 
+    next.disabled = (currentPage >= totalPages); 
+    next.onclick = ()=>{ 
+      if (currentPage < totalPages) {
+        currentPage++; 
+        renderTablePage(items, rowsPerPage, currentPage, sortKey, sortDir); 
+        updatePagination(); 
+      }
+    };
+    
+    const info = document.createElement('div'); 
+    info.textContent = `Page ${currentPage} / ${totalPages}`;
+    
+    paginationContainer.appendChild(prev); 
+    paginationContainer.appendChild(info); 
+    paginationContainer.appendChild(next);
   }
 
   // CSV export button
   const csvBtn = document.getElementById('export-csv-btn');
-  if(csvBtn){ csvBtn.disabled = false; csvBtn.addEventListener('click', ()=>{
-    const csv = generateCSVFromData(items); // Use actual data instead of DOM
-    const blob = new Blob([csv], {type:'text/csv'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `owasp-report-${new Date().toISOString().split('T')[0]}.csv`; a.click(); URL.revokeObjectURL(url);
-  }); }
+  if(csvBtn){ 
+    csvBtn.disabled = false; 
+    // Remove existing event listeners by cloning the button
+    const newCsvBtn = csvBtn.cloneNode(true);
+    csvBtn.parentNode.replaceChild(newCsvBtn, csvBtn);
+    
+    newCsvBtn.addEventListener('click', ()=>{
+      const htmlTable = generateExcelFromGroupedData(items); // Use enhanced Excel-compatible format
+      const blob = new Blob([htmlTable], {type:'application/vnd.ms-excel'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `owasp-vulnerable-dependencies-${new Date().toISOString().split('T')[0]}.xls`; a.click(); URL.revokeObjectURL(url);
+    }); 
+  }
 
   // initial render
   renderTablePage(items, rowsPerPage, currentPage, sortKey, sortDir);
   updatePagination();
 
-  // When filters change, re-run pagination & table (attach listener via existing attachInteractivity)
-  document.getElementById('severity-filter')?.addEventListener('change', ()=>{ currentPage=1; renderTablePage(items, rowsPerPage, currentPage, sortKey, sortDir); updatePagination(); });
-  document.getElementById('search-filter')?.addEventListener('input', ()=>{ currentPage=1; renderTablePage(items, rowsPerPage, currentPage, sortKey, sortDir); updatePagination(); });
+  // When filters change, re-run pagination & table (remove existing listeners first)
+  const severityFilter = document.getElementById('severity-filter');
+  const searchFilter = document.getElementById('search-filter');
+  
+  if(severityFilter) {
+    const newSeverityFilter = severityFilter.cloneNode(true);
+    severityFilter.parentNode.replaceChild(newSeverityFilter, severityFilter);
+    newSeverityFilter.addEventListener('change', ()=>{ 
+      currentPage=1; 
+      renderTablePage(items, rowsPerPage, currentPage, sortKey, sortDir); 
+      updatePagination(); 
+    });
+  }
+  
+  if(searchFilter) {
+    const newSearchFilter = searchFilter.cloneNode(true);
+    searchFilter.parentNode.replaceChild(newSearchFilter, searchFilter);
+    newSearchFilter.addEventListener('input', ()=>{ 
+      currentPage=1; 
+      renderTablePage(items, rowsPerPage, currentPage, sortKey, sortDir); 
+      updatePagination(); 
+    });
+  }
+
+  // Reset button functionality
+  const resetBtn = document.getElementById('reset-filters');
+  if(resetBtn) {
+    const newResetBtn = resetBtn.cloneNode(true);
+    resetBtn.parentNode.replaceChild(newResetBtn, resetBtn);
+    newResetBtn.addEventListener('click', ()=>{ 
+      const severityFilter = document.getElementById('severity-filter');
+      const searchFilter = document.getElementById('search-filter');
+      if(severityFilter) severityFilter.value='ALL'; 
+      if(searchFilter) searchFilter.value=''; 
+      currentPage=1; 
+      renderTablePage(items, rowsPerPage, currentPage, sortKey, sortDir); 
+      updatePagination(); 
+    });
+  }
 }
 
 function renderTablePage(items, perPage, page, sortKey, sortDir){
@@ -2138,6 +2251,169 @@ function generateCSVFromTable(){
     rows.push([cols[0].textContent.trim(), cols[1].textContent.trim(), cols[2].textContent.trim(), cols[3].textContent.trim(), cols[4].textContent.trim(), cols[5].textContent.trim()].map(c=>`"${c.replace(/"/g,'""')}"`));
   });
   return rows.map(r=>r.join(',')).join('\n');
+}
+
+function generateExcelFromGroupedData(items){
+  // Group vulnerabilities by dependency/file
+  const groupedDeps = groupVulnerabilitiesByDependency(items);
+  
+  // Apply current filters to get the same filtered data that would be shown
+  const sev = document.getElementById('severity-filter') ? document.getElementById('severity-filter').value : 'ALL';
+  const q = document.getElementById('search-filter') ? document.getElementById('search-filter').value.trim().toLowerCase() : '';
+  
+  let filteredItems = groupedDeps.filter(it=>{
+    if(sev !== 'ALL' && (it.highestSeverity||'').toUpperCase() !== sev) return false;
+    if(q && !(it.file||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  // Generate scan metadata
+  const metadata = {
+    scanDate: new Date().toLocaleDateString(),
+    totalDependencies: filteredItems.length,
+    appliedFilters: sev !== 'ALL' ? `Severity: ${sev}` : 'None',
+    searchQuery: q || 'None'
+  };
+
+  // Calculate total vulnerabilities by severity
+  const totalCounts = {
+    CRITICAL: filteredItems.reduce((sum, dep) => sum + dep.severityCounts.CRITICAL, 0),
+    HIGH: filteredItems.reduce((sum, dep) => sum + dep.severityCounts.HIGH, 0),
+    MEDIUM: filteredItems.reduce((sum, dep) => sum + dep.severityCounts.MEDIUM, 0),
+    LOW: filteredItems.reduce((sum, dep) => sum + dep.severityCounts.LOW, 0)
+  };
+
+  // Create HTML table with Excel-compatible styling
+  const html = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta charset="utf-8">
+      <meta name="ProgId" content="Excel.Sheet">
+      <meta name="Generator" content="OWASP Dependency Audit Tool">
+      <!--[if gte mso 9]>
+      <xml>
+        <x:ExcelWorkbook>
+          <x:ExcelWorksheets>
+            <x:ExcelWorksheet>
+              <x:Name>Vulnerable Dependencies</x:Name>
+              <x:WorksheetSource HRef="sheet001.htm"/>
+            </x:ExcelWorksheet>
+          </x:ExcelWorksheets>
+        </x:ExcelWorkbook>
+      </xml>
+      <![endif]-->
+      <style>
+        .header { font-weight: bold; background-color: #4472C4; color: white; text-align: center; font-size: 14px; }
+        .summary { font-weight: bold; background-color: #E7E6E6; font-size: 12px; }
+        .critical { background-color: #FFE6E6; color: #8B0000; font-weight: bold; }
+        .high { background-color: #FFF0E6; color: #FF4500; font-weight: bold; }
+        .medium { background-color: #FFFACD; color: #FF8C00; font-weight: bold; }
+        .low { background-color: #F0FFF0; color: #228B22; font-weight: bold; }
+        .data { font-size: 11px; border: 1px solid #D4D4D4; }
+        .number { text-align: center; }
+        .path { font-family: 'Courier New', monospace; font-size: 10px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #D4D4D4; padding: 8px; }
+      </style>
+    </head>
+    <body>
+      <table>
+        <tr>
+          <td colspan="9" class="header" style="font-size: 16px; padding: 15px;">
+            🛡️ OWASP Dependency Check - Vulnerable Dependencies Report
+          </td>
+        </tr>
+        <tr>
+          <td colspan="9" class="summary">
+            Report Generated: ${metadata.scanDate} | 
+            Total Vulnerable Dependencies: ${metadata.totalDependencies} | 
+            Applied Filters: ${metadata.appliedFilters} | 
+            Search Query: ${metadata.searchQuery}
+          </td>
+        </tr>
+        <tr>
+          <td colspan="9" class="summary">
+            🔴 Critical: ${totalCounts.CRITICAL} | 
+            🟠 High: ${totalCounts.HIGH} | 
+            🟡 Medium: ${totalCounts.MEDIUM} | 
+            🟢 Low: ${totalCounts.LOW} | 
+            Total Vulnerabilities: ${totalCounts.CRITICAL + totalCounts.HIGH + totalCounts.MEDIUM + totalCounts.LOW}
+          </td>
+        </tr>
+        <tr><td colspan="9" style="height: 10px;"></td></tr>
+        <tr class="header">
+          <th style="width: 5%;">#</th>
+          <th style="width: 20%;">Dependency</th>
+          <th style="width: 12%;">Highest Severity</th>
+          <th style="width: 8%;">Total Vulns</th>
+          <th style="width: 8%;">Critical</th>
+          <th style="width: 8%;">High</th>
+          <th style="width: 8%;">Medium</th>
+          <th style="width: 8%;">Low</th>
+          <th style="width: 23%;">File Path</th>
+        </tr>
+        ${filteredItems.map((dep, index) => {
+          const severityClass = dep.highestSeverity ? dep.highestSeverity.toLowerCase() : '';
+          return `
+          <tr class="data">
+            <td class="number">${index + 1}</td>
+            <td><strong>${escapeHtml(dep.file.split('/').pop() || dep.file)}</strong></td>
+            <td class="${severityClass} number">${dep.highestSeverity || ''}</td>
+            <td class="number"><strong>${dep.totalVulns}</strong></td>
+            <td class="number ${dep.severityCounts.CRITICAL > 0 ? 'critical' : ''}">${dep.severityCounts.CRITICAL}</td>
+            <td class="number ${dep.severityCounts.HIGH > 0 ? 'high' : ''}">${dep.severityCounts.HIGH}</td>
+            <td class="number ${dep.severityCounts.MEDIUM > 0 ? 'medium' : ''}">${dep.severityCounts.MEDIUM}</td>
+            <td class="number ${dep.severityCounts.LOW > 0 ? 'low' : ''}">${dep.severityCounts.LOW}</td>
+            <td class="path">${escapeHtml(dep.file)}</td>
+          </tr>`;
+        }).join('')}
+        <tr><td colspan="9" style="height: 10px;"></td></tr>
+        <tr class="summary">
+          <td colspan="9" style="font-style: italic; text-align: center;">
+            Exported from OWASP Dependency Audit Tool - ${new Date().toLocaleString()}
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+  
+  return html;
+}
+
+function generateCSVFromGroupedData(items){
+  // Group vulnerabilities by dependency/file
+  const groupedDeps = groupVulnerabilitiesByDependency(items);
+  
+  const rows = [];
+  rows.push(['#','Dependency','Highest Severity','Total Vulnerabilities','Critical','High','Medium','Low','File Path']);
+  
+  // Apply current filters to get the same filtered data that would be shown
+  const sev = document.getElementById('severity-filter') ? document.getElementById('severity-filter').value : 'ALL';
+  const q = document.getElementById('search-filter') ? document.getElementById('search-filter').value.trim().toLowerCase() : '';
+  
+  let filteredItems = groupedDeps.filter(it=>{
+    if(sev !== 'ALL' && (it.highestSeverity||'').toUpperCase() !== sev) return false;
+    if(q && !(it.file||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  
+  // Export all filtered data (not just current page)
+  filteredItems.forEach((dep, index) => {
+    rows.push([
+      (index + 1).toString(),
+      (dep.file.split('/').pop() || dep.file) || '',
+      dep.highestSeverity || '',
+      dep.totalVulns.toString(),
+      dep.severityCounts.CRITICAL.toString(),
+      dep.severityCounts.HIGH.toString(),
+      dep.severityCounts.MEDIUM.toString(),
+      dep.severityCounts.LOW.toString(),
+      dep.file || ''
+    ].map(c => `"${c.replace(/"/g, '""')}"`));
+  });
+  
+  return rows.map(r => r.join(',')).join('\n');
 }
 
 function generateCSVFromData(items){
@@ -2283,30 +2559,8 @@ function attachInteractivity(){
     r.addEventListener('keydown', e=>{ if(e.key==='Enter'){ r.click(); } });
   });
 
-  // Filtering
-  const severityFilter = document.getElementById('severity-filter');
-  const searchFilter = document.getElementById('search-filter');
-  const resetBtn = document.getElementById('reset-filters');
-  function applyFilters(){
-    const sev = severityFilter ? severityFilter.value : 'ALL';
-    const q = searchFilter ? searchFilter.value.trim().toLowerCase() : '';
-    document.querySelectorAll('#vuln-table tbody tr.vuln-row').forEach(r=>{
-      const idx = r.getAttribute('data-idx');
-      const name = r.querySelector('td:nth-child(2)') ? r.querySelector('td:nth-child(2)').textContent.toLowerCase() : '';
-      const file = r.querySelector('td:nth-child(6)') ? r.querySelector('td:nth-child(6)').textContent.toLowerCase() : '';
-      const sevCell = r.querySelector('td:nth-child(3)') ? r.querySelector('td:nth-child(3)').textContent.toUpperCase() : '';
-      let hide = false;
-      if(sev !== 'ALL' && sevCell !== sev) hide = true;
-      if(q && !(name.includes(q) || file.includes(q))) hide = true;
-      // toggle row and its details
-      const details = document.getElementById('details-'+idx);
-      if(hide){ r.style.display='none'; if(details) details.style.display='none'; }
-      else { r.style.display='table-row'; if(details) details.style.display='table-row'; }
-    });
-  }
-  if(severityFilter) severityFilter.addEventListener('change', applyFilters);
-  if(searchFilter) searchFilter.addEventListener('input', applyFilters);
-  if(resetBtn) resetBtn.addEventListener('click', ()=>{ if(severityFilter) severityFilter.value='ALL'; if(searchFilter) searchFilter.value=''; applyFilters(); });
+  // Filtering is now handled by initTableControls() with pagination
+  // Removed conflicting filter event listeners to prevent interference
 }
 
 // Expose for debug (not needed)
