@@ -1433,7 +1433,6 @@ function parseDependencyCheck(xml){
     }
     
     // dependency elements
-    const depEls = Array.from(xml.getElementsByTagName('dependency'));
     console.log(`Found ${depEls.length} dependency elements`);
     
     depEls.forEach(dep => {
