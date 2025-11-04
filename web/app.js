@@ -880,21 +880,32 @@ function getCurrentReportData() {
   
   // For regular reports or if delta data not available, extract from DOM
   const vulnerabilities = [];
-  const vulnTable = document.querySelector('#vuln-table, #new-vuln-table');
+  const vulnTable = isDelta ? document.querySelector('#new-vuln-table') : document.querySelector('#vuln-table');
   
   if (vulnTable) {
-    const rows = vulnTable.querySelectorAll('tbody tr.vuln-row');
+    // Get all visible vulnerability rows (not filtered out)
+    const rows = Array.from(vulnTable.querySelectorAll('tbody tr.vuln-row')).filter(row => {
+      return window.getComputedStyle(row).display !== 'none';
+    });
+    
     rows.forEach(row => {
-      const cells = row.querySelectorAll('td');
-      if (cells.length >= 6) {
-        vulnerabilities.push({
-          'Package': cells[0]?.textContent.trim() || '',
-          'Vulnerability': cells[1]?.textContent.trim() || '',
-          'Severity': cells[2]?.textContent.trim() || '',
-          'CVSS': cells[3]?.textContent.trim() || '',
-          'Description': cells[4]?.textContent.trim() || '',
-          'File': cells[5]?.textContent.trim() || ''
-        });
+      // Only process if the row has the correct severity level
+      const severityCell = row.querySelector('td[data-severity]');
+      if (severityCell) {
+        const severity = severityCell.getAttribute('data-severity')?.toUpperCase() || 'UNKNOWN';
+        if (severity) {
+          const cells = row.querySelectorAll('td');
+          if (cells.length >= 6) {
+            vulnerabilities.push({
+              'Package': cells[0]?.textContent.trim() || '',
+              'Vulnerability': cells[1]?.textContent.trim() || '',
+              'Severity': severity,
+              'CVSS': cells[3]?.textContent.trim() || '',
+              'Description': cells[4]?.textContent.trim() || '',
+              'File': cells[5]?.textContent.trim() || ''
+            });
+          }
+        }
       }
     });
   }
@@ -906,36 +917,75 @@ function getCurrentReportData() {
   };
 }
 
+// Helper function to generate table rows for vulnerabilities
+function generateVulnerabilityRows(vulnerabilities) {
+  return vulnerabilities.map(vuln => `
+    <tr class="severity-${vuln.Severity?.toLowerCase() || 'unknown'}">
+      <td>${escapeHtml(vuln.Package || '')}</td>
+      <td>${escapeHtml(vuln.Vulnerability || '')}</td>
+      <td>${escapeHtml(vuln.Severity || '')}</td>
+      <td>${escapeHtml(vuln.CVSS || '')}</td>
+      <td>${escapeHtml(vuln.Description || '')}</td>
+      <td>${escapeHtml(vuln.File || '')}</td>
+    </tr>
+  `).join('');
+}
+
+// Helper function to escape HTML special characters
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
 // Generate beautiful HTML report for export (enhanced version)
 function generateBeautifulReportHTML(reportData) {
   const isDelta = reportData.type === 'delta';
   const timestamp = reportData.timestamp;
   
-  let vulnerabilities = [];
+  let allVulnerabilities = [];
+  let fixedVulns = [];
+  let suppressionChanges = null;
+
   if (isDelta && reportData.data) {
-    vulnerabilities = reportData.data.newVulnerabilities || [];
+    // Include all types of vulnerabilities for delta reports
+    allVulnerabilities = reportData.data.newVulnerabilities || [];
+    fixedVulns = reportData.data.fixedVulnerabilities || [];
+    suppressionChanges = reportData.data.suppressionChanges || null;
   } else {
-    vulnerabilities = reportData.vulnerabilities || [];
+    allVulnerabilities = reportData.vulnerabilities || [];
   }
   
   const title = isDelta ? 'OWASP Delta Security Report' : 'OWASP Security Audit Report';
   
-  // Count by severity
-  const severityCounts = {
-    CRITICAL: 0,
-    HIGH: 0,
-    MEDIUM: 0,
-    LOW: 0
-  };
+  // Function to count vulnerabilities by severity
+  function countBySeverity(vulns) {
+    const counts = {
+      CRITICAL: 0,
+      HIGH: 0,
+      MEDIUM: 0,
+      LOW: 0
+    };
+
+    vulns.forEach(vuln => {
+      // Try to get severity from the data-severity attribute first
+      let severity = vuln.severity || vuln.Severity;
+      if (typeof severity === 'string') {
+        severity = severity.toUpperCase();
+        if (counts.hasOwnProperty(severity)) {
+          counts[severity]++;
+        }
+      }
+    });
+
+    return counts;
+  }
+
+  // Get counts for both new and fixed vulnerabilities
+  const severityCounts = countBySeverity(allVulnerabilities);
+  const fixedCounts = countBySeverity(fixedVulns);
   
-  vulnerabilities.forEach(vuln => {
-    const severity = vuln.Severity?.toUpperCase() || 'UNKNOWN';
-    if (severityCounts.hasOwnProperty(severity)) {
-      severityCounts[severity]++;
-    }
-  });
-  
-  const totalVulns = vulnerabilities.length;
+  const totalVulns = allVulnerabilities.length;
   
   return `<!DOCTYPE html>
 <html lang="en">
@@ -994,6 +1044,16 @@ function generateBeautifulReportHTML(reportData) {
             gap: 20px;
             padding: 40px;
             background: #f8f9fa;
+        }
+        
+        .metrics-section {
+            margin-bottom: 30px;
+        }
+        
+        .metrics-section h2 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #764ba2;
         }
         
         .metric-card {
@@ -1108,6 +1168,50 @@ function generateBeautifulReportHTML(reportData) {
             <div class="timestamp">Generated on ${timestamp}</div>
         </div>
         
+        ${isDelta ? `
+        <div class="metrics-section">
+            <h2>⚠️ New Vulnerabilities</h2>
+            <div class="metrics-grid">
+                <div class="metric-card critical">
+                    <div class="metric-number">${severityCounts.CRITICAL}</div>
+                    <div class="metric-label">Critical</div>
+                </div>
+                <div class="metric-card high">
+                    <div class="metric-number">${severityCounts.HIGH}</div>
+                    <div class="metric-label">High</div>
+                </div>
+                <div class="metric-card medium">
+                    <div class="metric-number">${severityCounts.MEDIUM}</div>
+                    <div class="metric-label">Medium</div>
+                </div>
+                <div class="metric-card low">
+                    <div class="metric-number">${severityCounts.LOW}</div>
+                    <div class="metric-label">Low</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="metrics-section">
+            <h2>✅ Fixed Vulnerabilities</h2>
+            <div class="metrics-grid">
+                <div class="metric-card critical">
+                    <div class="metric-number">${fixedCounts.CRITICAL}</div>
+                    <div class="metric-label">Critical</div>
+                </div>
+                <div class="metric-card high">
+                    <div class="metric-number">${fixedCounts.HIGH}</div>
+                    <div class="metric-label">High</div>
+                </div>
+                <div class="metric-card medium">
+                    <div class="metric-number">${fixedCounts.MEDIUM}</div>
+                    <div class="metric-label">Medium</div>
+                </div>
+                <div class="metric-card low">
+                    <div class="metric-number">${fixedCounts.LOW}</div>
+                    <div class="metric-label">Low</div>
+                </div>
+            </div>
+        </div>` : `
         <div class="metrics-grid">
             <div class="metric-card critical">
                 <div class="metric-number">${severityCounts.CRITICAL}</div>
@@ -1126,14 +1230,81 @@ function generateBeautifulReportHTML(reportData) {
                 <div class="metric-label">Low</div>
             </div>
         </div>
+        ${suppressionChanges ? `
+        <div class="metrics-section">
+            <h2>🔒 Suppression Changes</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-number">${suppressionChanges.added}</div>
+                    <div class="metric-label">Added</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number">${suppressionChanges.removed}</div>
+                    <div class="metric-label">Removed</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number">${suppressionChanges.unchanged}</div>
+                    <div class="metric-label">Unchanged</div>
+                </div>
+            </div>
+        </div>` : ''}`}
+            <div class="metric-card medium">
+                <div class="metric-number">${severityCounts.MEDIUM}</div>
+                <div class="metric-label">Medium</div>
+            </div>
+            <div class="metric-card low">
+                <div class="metric-number">${severityCounts.LOW}</div>
+                <div class="metric-label">Low</div>
+            </div>
+        </div>
         
         <div class="content">
+            ${isDelta ? `
+            ${allVulnerabilities.length > 0 ? `
+            <div class="vuln-section">
+                <h2 class="section-title">⚠️ New Vulnerabilities (${allVulnerabilities.length} total)</h2>
+                <table class="vuln-table">
+                    <thead>
+                        <tr>
+                            <th>Package</th>
+                            <th>Vulnerability</th>
+                            <th>Severity</th>
+                            <th>CVSS</th>
+                            <th>Description</th>
+                            <th>File</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${generateVulnerabilityRows(allVulnerabilities)}
+                    </tbody>
+                </table>
+            </div>` : ''}
+            
+            ${fixedVulns.length > 0 ? `
+            <div class="vuln-section">
+                <h2 class="section-title">✅ Fixed Vulnerabilities (${fixedVulns.length} total)</h2>
+                <table class="vuln-table">
+                    <thead>
+                        <tr>
+                            <th>Package</th>
+                            <th>Vulnerability</th>
+                            <th>Severity</th>
+                            <th>CVSS</th>
+                            <th>Description</th>
+                            <th>File</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${generateVulnerabilityRows(fixedVulns)}
+                    </tbody>
+                </table>
+            </div>` : ''}
+            ` : `
             <h2 class="section-title">
-                ${isDelta ? 'Unhandled Vulnerabilities Detected' : 'Security Vulnerabilities'} 
-                (${totalVulns} total)
+                Security Vulnerabilities (${allVulnerabilities.length} total)
             </h2>
             
-            ${totalVulns === 0 ? 
+            ${allVulnerabilities.length === 0 ? 
                 '<div class="no-vulnerabilities">🎉 No vulnerabilities found! Your application is secure.</div>' :
                 `<table class="vuln-table">
                     <thead>
@@ -1146,6 +1317,11 @@ function generateBeautifulReportHTML(reportData) {
                             <th>File</th>
                         </tr>
                     </thead>
+                    <tbody>
+                        ${generateVulnerabilityRows(allVulnerabilities)}
+                    </tbody>
+                </table>`}
+            `}
                     <tbody>
                         ${vulnerabilities.map(vuln => `
                             <tr>
