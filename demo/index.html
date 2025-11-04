@@ -567,102 +567,9 @@
             </div>
         </div>
 
-        <!-- Slide 5: Delta Results -->
-        <div class="slide" data-slide="5">
-            <div class="slide-number">5/8</div>
-            <h2>🔄 Delta Comparison Results</h2>
-            <p>Professional delta reports showing exactly what's been fixed and what's new between security scans.</p>
-            <div class="screenshot-container">
-                <!-- Real delta interface based on your screenshot -->
-                <div style="padding: 1.5rem; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; text-align: center;">
-                    <h1 style="font-size: 2.2rem; margin: 0 0 0.5rem 0; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                        🔄 OWASP Delta Report
-                    </h1>
-                    <p style="margin: 0; opacity: 0.9; font-size: 1rem;">Generated: 11/4/2025, 9:13:34 AM</p>
-                </div>
-                <div style="padding: 2rem; background: white; color: #1e293b;">
-                    <!-- Analysis Summary -->
-                    <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; border-left: 4px solid #6366f1;">
-                        <h3 style="margin: 0 0 1rem 0; color: #1e293b; display: flex; align-items: center; gap: 0.5rem;">
-                            📊 Analysis Summary
-                        </h3>
-                        <p style="margin: 0; color: #6b7280; font-size: 0.95rem;">
-                            <strong style="color: #10b981;">Fixed:</strong> 27 vulnerabilities &nbsp;|&nbsp;
-                            <strong style="color: #f59e0b;">New:</strong> 15 vulnerabilities &nbsp;|&nbsp;
-                            <strong style="color: #6366f1;">Current Total:</strong> 170 vulnerabilities
-                        </p>
-                    </div>
-
-                    <!-- Delta Cards -->
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
-                        <!-- Fixed Vulnerabilities -->
-                        <div style="background: #ecfdf5; padding: 1.5rem; border-radius: 8px; text-align: center; border-left: 4px solid #10b981;">
-                            <h3 style="color: #10b981; margin: 0 0 1rem 0; font-size: 1.1rem;">✅ Fixed (27)</h3>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                                <div style="background: #fef2f2; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #dc2626;">
-                                    <div style="font-size: 1.4rem; font-weight: bold; color: #dc2626;">1</div>
-                                    <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase;">CRITICAL</div>
-                                </div>
-                                <div style="background: #fff7ed; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #ea580c;">
-                                    <div style="font-size: 1.4rem; font-weight: bold; color: #ea580c;">7</div>
-                                    <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase;">HIGH</div>
-                                </div>
-                                <div style="background: #fffbeb; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #d97706;">
-                                    <div style="font-size: 1.4rem; font-weight: bold; color: #d97706;">19</div>
-                                    <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase;">MEDIUM</div>
-                                </div>
-                                <div style="background: #f0fdf4; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #059669;">
-                                    <div style="font-size: 1.4rem; font-weight: bold; color: #059669;">0</div>
-                                    <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase;">LOW</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- New Vulnerabilities -->
-                        <div style="background: #fff7ed; padding: 1.5rem; border-radius: 8px; text-align: center; border-left: 4px solid #f59e0b;">
-                            <h3 style="color: #f59e0b; margin: 0 0 1rem 0; font-size: 1.1rem;">📋 New (15)</h3>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                                <div style="background: #fef2f2; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #dc2626;">
-                                    <div style="font-size: 1.4rem; font-weight: bold; color: #dc2626;">6</div>
-                                    <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase;">CRITICAL</div>
-                                </div>
-                                <div style="background: #fff7ed; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #ea580c;">
-                                    <div style="font-size: 1.4rem; font-weight: bold; color: #ea580c;">5</div>
-                                    <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase;">HIGH</div>
-                                </div>
-                                <div style="background: #fffbeb; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #d97706;">
-                                    <div style="font-size: 1.4rem; font-weight: bold; color: #d97706;">4</div>
-                                    <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase;">MEDIUM</div>
-                                </div>
-                                <div style="background: #f0fdf4; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #059669;">
-                                    <div style="font-size: 1.4rem; font-weight: bold; color: #059669;">0</div>
-                                    <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase;">LOW</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Suppression Changes -->
-                        <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; text-align: center; border-left: 4px solid #6366f1;">
-                            <h3 style="color: #6366f1; margin: 0 0 1rem 0; font-size: 1.1rem;">📊 Suppressions</h3>
-                            <div style="background: white; padding: 1rem; border-radius: 6px; border: 1px solid #e2e8f0;">
-                                <div style="margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
-                                    <span style="font-weight: 600; color: #374151; font-size: 0.9rem;">Added:</span>
-                                    <span style="font-size: 1.5rem; font-weight: bold; color: #10b981;">25</span>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span style="font-weight: 600; color: #374151; font-size: 0.9rem;">Removed:</span>
-                                    <span style="font-size: 1.5rem; font-weight: bold; color: #ef4444;">0</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Slide 6: Suppressions Comparison Tool -->
-        <div class="slide" data-slide="6">
-            <div class="slide-number">6/10</div>
+        <!-- Slide 7: Suppressions Comparison Tool -->
+        <div class="slide" data-slide="7">
+            <div class="slide-number">7/11</div>
             <h2>🔍 Suppressions Comparison Tool</h2>
             <p>Compare two suppressions XML files to track what security rules have been added or removed between versions.</p>
             <div class="screenshot-container">
@@ -706,8 +613,8 @@
         </div>
 
         <!-- Slide 7: Suppressions Comparison Results -->
-        <div class="slide" data-slide="7">
-            <div class="slide-number">7/10</div>
+        <div class="slide" data-slide="8">
+            <div class="slide-number">8/11</div>
             <h2>📊 Suppressions Analysis Results</h2>
             <p>Detailed breakdown showing exactly which suppressions were added, removed, or unchanged between versions.</p>
             <div class="screenshot-container">
@@ -778,7 +685,7 @@
 
         <!-- Slide 9: Enhanced Features -->
         <div class="slide" data-slide="9">
-            <div class="slide-number">9/12</div>
+            <div class="slide-number">9/11</div>
             <h2>⚡ Enhanced Features</h2>
             <p>Powerful filtering, pagination, and export capabilities for professional security reporting.</p>
             <div class="feature-grid">
@@ -807,7 +714,7 @@
 
         <!-- Slide 10: Professional Export Features -->
         <div class="slide" data-slide="10">
-            <div class="slide-number">10/12</div>
+            <div class="slide-number">10/11</div>
             <h2>📤 Professional Export Features</h2>
             <p>Generate audit-ready reports in multiple formats with comprehensive metadata and professional styling.</p>
             <div class="feature-grid">
@@ -836,7 +743,7 @@
 
         <!-- Slide 11: Technical Excellence -->
         <div class="slide" data-slide="11">
-            <div class="slide-number">11/12</div>
+            <div class="slide-number">11/11</div>
             <h2>🛠️ Technical Excellence</h2>
             <p>Built with modern web technologies for reliability, security, and ease of use.</p>
             <div class="feature-grid">
@@ -864,8 +771,8 @@
         </div>
 
         <!-- Slide 12: Call to Action -->
-        <div class="slide" data-slide="12">
-            <div class="slide-number">12/12</div>
+        <div class="slide" data-slide="11">
+            <div class="slide-number">11/11</div>
             <h2>🚀 Ready to Transform Your Security Reports?</h2>
             <p>Start generating professional OWASP dependency audit reports today.</p>
             <div style="margin: 3rem 0;">
@@ -889,7 +796,7 @@
 
     <script>
         let currentSlide = 0;
-        const totalSlides = 12;
+        const totalSlides = 11;
         let autoPlay = true;
         let autoPlayInterval;
 
