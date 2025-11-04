@@ -237,3 +237,84 @@ body{
 /* Tooltip for chart */
 .tooltip{position:absolute;background:#111;color:#fff;padding:6px 8px;border-radius:6px;font-size:12px;pointer-events:none;opacity:0;transition:opacity 0.12s}
 .tooltip.show{opacity:1}
+
+/* Progress Bar Styles */
+.progress-bar {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  z-index: 10;
+}
+
+.progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  border-radius: 15px;
+  width: 0%;
+  transition: width 0.3s ease;
+  animation: progressPulse 2s infinite;
+}
+
+.progress-text {
+  position: relative;
+  z-index: 2;
+  font-size: 12px;
+  font-weight: 600;
+  color: #2c3e50;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+@keyframes progressPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Progress animation for indeterminate progress */
+.progress-fill.indeterminate {
+  width: 30%;
+  animation: progressSlide 2s infinite linear;
+}
+
+@keyframes progressSlide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+/* Progress states */
+.progress-bar.success .progress-fill {
+  width: 100%;
+  background: linear-gradient(90deg, #10b981, #059669);
+  animation: none;
+}
+
+.progress-bar.error .progress-fill {
+  width: 100%;
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+  animation: none;
+}
+
+.progress-bar.success .progress-text {
+  color: #065f46;
+}
+
+.progress-bar.error .progress-text {
+  color: #7f1d1d;
+}
+
+/* Hide progress bar when upload area is in uploaded state */
+.dropzone.uploaded .progress-bar {
+  display: none !important;
+}

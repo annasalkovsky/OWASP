@@ -23,15 +23,15 @@ let baselineDependencyXml = null;
 let baselineSuppressionsXml = null;
 let isDeltaMode = false;
 
-reportInput.addEventListener('change', e => { loadFile(e.target.files[0], xml => dependencyXml = xml); });
-suppressionsInput.addEventListener('change', e => { loadFile(e.target.files[0], xml => suppressionsXml = xml); });
+reportInput.addEventListener('change', e => { loadFile(e.target.files[0], xml => dependencyXml = xml, 'report-progress'); });
+suppressionsInput.addEventListener('change', e => { loadFile(e.target.files[0], xml => suppressionsXml = xml, 'suppressions-progress'); });
 baselineReportInput.addEventListener('change', e => { 
   loadFile(e.target.files[0], xml => {
     baselineDependencyXml = xml;
     console.log('Baseline report loaded:', !!baselineDependencyXml);
-  }); 
+  }, 'baseline-progress'); 
 });
-baselineSuppressionsInput.addEventListener('change', e => { loadFile(e.target.files[0], xml => baselineSuppressionsXml = xml); });
+baselineSuppressionsInput.addEventListener('change', e => { loadFile(e.target.files[0], xml => baselineSuppressionsXml = xml, 'baseline-suppressions-progress'); });
 
 // Toggle uploaded visual state
 reportInput.addEventListener('change', () => setUploadedState('report', !!reportInput.files.length));
@@ -100,33 +100,118 @@ document.addEventListener('DOMContentLoaded', () => {
   reportDrop.addEventListener(ev, e => {
     e.preventDefault();
     const f = e.dataTransfer.files && e.dataTransfer.files[0];
-    if(f){ reportInput.files = e.dataTransfer.files; loadFile(f, xml => dependencyXml = xml); setUploadedState('report', true); }
+    if(f){ reportInput.files = e.dataTransfer.files; loadFile(f, xml => dependencyXml = xml, 'report-progress'); setUploadedState('report', true); }
   });
   suppressionsDrop.addEventListener(ev, e => {
     e.preventDefault();
     const f = e.dataTransfer.files && e.dataTransfer.files[0];
-    if(f){ suppressionsInput.files = e.dataTransfer.files; loadFile(f, xml => suppressionsXml = xml); setUploadedState('suppressions', true); }
+    if(f){ suppressionsInput.files = e.dataTransfer.files; loadFile(f, xml => suppressionsXml = xml, 'suppressions-progress'); setUploadedState('suppressions', true); }
   });
   baselineReportDrop?.addEventListener(ev, e => {
     e.preventDefault();
     const f = e.dataTransfer.files && e.dataTransfer.files[0];
-    if(f){ baselineReportInput.files = e.dataTransfer.files; loadFile(f, xml => baselineDependencyXml = xml); setUploadedState('baseline', true); }
+    if(f){ baselineReportInput.files = e.dataTransfer.files; loadFile(f, xml => baselineDependencyXml = xml, 'baseline-progress'); setUploadedState('baseline', true); }
   });
   baselineSuppressionsDrop?.addEventListener(ev, e => {
     e.preventDefault();
     const f = e.dataTransfer.files && e.dataTransfer.files[0];
-    if(f){ baselineSuppressionsInput.files = e.dataTransfer.files; loadFile(f, xml => baselineSuppressionsXml = xml); setUploadedState('baseline-suppressions', true); }
+    if(f){ baselineSuppressionsInput.files = e.dataTransfer.files; loadFile(f, xml => baselineSuppressionsXml = xml, 'baseline-suppressions-progress'); setUploadedState('baseline-suppressions', true); }
   });
 });
 
-function loadFile(file, cb){
+function loadFile(file, cb, progressId = null){
   if(!file) return;
+  
+  const progressBar = progressId ? document.getElementById(progressId) : null;
+  const progressFill = progressBar ? progressBar.querySelector('.progress-fill') : null;
+  const progressText = progressBar ? progressBar.querySelector('.progress-text') : null;
+  
+  // Show progress bar
+  if (progressBar) {
+    progressBar.style.display = 'flex';
+    progressBar.className = 'progress-bar';
+    progressFill.className = 'progress-fill indeterminate';
+    progressText.textContent = 'Reading file...';
+  }
+  
   const reader = new FileReader();
-  reader.onload = () => {
-    const parser = new DOMParser();
-    const xml = parser.parseFromString(reader.result, "application/xml");
-    cb(xml);
+  
+  reader.onprogress = (e) => {
+    if (e.lengthComputable && progressFill && progressText) {
+      const percentComplete = (e.loaded / e.total) * 100;
+      progressFill.style.width = percentComplete + '%';
+      progressFill.className = 'progress-fill';
+      progressText.textContent = `Loading ${Math.round(percentComplete)}%`;
+    }
   };
+  
+  reader.onload = () => {
+    try {
+      // Show parsing state
+      if (progressText) {
+        progressText.textContent = 'Parsing XML...';
+      }
+      
+      setTimeout(() => {
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(reader.result, "application/xml");
+        
+        // Check for parsing errors
+        const parserError = xml.querySelector("parsererror");
+        if (parserError) {
+          throw new Error("Invalid XML file");
+        }
+        
+        // Success state
+        if (progressBar) {
+          progressBar.className = 'progress-bar success';
+          progressText.textContent = '✓ Loaded successfully';
+          progressFill.style.width = '100%';
+          
+          // Hide progress after delay
+          setTimeout(() => {
+            progressBar.style.display = 'none';
+          }, 1500);
+        }
+        
+        cb(xml);
+      }, 100); // Small delay to show parsing state
+      
+    } catch (error) {
+      console.error('File loading error:', error);
+      
+      // Error state
+      if (progressBar) {
+        progressBar.className = 'progress-bar error';
+        progressText.textContent = '✗ Failed to load';
+        progressFill.style.width = '100%';
+        
+        // Hide progress after delay
+        setTimeout(() => {
+          progressBar.style.display = 'none';
+        }, 2000);
+      }
+      
+      alert('Error loading file: ' + error.message);
+    }
+  };
+  
+  reader.onerror = () => {
+    console.error('FileReader error');
+    
+    if (progressBar) {
+      progressBar.className = 'progress-bar error';
+      progressText.textContent = '✗ Read failed';
+      progressFill.style.width = '100%';
+      
+      setTimeout(() => {
+        progressBar.style.display = 'none';
+      }, 2000);
+    }
+    
+    alert('Error reading file');
+  };
+  
   reader.readAsText(file);
 }
 
