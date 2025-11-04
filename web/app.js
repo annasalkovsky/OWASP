@@ -25,7 +25,12 @@ let isDeltaMode = false;
 
 reportInput.addEventListener('change', e => { loadFile(e.target.files[0], xml => dependencyXml = xml); });
 suppressionsInput.addEventListener('change', e => { loadFile(e.target.files[0], xml => suppressionsXml = xml); });
-baselineReportInput.addEventListener('change', e => { loadFile(e.target.files[0], xml => baselineDependencyXml = xml); });
+baselineReportInput.addEventListener('change', e => { 
+  loadFile(e.target.files[0], xml => {
+    baselineDependencyXml = xml;
+    console.log('Baseline report loaded:', !!baselineDependencyXml);
+  }); 
+});
 baselineSuppressionsInput.addEventListener('change', e => { loadFile(e.target.files[0], xml => baselineSuppressionsXml = xml); });
 
 // Toggle uploaded visual state
@@ -64,7 +69,7 @@ function setUploadedState(which, state){
 }
 
 function updateGenerateButtonText(){
-  generateBtn.textContent = isDeltaMode ? 'Generate Delta Report' : 'Generate Audit Report';
+  generateBtn.textContent = deltaToggle.checked ? 'Generate Delta Report' : 'Generate Audit Report';
 }
 
 // Ensure uploaded message display matches aria-hidden (fix for pre-rendered visibility)
@@ -128,8 +133,16 @@ function loadFile(file, cb){
 generateBtn.addEventListener('click', () => {
   if(!dependencyXml) return alert('Please upload a dependency-check XML report');
   
-  if(isDeltaMode) {
-    if(!baselineDependencyXml) return alert('Please upload a baseline report for delta comparison');
+  // Check current state of delta toggle directly
+  const deltaMode = deltaToggle.checked;
+  
+  console.log('Generate button clicked:', { deltaMode, baselineDependencyXml: !!baselineDependencyXml });
+  
+  if(deltaMode) {
+    if(!baselineDependencyXml) {
+      console.error('Baseline report is missing for delta comparison');
+      return alert('Please upload a baseline report for delta comparison.\n\nMake sure you:\n1. Check "Enable Delta Comparison Mode"\n2. Upload both Current and Baseline reports\n3. Click "Generate Delta Report"');
+    }
     generateDeltaReport();
   } else {
     const findings = parseDependencyCheck(dependencyXml);
