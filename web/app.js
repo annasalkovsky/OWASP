@@ -471,104 +471,187 @@ function renderDeltaReport(delta){
   const newCounts = severityCounts(delta.newUnsuppressed);
   
   reportArea.innerHTML = `
-    <div class="report-header">
-      <h2>OWASP Delta Report</h2>
-      <div class="small">Generated: ${new Date().toLocaleString()} &nbsp; 
-        <strong>Fixed:</strong> ${delta.fixedCount} &nbsp;
-        <strong>New:</strong> ${delta.newUnsuppressedCount} &nbsp;
-        <strong>Current Total:</strong> ${delta.currentUnsuppressed.length}
+    <div class="delta-container" style="background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; margin: 2rem 0;">
+      <div class="delta-header" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 2rem; text-align: center;">
+        <h1 style="font-size: 2.5rem; margin: 0 0 0.5rem 0; font-weight: bold;">🔄 OWASP Delta Report</h1>
+        <p style="font-size: 1.1rem; opacity: 0.9; margin: 0;">Generated: ${new Date().toLocaleString()}</p>
       </div>
-    </div>
 
-    <div class="delta-summary" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:24px">
-      <div class="delta-section">
-        <h3 style="color:#10b981;margin-bottom:12px">✅ Fixed Vulnerabilities (${delta.fixedCount})</h3>
-        <div class="metrics">
-          <div class="metric critical"><strong>${fixedCounts.CRITICAL}</strong><div class="small">CRITICAL</div></div>
-          <div class="metric high"><strong>${fixedCounts.HIGH}</strong><div class="small">HIGH</div></div>
-          <div class="metric medium"><strong>${fixedCounts.MEDIUM}</strong><div class="small">MEDIUM</div></div>
-          <div class="metric low"><strong>${fixedCounts.LOW}</strong><div class="small">LOW</div></div>
+      <div class="delta-content" style="padding: 2rem;">
+        <div class="delta-summary-section" style="background: #f1f5f9; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+          <h2 style="color: #1e293b; margin: 0 0 1rem 0;">📊 Analysis Summary</h2>
+          <p style="margin: 0; color: #64748b;">
+            <strong>Fixed:</strong> ${delta.fixedCount} vulnerabilities &nbsp;|&nbsp;
+            <strong>New:</strong> ${delta.newUnsuppressedCount} vulnerabilities &nbsp;|&nbsp;
+            <strong>Current Total:</strong> ${delta.currentUnsuppressed.length} vulnerabilities
+          </p>
         </div>
-      </div>
-      
-      <div class="delta-section">
-        <h3 style="color:#f59e0b;margin-bottom:12px">🆕 New Vulnerabilities (${delta.newUnsuppressedCount})</h3>
-        <div class="metrics">
-          <div class="metric critical"><strong>${newCounts.CRITICAL}</strong><div class="small">CRITICAL</div></div>
-          <div class="metric high"><strong>${newCounts.HIGH}</strong><div class="small">HIGH</div></div>
-          <div class="metric medium"><strong>${newCounts.MEDIUM}</strong><div class="small">MEDIUM</div></div>
-          <div class="metric low"><strong>${newCounts.LOW}</strong><div class="small">LOW</div></div>
-        </div>
-      </div>
-      
-      <div class="delta-section">
-        <h3 style="color:#6366f1;margin-bottom:12px">📊 Suppression Changes</h3>
-        <div style="padding:16px;background:#f8fafc;border-radius:8px">
-          <div><strong>Added:</strong> ${delta.suppressionChanges.added.length} suppressions</div>
-          <div><strong>Removed:</strong> ${delta.suppressionChanges.removed.length} suppressions</div>
-        </div>
-      </div>
-    </div>
 
-    ${delta.fixedCount > 0 ? `
-    <h3>Fixed Vulnerabilities</h3>
-    <table class="table">
-      <thead><tr><th>Vulnerability</th><th>Severity</th><th>CVSS</th><th>File</th></tr></thead>
-      <tbody>
-        ${delta.fixed.map(vuln => `
-          <tr>
-            <td>${escapeHtml(vuln.name)}</td>
-            <td>${renderBadge(vuln.severity)}</td>
-            <td>${renderCvss(vuln.cvss)}</td>
-            <td>${escapeHtml(vuln.file)}</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-    ` : ''}
-
-    ${delta.newUnsuppressedCount > 0 ? `
-    <h3>New Vulnerabilities (Unhandled)</h3>
-    <table class="table" id="new-vuln-table">
-      <thead><tr><th>#</th><th>VULNERABILITY</th><th>SEVERITY</th><th>CVSS SCORE</th><th>DESCRIPTION</th><th>FILE</th></tr></thead>
-      <tbody>
-        ${delta.newUnsuppressed.map((it,idx) => `
-          <tr class="vuln-row" data-idx="${idx}">
-            <td>${idx+1}</td>
-            <td><a href="#" onclick="return false">${escapeHtml(it.name)}</a></td>
-            <td>${renderBadge(it.severity)}</td>
-            <td>${renderCvss(it.cvss)}</td>
-            <td>${escapeHtml(truncate(it.description,240))}</td>
-            <td>${escapeHtml(it.file)}</td>
-          </tr>
-          <tr class="vuln-details" id="details-${idx}">
-            <td colspan="6">
-              <div class="vuln-details-panel" id="panel-${idx}">
-                <div class="vuln-details-grid">
-                  <div>
-                    <h4 style="margin:0 0 8px 0">${escapeHtml(it.name)}</h4>
-                    <div class="vuln-meta">
-                      <div><strong>Severity:</strong> ${escapeHtml(it.severity)}</div>
-                      <div><strong>CVSS:</strong> ${escapeHtml(it.cvss || 'N/A')}</div>
-                      <div style="margin-top:8px">${escapeHtml(it.description)}</div>
-                    </div>
-                  </div>
-                  <div>
-                    <div style="background:#f8fafc;padding:12px;border-radius:8px">
-                      <div class="small" style="margin-bottom:8px">File</div>
-                      <div style="font-weight:600">${escapeHtml(it.file)}</div>
-                    </div>
-                  </div>
-                </div>
+        <div class="delta-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+          <div class="delta-stat-card" style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; border-top: 4px solid #10b981;">
+            <h3 style="color: #10b981; margin: 0 0 1rem 0; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+              ✅ Fixed Vulnerabilities (${delta.fixedCount})
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div style="text-align: center; padding: 1rem; background: #fef2f2; border-radius: 6px; border-left: 3px solid #dc2626;">
+                <div style="font-size: 1.8rem; font-weight: bold; color: #dc2626;">${fixedCounts.CRITICAL}</div>
+                <div style="font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">CRITICAL</div>
               </div>
-            </td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-    ` : '<h3>No New Vulnerabilities Found</h3>'}
+              <div style="text-align: center; padding: 1rem; background: #fff7ed; border-radius: 6px; border-left: 3px solid #ea580c;">
+                <div style="font-size: 1.8rem; font-weight: bold; color: #ea580c;">${fixedCounts.HIGH}</div>
+                <div style="font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">HIGH</div>
+              </div>
+              <div style="text-align: center; padding: 1rem; background: #fffbeb; border-radius: 6px; border-left: 3px solid #d97706;">
+                <div style="font-size: 1.8rem; font-weight: bold; color: #d97706;">${fixedCounts.MEDIUM}</div>
+                <div style="font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">MEDIUM</div>
+              </div>
+              <div style="text-align: center; padding: 1rem; background: #f0fdf4; border-radius: 6px; border-left: 3px solid #059669;">
+                <div style="font-size: 1.8rem; font-weight: bold; color: #059669;">${fixedCounts.LOW}</div>
+                <div style="font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">LOW</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="delta-stat-card" style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; border-top: 4px solid #f59e0b;">
+            <h3 style="color: #f59e0b; margin: 0 0 1rem 0; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+              🆕 New Vulnerabilities (${delta.newUnsuppressedCount})
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div style="text-align: center; padding: 1rem; background: #fef2f2; border-radius: 6px; border-left: 3px solid #dc2626;">
+                <div style="font-size: 1.8rem; font-weight: bold; color: #dc2626;">${newCounts.CRITICAL}</div>
+                <div style="font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">CRITICAL</div>
+              </div>
+              <div style="text-align: center; padding: 1rem; background: #fff7ed; border-radius: 6px; border-left: 3px solid #ea580c;">
+                <div style="font-size: 1.8rem; font-weight: bold; color: #ea580c;">${newCounts.HIGH}</div>
+                <div style="font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">HIGH</div>
+              </div>
+              <div style="text-align: center; padding: 1rem; background: #fffbeb; border-radius: 6px; border-left: 3px solid #d97706;">
+                <div style="font-size: 1.8rem; font-weight: bold; color: #d97706;">${newCounts.MEDIUM}</div>
+                <div style="font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">MEDIUM</div>
+              </div>
+              <div style="text-align: center; padding: 1rem; background: #f0fdf4; border-radius: 6px; border-left: 3px solid #059669;">
+                <div style="font-size: 1.8rem; font-weight: bold; color: #059669;">${newCounts.LOW}</div>
+                <div style="font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">LOW</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="delta-stat-card" style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; border-top: 4px solid #6366f1;">
+            <h3 style="color: #6366f1; margin: 0 0 1rem 0; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+              📊 Suppression Changes
+            </h3>
+            <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 600; color: #374151;">Added:</span>
+                <span style="font-size: 1.5rem; font-weight: bold; color: #10b981;">${delta.suppressionChanges.added.length}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 600; color: #374151;">Removed:</span>
+                <span style="font-size: 1.5rem; font-weight: bold; color: #ef4444;">${delta.suppressionChanges.removed.length}</span>
+              </div>
+            </div>
+          </div>
+        </div>
 
-    <div class="footer">Delta Report from OWASP Dependency Audit Tool</div>
+        ${delta.fixedCount > 0 ? `
+        <div class="delta-section" style="margin: 2rem 0;">
+          <div class="section-header" style="background: #ecfdf5; color: #065f46; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #10b981; font-weight: bold; font-size: 1.2rem;">
+            ✅ Fixed Vulnerabilities (${delta.fixedCount})
+          </div>
+          <div style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <table class="table" style="width: 100%; border-collapse: collapse;">
+              <thead style="background: #f8fafc;">
+                <tr>
+                  <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e2e8f0;">Vulnerability</th>
+                  <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e2e8f0;">Severity</th>
+                  <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e2e8f0;">CVSS</th>
+                  <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e2e8f0;">File</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${delta.fixed.map((vuln, index) => `
+                  <tr style="border-bottom: 1px solid #f1f5f9; ${index % 2 === 0 ? 'background: #fafafa;' : 'background: white;'}">
+                    <td style="padding: 1rem; color: #374151;">${escapeHtml(vuln.name)}</td>
+                    <td style="padding: 1rem;">${renderBadge(vuln.severity)}</td>
+                    <td style="padding: 1rem; color: #374151;">${renderCvss(vuln.cvss)}</td>
+                    <td style="padding: 1rem; color: #374151; font-family: monospace; font-size: 0.9rem;">${escapeHtml(vuln.file)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        ` : ''}
+
+        ${delta.newUnsuppressedCount > 0 ? `
+        <div class="delta-section" style="margin: 2rem 0;">
+          <div class="section-header" style="background: #fff7ed; color: #9a3412; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #f59e0b; font-weight: bold; font-size: 1.2rem;">
+            🆕 New Vulnerabilities (${delta.newUnsuppressedCount})
+          </div>
+          <div style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <table class="table" id="new-vuln-table" style="width: 100%; border-collapse: collapse;">
+              <thead style="background: #f8fafc;">
+                <tr>
+                  <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e2e8f0;">#</th>
+                  <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e2e8f0;">VULNERABILITY</th>
+                  <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e2e8f0;">SEVERITY</th>
+                  <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e2e8f0;">CVSS SCORE</th>
+                  <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e2e8f0;">DESCRIPTION</th>
+                  <th style="padding: 1rem; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e2e8f0;">FILE</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${delta.newUnsuppressed.map((it,idx) => `
+                  <tr class="vuln-row" data-idx="${idx}" style="border-bottom: 1px solid #f1f5f9; ${idx % 2 === 0 ? 'background: #fafafa;' : 'background: white;'} cursor: pointer; transition: background-color 0.2s;">
+                    <td style="padding: 1rem; color: #374151;">${idx+1}</td>
+                    <td style="padding: 1rem;"><a href="#" onclick="return false" style="color: #6366f1; text-decoration: none; font-weight: 500;">${escapeHtml(it.name)}</a></td>
+                    <td style="padding: 1rem;">${renderBadge(it.severity)}</td>
+                    <td style="padding: 1rem; color: #374151;">${renderCvss(it.cvss)}</td>
+                    <td style="padding: 1rem; color: #64748b; max-width: 300px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(truncate(it.description,120))}</td>
+                    <td style="padding: 1rem; color: #374151; font-family: monospace; font-size: 0.9rem;">${escapeHtml(it.file)}</td>
+                  </tr>
+                  <tr class="vuln-details" id="details-${idx}" style="display: none;">
+                    <td colspan="6" style="padding: 0; background: #f8fafc;">
+                      <div class="vuln-details-panel" id="panel-${idx}" style="padding: 1.5rem; border-top: 1px solid #e2e8f0;">
+                        <div class="vuln-details-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+                          <div>
+                            <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1.1rem;">${escapeHtml(it.name)}</h4>
+                            <div class="vuln-meta" style="margin-bottom: 1rem;">
+                              <div style="margin-bottom: 0.5rem;"><strong>Severity:</strong> ${renderBadge(it.severity)}</div>
+                              <div style="margin-bottom: 1rem;"><strong>CVSS:</strong> ${renderCvss(it.cvss)}</div>
+                              <div style="line-height: 1.6; color: #374151;">${escapeHtml(it.description)}</div>
+                            </div>
+                          </div>
+                          <div>
+                            <div style="background: white; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                              <div style="font-size: 0.9rem; color: #64748b; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">Affected File</div>
+                              <div style="font-weight: 600; font-family: monospace; color: #374151; word-break: break-all;">${escapeHtml(it.file)}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        ` : `
+        <div class="delta-section" style="margin: 2rem 0;">
+          <div style="text-align: center; padding: 3rem; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
+            <h3 style="color: #065f46; margin: 0 0 1rem 0;">✅ No New Vulnerabilities Found</h3>
+            <p style="color: #059669; margin: 0;">All current vulnerabilities are either resolved or already known from the baseline.</p>
+          </div>
+        </div>
+        `}
+
+      </div>
+
+      <div class="delta-footer" style="background: #f1f5f9; padding: 1.5rem; text-align: center; color: #64748b; border-top: 1px solid #e2e8f0;">
+        <p style="margin: 0;">Generated by OWASP Dependency Audit Tool | <strong>github.com/annasalkovsky/OWASP</strong></p>
+      </div>
+    </div>
   `;
 
   // Attach interactivity to new vulnerability rows  
