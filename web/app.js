@@ -369,51 +369,97 @@ function generateDeltaReport(){
 }
 
 function calculateDelta(current, baseline, currentSuppressions, baselineSuppressions){
-  // Create vulnerability signature for comparison (name + file)
-  const createSig = (vuln) => `${vuln.name}|${vuln.file}`;
+  console.log('calculateDelta called with:', {
+    current: current ? `array length ${current.length}` : 'undefined/null',
+    baseline: baseline ? `array length ${baseline.length}` : 'undefined/null',
+    currentSuppressions: currentSuppressions ? `array length ${currentSuppressions.length}` : 'undefined/null',
+    baselineSuppressions: baselineSuppressions ? `array length ${baselineSuppressions.length}` : 'undefined/null'
+  });
   
-  const currentSigs = new Set(current.map(createSig));
-  const baselineSigs = new Set(baseline.map(createSig));
+  // Validate inputs
+  if (!Array.isArray(current)) {
+    throw new Error(`calculateDelta: current parameter is not an array (got ${typeof current})`);
+  }
+  if (!Array.isArray(baseline)) {
+    throw new Error(`calculateDelta: baseline parameter is not an array (got ${typeof baseline})`);
+  }
+  if (!Array.isArray(currentSuppressions)) {
+    throw new Error(`calculateDelta: currentSuppressions parameter is not an array (got ${typeof currentSuppressions})`);
+  }
+  if (!Array.isArray(baselineSuppressions)) {
+    throw new Error(`calculateDelta: baselineSuppressions parameter is not an array (got ${typeof baselineSuppressions})`);
+  }
   
-  // Fixed: in baseline but not in current
-  const fixed = baseline.filter(vuln => !currentSigs.has(createSig(vuln)));
-  
-  // New: in current but not in baseline  
-  const newVulns = current.filter(vuln => !baselineSigs.has(createSig(vuln)));
-  
-  // Apply current suppressions to new vulnerabilities
-  const newUnsuppressed = filterSuppressions(newVulns, currentSuppressions);
-  
-  // Suppression changes
-  const suppressionChanges = {
-    added: currentSuppressions.filter(s => !baselineSuppressions.some(bs => 
-      bs.type === s.type && bs.value === s.value
-    )),
-    removed: baselineSuppressions.filter(s => !currentSuppressions.some(cs => 
-      cs.type === s.type && cs.value === s.value
-    ))
-  };
-  
-  // All current vulnerabilities after applying suppressions (for context)
-  const currentUnsuppressed = filterSuppressions(current, currentSuppressions);
-  
-  return {
-    fixed,
-    newVulns,
-    newUnsuppressed,
-    suppressionChanges,
-    currentUnsuppressed,
-    fixedCount: fixed.length,
-    newCount: newVulns.length,
-    newUnsuppressedCount: newUnsuppressed.length,
-    summary: {
-      totalCurrent: current.length,
-      totalBaseline: baseline.length,
+  try {
+    // Create vulnerability signature for comparison (name + file)
+    const createSig = (vuln) => {
+      if (!vuln) throw new Error('Vulnerability object is null/undefined');
+      if (!vuln.name && !vuln.file) throw new Error('Vulnerability missing name and file properties');
+      return `${vuln.name || 'UNKNOWN'}|${vuln.file || 'UNKNOWN'}`;
+    };
+
+    console.log('Creating signature sets...');
+    const currentSigs = new Set(current.map(createSig));
+    const baselineSigs = new Set(baseline.map(createSig));
+    console.log('Signature sets created successfully');
+
+    // Fixed: in baseline but not in current
+    console.log('Calculating fixed vulnerabilities...');
+    const fixed = baseline.filter(vuln => !currentSigs.has(createSig(vuln)));
+    console.log(`Fixed vulnerabilities: ${fixed.length}`);
+
+    // New: in current but not in baseline  
+    console.log('Calculating new vulnerabilities...');
+    const newVulns = current.filter(vuln => !baselineSigs.has(createSig(vuln)));
+    console.log(`New vulnerabilities: ${newVulns.length}`);
+
+    // Apply current suppressions to new vulnerabilities
+    console.log('Filtering suppressions on new vulnerabilities...');
+    const newUnsuppressed = filterSuppressions(newVulns, currentSuppressions);
+    console.log(`New unsuppressed vulnerabilities: ${newUnsuppressed.length}`);
+
+    // Suppression changes
+    console.log('Calculating suppression changes...');
+    const suppressionChanges = {
+      added: currentSuppressions.filter(s => !baselineSuppressions.some(bs => 
+        bs.type === s.type && bs.value === s.value
+      )),
+      removed: baselineSuppressions.filter(s => !currentSuppressions.some(cs => 
+        cs.type === s.type && cs.value === s.value
+      ))
+    };
+    console.log(`Suppression changes - added: ${suppressionChanges.added.length}, removed: ${suppressionChanges.removed.length}`);
+
+    // All current vulnerabilities after applying suppressions (for context)
+    console.log('Filtering current vulnerabilities with suppressions...');
+    const currentUnsuppressed = filterSuppressions(current, currentSuppressions);
+    console.log(`Current unsuppressed vulnerabilities: ${currentUnsuppressed.length}`);
+
+    const result = {
+      fixed,
+      newVulns,
+      newUnsuppressed,
+      suppressionChanges,
+      currentUnsuppressed,
       fixedCount: fixed.length,
       newCount: newVulns.length,
-      newUnsuppressedCount: newUnsuppressed.length
-    }
-  };
+      newUnsuppressedCount: newUnsuppressed.length,
+      summary: {
+        totalCurrent: current.length,
+        totalBaseline: baseline.length,
+        fixedCount: fixed.length,
+        newCount: newVulns.length,
+        newUnsuppressedCount: newUnsuppressed.length
+      }
+    };
+    
+    console.log('Delta calculation completed successfully:', result);
+    return result;
+    
+  } catch (error) {
+    console.error('Error in calculateDelta:', error);
+    throw error;
+  }
 }
 
 exportBtn.addEventListener('click', async () => {
@@ -1411,16 +1457,54 @@ function parseSuppressions(xml){
 }
 
 function filterSuppressions(findings, suppressions){
-  if(!suppressions || suppressions.length===0) return findings;
-  return findings.filter(f => {
-    // If any suppression rule matches ID, file or name substring -> suppress
-    for(const r of suppressions){
-      if(r.type === 'name' && f.name.includes(r.value)) return false;
-      if(r.type === 'cpe' && f.description.includes(r.value)) return false;
-      if(r.type === 'note' && (f.description + f.name + f.file).includes(r.value)) return false;
-    }
-    return true;
+  console.log('filterSuppressions called with:', {
+    findings: findings ? `array length ${findings.length}` : 'undefined/null',
+    suppressions: suppressions ? `array length ${suppressions.length}` : 'undefined/null'
   });
+  
+  // Validate inputs
+  if (!Array.isArray(findings)) {
+    throw new Error(`filterSuppressions: findings parameter is not an array (got ${typeof findings})`);
+  }
+  if (!Array.isArray(suppressions)) {
+    console.warn('filterSuppressions: suppressions is not an array, treating as empty');
+    suppressions = [];
+  }
+  
+  if(!suppressions || suppressions.length===0) {
+    console.log('No suppressions to apply, returning all findings');
+    return findings;
+  }
+  
+  try {
+    const result = findings.filter(f => {
+      if (!f) {
+        console.warn('filterSuppressions: found null/undefined finding, skipping');
+        return true;
+      }
+      
+      // If any suppression rule matches ID, file or name substring -> suppress
+      for(const r of suppressions){
+        if (!r) continue;
+        
+        const fname = f.name || '';
+        const fdesc = f.description || '';
+        const ffile = f.file || '';
+        
+        if(r.type === 'name' && fname.includes(r.value)) return false;
+        if(r.type === 'cpe' && fdesc.includes(r.value)) return false;
+        if(r.type === 'note' && (fdesc + fname + ffile).includes(r.value)) return false;
+      }
+      return true;
+    });
+    
+    console.log(`filterSuppressions: filtered ${findings.length} findings to ${result.length} (${findings.length - result.length} suppressed)`);
+    return result;
+    
+  } catch (error) {
+    console.error('Error in filterSuppressions:', error);
+    throw error;
+  }
 }
 
 function severityCounts(items){
