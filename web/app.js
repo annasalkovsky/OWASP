@@ -950,13 +950,28 @@ function generateBeautifulReportHTML(reportData) {
   if (isDelta && reportData.data) {
     // Include all types of vulnerabilities for delta reports
     allVulnerabilities = reportData.data.newVulnerabilities || [];
-    fixedVulns = reportData.data.fixedVulnerabilities || [];
-    suppressionChanges = reportData.data.suppressionChanges || null;
+    fixedVulns = reportData.data.fixed || [];
+    suppressionChanges = reportData.data.suppressionChanges || {
+      added: reportData.data.suppressedNewCount || 0,
+      removed: 0,
+      unchanged: 0
+    };
   } else {
     allVulnerabilities = reportData.vulnerabilities || [];
   }
   
   const title = isDelta ? 'OWASP Delta Security Report' : 'OWASP Security Audit Report';
+  
+  // Debug logging for export data
+  console.log('Export data debug:', {
+    isDelta,
+    reportDataType: reportData.type,
+    allVulnerabilitiesCount: allVulnerabilities.length,
+    fixedVulnsCount: fixedVulns.length,
+    sampleAllVuln: allVulnerabilities[0],
+    sampleFixedVuln: fixedVulns[0],
+    suppressionChanges
+  });
   
   // Function to count vulnerabilities by severity
   function countBySeverity(vulns) {
@@ -967,17 +982,37 @@ function generateBeautifulReportHTML(reportData) {
       LOW: 0
     };
 
-    vulns.forEach(vuln => {
-      // Try to get severity from the data-severity attribute first
-      let severity = vuln.severity || vuln.Severity;
+    if (!Array.isArray(vulns)) {
+      console.warn('countBySeverity: vulns is not an array:', vulns);
+      return counts;
+    }
+
+    vulns.forEach((vuln, index) => {
+      // Debug logging for the first few vulnerabilities
+      if (index < 3) {
+        console.log(`Vulnerability ${index}:`, vuln);
+      }
+      
+      // Try multiple ways to get severity
+      let severity = vuln.severity || vuln.Severity || vuln.cvssScore?.severity;
+      
+      // If it's still not found, try looking at the structure
+      if (!severity && typeof vuln === 'object') {
+        // Check if vulnerability has nested structure
+        severity = vuln.vulnerability?.severity || vuln.package?.severity;
+      }
+      
       if (typeof severity === 'string') {
         severity = severity.toUpperCase();
         if (counts.hasOwnProperty(severity)) {
           counts[severity]++;
         }
+      } else {
+        console.warn('No severity found for vulnerability:', vuln);
       }
     });
 
+    console.log('Severity counts:', counts);
     return counts;
   }
 
