@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OWASP Suppressions Comparison Tool</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .comparison-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .suppressions-section {
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            background: #f8fafc;
+        }
+        
+        .suppressions-section.dragover {
+            border-color: #6366f1;
+            background: #eef2ff;
+        }
+        
+        .suppressions-section.uploaded {
+            border-color: #10b981;
+            background: #ecfdf5;
+        }
+        
+        .uploaded-msg {
+            color: #059669;
+            font-weight: bold;
+            margin-top: 1rem;
+        }
+        
+        .diff-section {
+            margin: 2rem 0;
+            padding: 1.5rem;
+            border-radius: 8px;
+        }
+        
+        .added-section {
+            background: #ecfdf5;
+            border-left: 4px solid #10b981;
+        }
+        
+        .removed-section {
+            background: #fef2f2;
+            border-left: 4px solid #ef4444;
+        }
+        
+        .unchanged-section {
+            background: #f8fafc;
+            border-left: 4px solid #64748b;
+        }
+        
+        .suppression-item {
+            background: white;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .suppression-item code {
+            background: #f1f5f9;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+        
+        .added { color: #10b981; }
+        .removed { color: #ef4444; }
+        .unchanged { color: #64748b; }
+        
+        .comparison-header {
+            text-align: center;
+            margin: 2rem 0;
+        }
+        
+        .error-message {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border-left: 4px solid #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1>OWASP Suppressions Comparison Tool</h1>
+            <p>Compare two suppressions XML files to see what changed</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="comparison-container">
+            <div class="suppressions-section" id="original-section">
+                <h3>📄 Original Suppressions</h3>
+                <p>Upload your baseline suppressions.xml file</p>
+                <input type="file" id="original-input" accept=".xml" style="display: none;">
+                <button class="btn secondary" onclick="document.getElementById('original-input').click()">
+                    Choose File
+                </button>
+                <div class="uploaded-msg" id="original-uploaded" style="display: none;">
+                    ✓ Uploaded
+                </div>
+            </div>
+
+            <div class="suppressions-section" id="updated-section">
+                <h3>📄 Updated Suppressions</h3>
+                <p>Upload your new suppressions.xml file</p>
+                <input type="file" id="updated-input" accept=".xml" style="display: none;">
+                <button class="btn secondary" onclick="document.getElementById('updated-input').click()">
+                    Choose File
+                </button>
+                <div class="uploaded-msg" id="updated-uploaded" style="display: none;">
+                    ✓ Uploaded
+                </div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button id="compare-btn" class="btn" disabled>Compare Suppressions</button>
+            <button id="export-btn" class="btn secondary" disabled>Export Comparison</button>
+        </div>
+
+        <div id="error-container"></div>
+
+        <div id="results-area" style="display: none;">
+            <div class="comparison-header">
+                <h2>Suppressions Comparison Results</h2>
+                <p id="comparison-summary"></p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number added" id="added-count">0</div>
+                    <div class="stat-label">Added Suppressions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number removed" id="removed-count">0</div>
+                    <div class="stat-label">Removed Suppressions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number unchanged" id="unchanged-count">0</div>
+                    <div class="stat-label">Unchanged Suppressions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="total-count">0</div>
+                    <div class="stat-label">Total in Updated File</div>
+                </div>
+            </div>
+
+            <div id="added-suppressions" class="diff-section added-section" style="display: none;">
+                <h3>➕ Added Suppressions</h3>
+                <div id="added-list"></div>
+            </div>
+
+            <div id="removed-suppressions" class="diff-section removed-section" style="display: none;">
+                <h3>➖ Removed Suppressions</h3>
+                <div id="removed-list"></div>
+            </div>
+
+            <div id="unchanged-suppressions" class="diff-section unchanged-section" style="display: none;">
+                <h3>⚪ Unchanged Suppressions</h3>
+                <div id="unchanged-list"></div>
+                <button class="btn secondary" onclick="toggleSection('unchanged-suppressions')">
+                    Toggle Unchanged Details
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let originalSuppressions = null;
+        let updatedSuppressions = null;
+
+        const originalInput = document.getElementById('original-input');
+        const updatedInput = document.getElementById('updated-input');
+        const compareBtn = document.getElementById('compare-btn');
+        const exportBtn = document.getElementById('export-btn');
+        const resultsArea = document.getElementById('results-area');
+        const errorContainer = document.getElementById('error-container');
+
+        // File input handlers
+        originalInput.addEventListener('change', (e) => {
+            loadSuppressions(e.target.files[0], 'original');
+        });
+
+        updatedInput.addEventListener('change', (e) => {
+            loadSuppressions(e.target.files[0], 'updated');
+        });
+
+        // Drag and drop handlers
+        setupDragAndDrop('original-section', 'original');
+        setupDragAndDrop('updated-section', 'updated');
+
+        function setupDragAndDrop(sectionId, type) {
+            const section = document.getElementById(sectionId);
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                section.addEventListener(eventName, preventDefaults, false);
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                section.addEventListener(eventName, () => section.classList.add('dragover'), false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                section.addEventListener(eventName, () => section.classList.remove('dragover'), false);
+            });
+
+            section.addEventListener('drop', (e) => {
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    loadSuppressions(files[0], type);
+                }
+            }, false);
+        }
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        function loadSuppressions(file, type) {
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const parser = new DOMParser();
+                    const xml = parser.parseFromString(e.target.result, 'application/xml');
+                    
+                    // Check for XML parsing errors
+                    const parserError = xml.querySelector('parsererror');
+                    if (parserError) {
+                        throw new Error('Invalid XML file');
+                    }
+
+                    const suppressions = parseSuppressions(xml);
+                    
+                    if (type === 'original') {
+                        originalSuppressions = suppressions;
+                        document.getElementById('original-uploaded').style.display = 'block';
+                        document.getElementById('original-section').classList.add('uploaded');
+                    } else {
+                        updatedSuppressions = suppressions;
+                        document.getElementById('updated-uploaded').style.display = 'block';
+                        document.getElementById('updated-section').classList.add('uploaded');
+                    }
+
+                    // Enable compare button if both files loaded
+                    if (originalSuppressions && updatedSuppressions) {
+                        compareBtn.disabled = false;
+                    }
+
+                    clearError();
+                } catch (error) {
+                    showError(`Error loading ${type} file: ${error.message}`);
+                }
+            };
+
+            reader.readAsText(file);
+        }
+
+        function parseSuppressions(xml) {
+            const suppressions = [];
+            const suppressElements = xml.querySelectorAll('suppress');
+
+            suppressElements.forEach(suppress => {
+                const suppression = {
+                    notes: suppress.getAttribute('notes') || '',
+                    rules: []
+                };
+
+                // Get all child elements (vulnerabilityName, cve, etc.)
+                suppress.childNodes.forEach(node => {
+                    if (node.nodeType === 1) { // Element node
+                        suppression.rules.push({
+                            type: node.nodeName,
+                            value: node.textContent.trim(),
+                            regex: node.getAttribute('regex') === 'true'
+                        });
+                    }
+                });
+
+                suppressions.push(suppression);
+            });
+
+            return suppressions;
+        }
+
+        function compareSuppressions() {
+            if (!originalSuppressions || !updatedSuppressions) {
+                showError('Please upload both suppressions files first.');
+                return;
+            }
+
+            try {
+                const comparison = performComparison(originalSuppressions, updatedSuppressions);
+                displayResults(comparison);
+                exportBtn.disabled = false;
+            } catch (error) {
+                showError(`Error comparing suppressions: ${error.message}`);
+            }
+        }
+
+        function performComparison(original, updated) {
+            const added = [];
+            const removed = [];
+            const unchanged = [];
+
+            // Create signatures for comparison
+            const originalSigs = new Set(original.map(createSuppressionSignature));
+            const updatedSigs = new Set(updated.map(createSuppressionSignature));
+
+            // Find added suppressions
+            updated.forEach(suppression => {
+                const sig = createSuppressionSignature(suppression);
+                if (!originalSigs.has(sig)) {
+                    added.push(suppression);
+                } else {
+                    unchanged.push(suppression);
+                }
+            });
+
+            // Find removed suppressions
+            original.forEach(suppression => {
+                const sig = createSuppressionSignature(suppression);
+                if (!updatedSigs.has(sig)) {
+                    removed.push(suppression);
+                }
+            });
+
+            return { added, removed, unchanged };
+        }
+
+        function createSuppressionSignature(suppression) {
+            // Create a unique signature for each suppression based on its rules
+            const rulesSig = suppression.rules
+                .map(rule => `${rule.type}:${rule.value}:${rule.regex}`)
+                .sort()
+                .join('|');
+            return `${suppression.notes}||${rulesSig}`;
+        }
+
+        function displayResults(comparison) {
+            const { added, removed, unchanged } = comparison;
+
+            // Update statistics
+            document.getElementById('added-count').textContent = added.length;
+            document.getElementById('removed-count').textContent = removed.length;
+            document.getElementById('unchanged-count').textContent = unchanged.length;
+            document.getElementById('total-count').textContent = updatedSuppressions.length;
+
+            // Update summary
+            const summary = `Compared ${originalSuppressions.length} original suppressions with ${updatedSuppressions.length} updated suppressions`;
+            document.getElementById('comparison-summary').textContent = summary;
+
+            // Display sections
+            displaySuppressionsList('added-list', added, 'added-suppressions');
+            displaySuppressionsList('removed-list', removed, 'removed-suppressions');
+            displaySuppressionsList('unchanged-list', unchanged, 'unchanged-suppressions');
+
+            resultsArea.style.display = 'block';
+        }
+
+        function displaySuppressionsList(containerId, suppressions, sectionId) {
+            const container = document.getElementById(containerId);
+            const section = document.getElementById(sectionId);
+
+            if (suppressions.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+            container.innerHTML = suppressions.map(suppression => {
+                const rulesHtml = suppression.rules.map(rule => 
+                    `<div><strong>${rule.type}:</strong> <code>${escapeHtml(rule.value)}</code>${rule.regex ? ' (regex)' : ''}</div>`
+                ).join('');
+
+                return `
+                    <div class="suppression-item">
+                        ${suppression.notes ? `<div><strong>Notes:</strong> ${escapeHtml(suppression.notes)}</div>` : ''}
+                        ${rulesHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            const list = section.querySelector('[id$="-list"]');
+            list.style.display = list.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            errorContainer.innerHTML = `<div class="error-message">${message}</div>`;
+        }
+
+        function clearError() {
+            errorContainer.innerHTML = '';
+        }
+
+        function exportComparison() {
+            // Create a simple text export of the comparison
+            const added = document.getElementById('added-count').textContent;
+            const removed = document.getElementById('removed-count').textContent;
+            const unchanged = document.getElementById('unchanged-count').textContent;
+
+            const exportContent = `OWASP Suppressions Comparison Report
+Generated: ${new Date().toLocaleString()}
+
+SUMMARY:
+- Added Suppressions: ${added}
+- Removed Suppressions: ${removed}
+- Unchanged Suppressions: ${unchanged}
+- Total in Updated File: ${document.getElementById('total-count').textContent}
+
+${resultsArea.innerHTML}
+`;
+
+            const blob = new Blob([exportContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `suppressions-comparison-${new Date().toISOString().split('T')[0]}.html`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Event listeners
+        compareBtn.addEventListener('click', compareSuppressions);
+        exportBtn.addEventListener('click', exportComparison);
+    </script>
+</body>
+</html>
