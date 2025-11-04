@@ -1585,18 +1585,37 @@ function severityCounts(items){
 
 function renderDeltaReport(delta){
   reportArea.hidden = false;
-  
-  // Store delta data globally for email export
+
+  // Extra defensive logging to help diagnose issues
+  console.log('renderDeltaReport received delta object:', {
+    keys: Object.keys(delta || {}),
+    fixedType: Array.isArray(delta.fixed) ? `array[${delta.fixed.length}]` : typeof delta.fixed,
+    newVulnsType: Array.isArray(delta.newVulns) ? `array[${delta.newVulns.length}]` : typeof delta.newVulns,
+    newUnsuppressedType: Array.isArray(delta.newUnsuppressed) ? `array[${delta.newUnsuppressed.length}]` : typeof delta.newUnsuppressed,
+    suppressionChanges: delta.suppressionChanges ? {
+      added: Array.isArray(delta.suppressionChanges.added) ? delta.suppressionChanges.added.length : 'bad',
+      removed: Array.isArray(delta.suppressionChanges.removed) ? delta.suppressionChanges.removed.length : 'bad'
+    } : 'none'
+  });
+
+  // Derive suppressed-new vulnerabilities count (those filtered out by suppressions)
+  const totalNewAll = Array.isArray(delta.newVulns) ? delta.newVulns.length : 0;
+  const totalNewUnsuppressed = Array.isArray(delta.newUnsuppressed) ? delta.newUnsuppressed.length : 0;
+  const suppressedNewCount = Math.max(totalNewAll - totalNewUnsuppressed, 0);
+
+  // Store delta data globally for email export (avoid undefined properties)
   window.lastDeltaData = {
-    fixed: delta.fixed,
-    newVulnerabilities: delta.newUnsuppressed,
-    suppressedVulnerabilities: delta.newSuppressed,
-    totalNew: delta.newUnsuppressed.length + delta.newSuppressed.length,
-    fixedCount: delta.fixed.length
+    fixed: Array.isArray(delta.fixed) ? delta.fixed : [],
+    newVulnerabilities: Array.isArray(delta.newUnsuppressed) ? delta.newUnsuppressed : [],
+    suppressedNewCount,
+    totalNew: totalNewAll,
+    fixedCount: Array.isArray(delta.fixed) ? delta.fixed.length : 0,
+    summary: delta.summary || {}
   };
-  
-  const fixedCounts = severityCounts(delta.fixed);
-  const newCounts = severityCounts(delta.newUnsuppressed);
+
+  // Guard against undefined arrays before passing to severityCounts
+  const fixedCounts = severityCounts(window.lastDeltaData.fixed);
+  const newCounts = severityCounts(window.lastDeltaData.newVulnerabilities);
   
   reportArea.innerHTML = `
     <div class="delta-container" style="background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; margin: 2rem 0;">
@@ -1609,16 +1628,17 @@ function renderDeltaReport(delta){
         <div class="delta-summary-section" style="background: #f1f5f9; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
           <h2 style="color: #1e293b; margin: 0 0 1rem 0;">📊 Analysis Summary</h2>
           <p style="margin: 0; color: #64748b;">
-            <strong>Fixed:</strong> ${delta.fixedCount} vulnerabilities &nbsp;|&nbsp;
-            <strong>New:</strong> ${delta.newUnsuppressedCount} vulnerabilities &nbsp;|&nbsp;
-            <strong>Current Total:</strong> ${delta.currentUnsuppressed.length} vulnerabilities
+            <strong>Fixed:</strong> ${window.lastDeltaData.fixedCount} vulnerabilities &nbsp;|&nbsp;
+            <strong>New (Unsuppressed):</strong> ${totalNewUnsuppressed} &nbsp;|&nbsp;
+            <strong>New (Suppressed):</strong> ${suppressedNewCount} &nbsp;|&nbsp;
+            <strong>Current Total:</strong> ${Array.isArray(delta.currentUnsuppressed) ? delta.currentUnsuppressed.length : 0} vulnerabilities
           </p>
         </div>
 
         <div class="delta-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
           <div class="delta-stat-card" style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; border-top: 4px solid #10b981;">
             <h3 style="color: #10b981; margin: 0 0 1rem 0; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-              ✅ Fixed Vulnerabilities (${delta.fixedCount})
+              ✅ Fixed Vulnerabilities (${window.lastDeltaData.fixedCount})
             </h3>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
               <div style="text-align: center; padding: 1rem; background: #fef2f2; border-radius: 6px; border-left: 3px solid #dc2626;">
@@ -1681,7 +1701,7 @@ function renderDeltaReport(delta){
           </div>
         </div>
 
-        ${delta.fixedCount > 0 ? `
+  ${window.lastDeltaData.fixedCount > 0 ? `
         <div class="delta-section" style="margin: 2rem 0;">
           <div class="section-header" style="background: #ecfdf5; color: #065f46; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #10b981; font-weight: bold; font-size: 1.2rem;">
             ✅ Fixed Vulnerabilities (${delta.fixedCount})
@@ -1711,10 +1731,10 @@ function renderDeltaReport(delta){
         </div>
         ` : ''}
 
-        ${delta.newUnsuppressedCount > 0 ? `
+  ${totalNewUnsuppressed > 0 ? `
         <div class="delta-section" style="margin: 2rem 0;">
           <div class="section-header" style="background: #fff7ed; color: #9a3412; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #f59e0b; font-weight: bold; font-size: 1.2rem;">
-            🆕 New Vulnerabilities (${delta.newUnsuppressedCount})
+            🆕 New Vulnerabilities (${totalNewUnsuppressed})
           </div>
           <div style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             <table class="table" id="new-vuln-table" style="width: 100%; border-collapse: collapse;">
@@ -1729,7 +1749,7 @@ function renderDeltaReport(delta){
                 </tr>
               </thead>
               <tbody>
-                ${delta.newUnsuppressed.map((it,idx) => `
+                ${window.lastDeltaData.newVulnerabilities.map((it,idx) => `
                   <tr class="vuln-row" data-idx="${idx}" style="border-bottom: 1px solid #f1f5f9; ${idx % 2 === 0 ? 'background: #fafafa;' : 'background: white;'} cursor: pointer; transition: background-color 0.2s;">
                     <td style="padding: 1rem; color: #374151;">${idx+1}</td>
                     <td style="padding: 1rem;"><a href="#" onclick="return false" style="color: #6366f1; text-decoration: none; font-weight: 500;">${escapeHtml(it.name)}</a></td>
