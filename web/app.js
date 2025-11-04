@@ -215,114 +215,404 @@ function calculateDelta(current, baseline, currentSuppressions, baselineSuppress
 }
 
 exportBtn.addEventListener('click', async () => {
-  // Export current report-area as a self-contained HTML file with inline CSS and JS
+  // Export current report with beautiful modern styling
   try {
-    // Try to find the current stylesheet href
-    const link = document.querySelector('link[rel="stylesheet"]');
-    const href = link ? link.getAttribute('href') : './styles.css';
+    const reportData = getCurrentReportData();
+    const exportHtml = generateBeautifulReportHTML(reportData);
 
-    // Helper: try fetch first, otherwise fall back to reading document.styleSheets
-    async function collectCssText(){
-      let css = '';
-      if(href){
-        try{
-          const res = await fetch(href);
-          if(res.ok){ css = await res.text(); }
-        } catch(e){
-          // fetch failed, will try styleSheets next
-          console.warn('Stylesheet fetch failed, will try document.styleSheets:', e);
-        }
-      }
-      if(!css){
-        // Fallback: aggregate rules from accessible stylesheets
-        for(const sheet of Array.from(document.styleSheets)){
-          try{
-            if(!sheet.cssRules) continue;
-            for(const rule of Array.from(sheet.cssRules)){
-              css += rule.cssText + '\n';
-            }
-          }catch(_){ /* cross-origin or inaccessible stylesheet */ }
-        }
-      }
-      return css;
-    }
-
-    const cssText = await collectCssText();
-
-    // Inline small script to re-enable interactivity in the exported file
-    const interactiveScript = `
-      (function(){
-        // Row toggles and keyboard support
-        function wireRowToggles(){
-          document.querySelectorAll('.vuln-row').forEach(r => {
-            r.setAttribute('tabindex','0');
-            r.addEventListener('click', ()=>{
-              const idx = r.getAttribute('data-idx');
-              const panel = document.getElementById('panel-'+idx);
-              if(panel) panel.classList.toggle('show');
-            });
-            r.addEventListener('keydown', e=>{ if(e.key==='Enter'){ r.click(); } });
-          });
-        }
-
-        // Filtering logic used in exported report
-        function wireFilters(){
-          const severityFilter = document.getElementById('severity-filter');
-          const searchFilter = document.getElementById('search-filter');
-          const resetBtn = document.getElementById('reset-filters');
-          function applyFilters(){
-            const sev = severityFilter ? severityFilter.value : 'ALL';
-            const q = searchFilter ? searchFilter.value.trim().toLowerCase() : '';
-            document.querySelectorAll('#vuln-table tbody tr.vuln-row').forEach(r=>{
-              const idx = r.getAttribute('data-idx');
-              const name = r.querySelector('td:nth-child(2)') ? r.querySelector('td:nth-child(2)').textContent.toLowerCase() : '';
-              const file = r.querySelector('td:nth-child(6)') ? r.querySelector('td:nth-child(6)').textContent.toLowerCase() : '';
-              const sevCell = r.querySelector('td:nth-child(3)') ? r.querySelector('td:nth-child(3)').textContent.toUpperCase() : '';
-              let hide = false;
-              if(sev !== 'ALL' && sevCell !== sev) hide = true;
-              if(q && !(name.includes(q) || file.includes(q))) hide = true;
-              const details = document.getElementById('details-'+idx);
-              if(hide){ r.style.display='none'; if(details) details.style.display='none'; }
-              else { r.style.display='table-row'; if(details) details.style.display='table-row'; }
-            });
-          }
-          if(severityFilter) severityFilter.addEventListener('change', applyFilters);
-          if(searchFilter) searchFilter.addEventListener('input', applyFilters);
-          if(resetBtn) resetBtn.addEventListener('click', ()=>{ if(severityFilter) severityFilter.value='ALL'; if(searchFilter) searchFilter.value=''; applyFilters(); });
-        }
-
-        // Prevent links from navigating when offline
-        document.querySelectorAll('a').forEach(a=>a.addEventListener('click', e=>e.preventDefault()));
-        // Wire functionality
-        wireRowToggles();
-        wireFilters();
-      })();
-    `;
-
-    const html = `<!doctype html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width,initial-scale=1">
-          <title>OWASP Audit Report</title>
-          <style>${cssText}</style>
-        </head>
-        <body>
-          ${reportArea.innerHTML}
-          <script>${interactiveScript} <\/script>
-        </body>
-      </html>`;
-
-    const blob = new Blob([html], {type: 'text/html'});
+    const blob = new Blob([exportHtml], {type: 'text/html'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = `OWASP-Audit-Report-${new Date().toISOString().split('T')[0]}.html`; a.click();
+    a.href = url; 
+    a.download = `OWASP-Audit-Report-${new Date().toISOString().split('T')[0]}.html`; 
+    a.click();
     URL.revokeObjectURL(url);
   } catch (err) {
     console.error('Export failed', err);
     alert('Export failed: ' + err.message);
   }
 });
+
+function getCurrentReportData() {
+  // Extract current report data from the DOM
+  const isDelta = document.querySelector('.delta-container') !== null;
+  
+  if (isDelta) {
+    // For delta reports, we'll handle this separately
+    return { type: 'delta', html: reportArea.innerHTML };
+  }
+  
+  // For normal reports, extract the data
+  const vulnerabilities = [];
+  document.querySelectorAll('#vuln-table tbody tr.vuln-row').forEach((row, idx) => {
+    const cells = row.querySelectorAll('td');
+    if (cells.length >= 6) {
+      vulnerabilities.push({
+        number: cells[0].textContent.trim(),
+        name: cells[1].textContent.trim(),
+        severity: cells[2].textContent.trim(),
+        cvss: cells[3].textContent.trim(),
+        description: cells[4].textContent.trim(),
+        file: cells[5].textContent.trim()
+      });
+    }
+  });
+
+  // Extract summary statistics
+  const metrics = {};
+  document.querySelectorAll('.metric').forEach(metric => {
+    const value = metric.querySelector('strong')?.textContent || '0';
+    const label = metric.querySelector('.small')?.textContent || '';
+    if (label) metrics[label] = parseInt(value);
+  });
+
+  const total = vulnerabilities.length;
+  const generated = document.querySelector('.report-header')?.textContent.includes('Generated:') ? 
+    document.querySelector('.report-header').textContent.match(/Generated: ([^Total]+)/)?.[1]?.trim() : 
+    new Date().toLocaleString();
+
+  return {
+    type: 'normal',
+    vulnerabilities,
+    metrics,
+    total,
+    generated: generated || new Date().toLocaleString()
+  };
+}
+
+function generateBeautifulReportHTML(data) {
+  if (data.type === 'delta') {
+    // For delta reports, return the existing beautiful HTML
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OWASP Delta Report</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e293b; background: #f8fafc; padding: 2rem; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        ${getCommonStyles()}
+    </style>
+</head>
+<body>
+    <div class="container">
+        ${data.html}
+    </div>
+    <script>${getInteractivityScript()}</script>
+</body>
+</html>`;
+  }
+
+  // Generate beautiful HTML for normal reports
+  const { vulnerabilities, metrics, total, generated } = data;
+  
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OWASP Dependency Check Report</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6; 
+            color: #1e293b; 
+            background: #f8fafc;
+            padding: 2rem;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .report-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin: 2rem 0;
+        }
+        .report-header {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        .report-header h1 {
+            font-size: 2.5rem;
+            margin: 0 0 0.5rem 0;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+        .report-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin: 0;
+        }
+        .report-content { padding: 2rem; }
+        .summary-section {
+            background: #f1f5f9;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+        .summary-section h2 {
+            color: #1e293b;
+            margin: 0 0 1rem 0;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        .metric-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            border-top: 4px solid;
+        }
+        .metric-card.critical { border-top-color: #dc2626; }
+        .metric-card.high { border-top-color: #ea580c; }
+        .metric-card.medium { border-top-color: #d97706; }
+        .metric-card.low { border-top-color: #059669; }
+        .metric-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .metric-number.critical { color: #dc2626; }
+        .metric-number.high { color: #ea580c; }
+        .metric-number.medium { color: #d97706; }
+        .metric-number.low { color: #059669; }
+        .metric-label {
+            color: #64748b;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .vulnerabilities-section {
+            margin: 2rem 0;
+        }
+        .section-header {
+            background: #f1f5f9;
+            color: #374151;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 4px solid #6366f1;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        .vulnerabilities-table {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        thead {
+            background: #f8fafc;
+        }
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        tr:nth-child(even) {
+            background: #fafafa;
+        }
+        .severity-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .severity-critical {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        .severity-high {
+            background: #fff7ed;
+            color: #9a3412;
+            border: 1px solid #fed7aa;
+        }
+        .severity-medium {
+            background: #fffbeb;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+        .severity-low {
+            background: #f0fdf4;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+        .file-path {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #64748b;
+            background: #f1f5f9;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+        }
+        .footer {
+            background: #f1f5f9;
+            padding: 1.5rem;
+            text-align: center;
+            color: #64748b;
+            border-top: 1px solid #e2e8f0;
+        }
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #fef2f2;
+            color: #991b1b;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .status-indicator::before {
+            content: "⚠️";
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="report-container">
+            <div class="report-header">
+                <h1>🛡️ OWASP Dependency Check</h1>
+                <p>Security Vulnerability Audit Report</p>
+            </div>
+            
+            <div class="report-content">
+                <div class="summary-section">
+                    <h2>📊 Report Summary</h2>
+                    <p><strong>Generated:</strong> ${generated}</p>
+                    <p><strong>Total Vulnerabilities:</strong> ${total} ${total > 0 ? '| <span class="status-indicator">Action Required</span>' : ''}</p>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card critical">
+                        <div class="metric-number critical">${metrics.CRITICAL || 0}</div>
+                        <div class="metric-label">Critical</div>
+                    </div>
+                    <div class="metric-card high">
+                        <div class="metric-number high">${metrics.HIGH || 0}</div>
+                        <div class="metric-label">High</div>
+                    </div>
+                    <div class="metric-card medium">
+                        <div class="metric-number medium">${metrics.MEDIUM || 0}</div>
+                        <div class="metric-label">Medium</div>
+                    </div>
+                    <div class="metric-card low">
+                        <div class="metric-number low">${metrics.LOW || 0}</div>
+                        <div class="metric-label">Low</div>
+                    </div>
+                </div>
+
+                ${vulnerabilities.length > 0 ? `
+                <div class="vulnerabilities-section">
+                    <div class="section-header">
+                        🔍 Unsuppressed Vulnerabilities (${vulnerabilities.length})
+                    </div>
+                    <div class="vulnerabilities-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Vulnerability</th>
+                                    <th>Severity</th>
+                                    <th>CVSS Score</th>
+                                    <th>Description</th>
+                                    <th>File</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${vulnerabilities.map((vuln, idx) => `
+                                    <tr>
+                                        <td>${vuln.number}</td>
+                                        <td style="color: #6366f1; font-weight: 500;">${escapeHtml(vuln.name)}</td>
+                                        <td>
+                                            <span class="severity-badge severity-${vuln.severity.toLowerCase()}">
+                                                ${vuln.severity}
+                                            </span>
+                                        </td>
+                                        <td>${vuln.cvss}</td>
+                                        <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(vuln.description)}</td>
+                                        <td>
+                                            <span class="file-path">${escapeHtml(vuln.file)}</span>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                ` : `
+                <div class="vulnerabilities-section">
+                    <div style="text-align: center; padding: 3rem; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
+                        <h3 style="color: #065f46; margin: 0 0 1rem 0;">✅ No Vulnerabilities Found</h3>
+                        <p style="color: #059669; margin: 0;">All dependencies are secure and up to date.</p>
+                    </div>
+                </div>
+                `}
+            </div>
+
+            <div class="footer">
+                <p>Generated by OWASP Dependency Audit Tool | <strong>github.com/annasalkovsky/OWASP</strong></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
+}
+
+function getCommonStyles() {
+  // Common styles for both normal and delta reports
+  return `
+    .severity-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .severity-critical { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .severity-high { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
+    .severity-medium { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+    .severity-low { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+  `;
+}
+
+function getInteractivityScript() {
+  return `
+    (function(){
+      // Row toggles and keyboard support for exported reports
+      document.querySelectorAll('.vuln-row').forEach(r => {
+        r.setAttribute('tabindex','0');
+        r.style.cursor = 'pointer';
+        r.addEventListener('click', ()=>{
+          const idx = r.getAttribute('data-idx');
+          const panel = document.getElementById('panel-'+idx);
+          if(panel) panel.classList.toggle('show');
+        });
+        r.addEventListener('keydown', e=>{ if(e.key==='Enter'){ r.click(); } });
+      });
+    })();
+  `;
+}
 
 emailBtn.addEventListener('click', async () => {
   // Email report using mailto with HTML content embedded
