@@ -140,6 +140,10 @@ generateBtn.addEventListener('click', () => {
   
   exportBtn.disabled = false;
   emailBtn.disabled = false;
+  
+  // Enable CSV export for normal reports too
+  const csvBtn = document.getElementById('export-csv-btn');
+  if(csvBtn) csvBtn.disabled = false;
 });
 
 function generateDeltaReport(){
@@ -156,6 +160,10 @@ function generateDeltaReport(){
   
   // Render delta report
   renderDeltaReport(delta);
+  
+  // Enable export buttons for delta reports
+  exportBtn.disabled = false;
+  emailBtn.disabled = false;
 }
 
 function calculateDelta(current, baseline, currentSuppressions, baselineSuppressions){
@@ -656,6 +664,25 @@ function renderDeltaReport(delta){
 
   // Attach interactivity to new vulnerability rows  
   attachInteractivity();
+  
+  // Enable CSV export for delta reports
+  const csvBtn = document.getElementById('export-csv-btn');
+  if(csvBtn){ 
+    csvBtn.disabled = false; 
+    // Remove existing event listeners to avoid duplicates
+    csvBtn.replaceWith(csvBtn.cloneNode(true));
+    const newCsvBtn = document.getElementById('export-csv-btn');
+    newCsvBtn.addEventListener('click', ()=>{
+      const csv = generateDeltaCSV(delta);
+      const blob = new Blob([csv], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); 
+      a.href = url; 
+      a.download = `owasp-delta-report-${new Date().toISOString().split('T')[0]}.csv`; 
+      a.click(); 
+      URL.revokeObjectURL(url);
+    }); 
+  }
 }
 
 function renderReport(items){
@@ -856,6 +883,48 @@ function generateCSVFromTable(){
     rows.push([cols[0].textContent.trim(), cols[1].textContent.trim(), cols[2].textContent.trim(), cols[3].textContent.trim(), cols[4].textContent.trim(), cols[5].textContent.trim()].map(c=>`"${c.replace(/"/g,'""')}"`));
   });
   return rows.map(r=>r.join(',')).join('\n');
+}
+
+function generateDeltaCSV(delta){
+  const rows = [];
+  
+  // Add header
+  rows.push(['Report Type', 'Vulnerability', 'Severity', 'CVSS', 'Description', 'File']);
+  
+  // Add fixed vulnerabilities
+  delta.fixed.forEach(vuln => {
+    rows.push([
+      'FIXED',
+      vuln.name || '',
+      vuln.severity || '',
+      vuln.cvss || '',
+      (vuln.description || '').replace(/\n/g, ' ').substring(0, 200),
+      vuln.file || ''
+    ].map(c => `"${c.replace(/"/g, '""')}"`));
+  });
+  
+  // Add new vulnerabilities
+  delta.newUnsuppressed.forEach(vuln => {
+    rows.push([
+      'NEW',
+      vuln.name || '',
+      vuln.severity || '',
+      vuln.cvss || '',
+      (vuln.description || '').replace(/\n/g, ' ').substring(0, 200),
+      vuln.file || ''
+    ].map(c => `"${c.replace(/"/g, '""')}"`));
+  });
+  
+  // Add summary information
+  rows.push([]);
+  rows.push(['SUMMARY', '', '', '', '', '']);
+  rows.push(['Fixed Vulnerabilities', delta.fixedCount.toString(), '', '', '', '']);
+  rows.push(['New Vulnerabilities', delta.newUnsuppressedCount.toString(), '', '', '', '']);
+  rows.push(['Suppressions Added', delta.suppressionChanges.added.length.toString(), '', '', '', '']);
+  rows.push(['Suppressions Removed', delta.suppressionChanges.removed.length.toString(), '', '', '', '']);
+  rows.push(['Current Total Vulnerabilities', delta.currentUnsuppressed.length.toString(), '', '', '', '']);
+  
+  return rows.map(r => r.join(',')).join('\n');
 }
 
 function renderSummaryChart(counts){
