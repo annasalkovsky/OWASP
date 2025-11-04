@@ -614,74 +614,497 @@ function getInteractivityScript() {
   `;
 }
 
+// Helper function to get current report data for exports
+function getCurrentReportData() {
+  const isDelta = reportArea.innerHTML.includes('OWASP Delta Report');
+  
+  if (isDelta) {
+    // For delta reports, extract from the delta data if available
+    if (window.lastDeltaData) {
+      return {
+        type: 'delta',
+        data: window.lastDeltaData,
+        timestamp: new Date().toLocaleString()
+      };
+    }
+  }
+  
+  // For regular reports or if delta data not available, extract from DOM
+  const vulnerabilities = [];
+  const vulnTable = document.querySelector('#vuln-table, #new-vuln-table');
+  
+  if (vulnTable) {
+    const rows = vulnTable.querySelectorAll('tbody tr.vuln-row');
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells.length >= 6) {
+        vulnerabilities.push({
+          'Package': cells[0]?.textContent.trim() || '',
+          'Vulnerability': cells[1]?.textContent.trim() || '',
+          'Severity': cells[2]?.textContent.trim() || '',
+          'CVSS': cells[3]?.textContent.trim() || '',
+          'Description': cells[4]?.textContent.trim() || '',
+          'File': cells[5]?.textContent.trim() || ''
+        });
+      }
+    });
+  }
+  
+  return {
+    type: isDelta ? 'delta' : 'regular',
+    vulnerabilities: vulnerabilities,
+    timestamp: new Date().toLocaleString()
+  };
+}
+
+// Generate beautiful HTML report for export (enhanced version)
+function generateBeautifulReportHTML(reportData) {
+  const isDelta = reportData.type === 'delta';
+  const timestamp = reportData.timestamp;
+  
+  let vulnerabilities = [];
+  if (isDelta && reportData.data) {
+    vulnerabilities = reportData.data.newVulnerabilities || [];
+  } else {
+    vulnerabilities = reportData.vulnerabilities || [];
+  }
+  
+  const title = isDelta ? 'OWASP Delta Security Report' : 'OWASP Security Audit Report';
+  
+  // Count by severity
+  const severityCounts = {
+    CRITICAL: 0,
+    HIGH: 0,
+    MEDIUM: 0,
+    LOW: 0
+  };
+  
+  vulnerabilities.forEach(vuln => {
+    const severity = vuln.Severity?.toUpperCase() || 'UNKNOWN';
+    if (severityCounts.hasOwnProperty(severity)) {
+      severityCounts[severity]++;
+    }
+  });
+  
+  const totalVulns = vulnerabilities.length;
+  
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${title}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #2c3e50;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+        
+        .header .timestamp {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 40px;
+            background: #f8f9fa;
+        }
+        
+        .metric-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border-left: 4px solid;
+        }
+        
+        .metric-card.critical { border-left-color: #e74c3c; }
+        .metric-card.high { border-left-color: #f39c12; }
+        .metric-card.medium { border-left-color: #f1c40f; }
+        .metric-card.low { border-left-color: #27ae60; }
+        
+        .metric-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .metric-label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+        }
+        
+        .vuln-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        
+        .vuln-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .vuln-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .vuln-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .severity-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: white;
+        }
+        
+        .severity-critical { background-color: #e74c3c; }
+        .severity-high { background-color: #f39c12; }
+        .severity-medium { background-color: #f1c40f; color: #2c3e50; }
+        .severity-low { background-color: #27ae60; }
+        
+        .footer {
+            background: #2c3e50;
+            color: white;
+            padding: 30px 40px;
+            text-align: center;
+        }
+        
+        .footer p {
+            margin-bottom: 10px;
+        }
+        
+        .no-vulnerabilities {
+            text-align: center;
+            padding: 60px;
+            color: #27ae60;
+            font-size: 1.2rem;
+        }
+        
+        @media print {
+            body { background: white; padding: 0; }
+            .container { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>${title}</h1>
+            <div class="subtitle">Comprehensive Security Analysis Report</div>
+            <div class="timestamp">Generated on ${timestamp}</div>
+        </div>
+        
+        <div class="metrics-grid">
+            <div class="metric-card critical">
+                <div class="metric-number">${severityCounts.CRITICAL}</div>
+                <div class="metric-label">Critical</div>
+            </div>
+            <div class="metric-card high">
+                <div class="metric-number">${severityCounts.HIGH}</div>
+                <div class="metric-label">High</div>
+            </div>
+            <div class="metric-card medium">
+                <div class="metric-number">${severityCounts.MEDIUM}</div>
+                <div class="metric-label">Medium</div>
+            </div>
+            <div class="metric-card low">
+                <div class="metric-number">${severityCounts.LOW}</div>
+                <div class="metric-label">Low</div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <h2 class="section-title">
+                ${isDelta ? 'New Vulnerabilities Detected' : 'Security Vulnerabilities'} 
+                (${totalVulns} total)
+            </h2>
+            
+            ${totalVulns === 0 ? 
+                '<div class="no-vulnerabilities">🎉 No vulnerabilities found! Your application is secure.</div>' :
+                `<table class="vuln-table">
+                    <thead>
+                        <tr>
+                            <th>Package</th>
+                            <th>Vulnerability</th>
+                            <th>Severity</th>
+                            <th>CVSS</th>
+                            <th>Description</th>
+                            <th>File</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${vulnerabilities.map(vuln => `
+                            <tr>
+                                <td>${vuln.Package || ''}</td>
+                                <td>${vuln.Vulnerability || ''}</td>
+                                <td>
+                                    <span class="severity-badge severity-${(vuln.Severity || '').toLowerCase()}">
+                                        ${vuln.Severity || ''}
+                                    </span>
+                                </td>
+                                <td>${vuln.CVSS || ''}</td>
+                                <td>${vuln.Description || ''}</td>
+                                <td>${vuln.File || ''}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>`
+            }
+        </div>
+        
+        <div class="footer">
+            <p><strong>OWASP Dependency Audit Tool</strong></p>
+            <p>Visit: <a href="https://annasalkovsky.github.io/OWASP/" style="color: #3498db;">https://annasalkovsky.github.io/OWASP/</a></p>
+            <p>Contact: anna.salkovsky@imd-soft.com</p>
+        </div>
+    </div>
+</body>
+</html>`;
+}
+
 emailBtn.addEventListener('click', async () => {
-  // Email report using mailto with HTML content embedded
+  // Enhanced email with detailed report content
   try {
     const reportContent = reportArea.innerHTML;
     const timestamp = new Date().toLocaleString();
     const isDelta = reportContent.includes('OWASP Delta Report');
     const subject = isDelta ? 'OWASP Delta Security Report' : 'OWASP Security Audit Report';
     
-    // Create a simplified text version for email body
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(reportContent, 'text/html');
+    // Generate the full HTML report for attachment instructions
+    const reportData = getCurrentReportData();
+    const fullReportHtml = generateBeautifulReportHTML(reportData);
     
-    // Extract key metrics
-    const header = doc.querySelector('.report-header');
-    const headerText = header ? header.textContent.trim() : '';
+    // Create a data URL for the report (user can save it)
+    const blob = new Blob([fullReportHtml], {type: 'text/html'});
+    const reportUrl = URL.createObjectURL(blob);
     
-    // Extract summary counts
-    let summaryText = '';
+    // Extract detailed information from the report
+    let detailedSummary = '';
+    let vulnerabilityList = '';
+    
     if (isDelta) {
-      const deltaSection = doc.querySelector('.delta-summary');
-      if (deltaSection) {
-        const fixed = deltaSection.textContent.match(/Fixed Vulnerabilities \((\d+)\)/)?.[1] || '0';
-        const newVulns = deltaSection.textContent.match(/New Vulnerabilities \((\d+)\)/)?.[1] || '0';
-        summaryText = `\n📊 Delta Summary:\n- Fixed: ${fixed} vulnerabilities\n- New: ${newVulns} vulnerabilities\n`;
-      }
-    } else {
-      const metrics = doc.querySelectorAll('.metric');
-      if (metrics.length > 0) {
-        summaryText = '\n📊 Vulnerability Summary:\n';
-        metrics.forEach(metric => {
-          const count = metric.querySelector('strong')?.textContent || '0';
-          const severity = metric.querySelector('.small')?.textContent || '';
-          if (severity) summaryText += `- ${severity}: ${count}\n`;
+      // Delta report details
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(reportContent, 'text/html');
+      
+      const fixedCount = doc.querySelector('.delta-content')?.textContent.match(/Fixed:\s*(\d+)/)?.[1] || '0';
+      const newCount = doc.querySelector('.delta-content')?.textContent.match(/New:\s*(\d+)/)?.[1] || '0';
+      const totalCount = doc.querySelector('.delta-content')?.textContent.match(/Current Total:\s*(\d+)/)?.[1] || '0';
+      
+      detailedSummary = `
+🔄 DELTA ANALYSIS RESULTS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Fixed Vulnerabilities: ${fixedCount}
+🆕 New Vulnerabilities: ${newCount}  
+📊 Current Total: ${totalCount}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+This delta report compares your current security scan with a baseline scan
+to show what vulnerabilities were fixed and what new ones were discovered.
+`;
+      
+      // Extract new vulnerabilities details
+      const newVulnTable = doc.querySelector('#new-vuln-table');
+      if (newVulnTable) {
+        vulnerabilityList = '\n🚨 NEW VULNERABILITIES REQUIRING ATTENTION:\n';
+        vulnerabilityList += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+        const rows = newVulnTable.querySelectorAll('tbody tr.vuln-row');
+        rows.forEach((row, index) => {
+          if (index < 10) { // Limit to first 10 for email readability
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 4) {
+              const name = cells[1]?.textContent.trim() || '';
+              const severity = cells[2]?.textContent.trim() || '';
+              const file = cells[5]?.textContent.trim() || '';
+              vulnerabilityList += `${index + 1}. ${name} [${severity}]\n   File: ${file}\n\n`;
+            }
+          }
         });
+        if (rows.length > 10) {
+          vulnerabilityList += `... and ${rows.length - 10} more vulnerabilities.\n`;
+        }
+      }
+      
+    } else {
+      // Normal report details
+      const metrics = {};
+      document.querySelectorAll('.metric').forEach(metric => {
+        const count = metric.querySelector('strong')?.textContent || '0';
+        const severity = metric.querySelector('.small')?.textContent || '';
+        if (severity) metrics[severity] = parseInt(count);
+      });
+      
+      const total = Object.values(metrics).reduce((a, b) => a + b, 0);
+      
+      detailedSummary = `
+🛡️ SECURITY AUDIT RESULTS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔴 Critical: ${metrics.CRITICAL || 0}
+🟠 High: ${metrics.HIGH || 0}
+🟡 Medium: ${metrics.MEDIUM || 0}
+🟢 Low: ${metrics.LOW || 0}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Total Vulnerabilities: ${total}
+`;
+
+      // Extract top vulnerabilities
+      const vulnTable = document.querySelector('#vuln-table');
+      if (vulnTable && total > 0) {
+        vulnerabilityList = '\n� TOP CRITICAL & HIGH VULNERABILITIES:\n';
+        vulnerabilityList += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+        const rows = vulnTable.querySelectorAll('tbody tr.vuln-row');
+        let criticalHighCount = 0;
+        rows.forEach((row) => {
+          if (criticalHighCount < 10) { // Limit to first 10 critical/high
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 6) {
+              const severity = cells[2]?.textContent.trim().toUpperCase() || '';
+              if (severity === 'CRITICAL' || severity === 'HIGH') {
+                const name = cells[1]?.textContent.trim() || '';
+                const file = cells[5]?.textContent.trim() || '';
+                vulnerabilityList += `${criticalHighCount + 1}. ${name} [${severity}]\n   File: ${file}\n\n`;
+                criticalHighCount++;
+              }
+            }
+          }
+        });
+        if (criticalHighCount === 0 && total > 0) {
+          vulnerabilityList += 'All vulnerabilities are MEDIUM or LOW severity.\n';
+        }
       }
     }
     
     const emailBody = `Hello,
 
 Please find the ${subject} generated on ${timestamp}.
+${detailedSummary}
+${vulnerabilityList}
 
-${headerText}${summaryText}
+� FULL INTERACTIVE REPORT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The complete interactive HTML report is ready for download.
 
-📋 Full interactive report is available for download from the OWASP Security Tool.
+To access the full report:
+1. Visit: https://annasalkovsky.github.io/OWASP/
+2. Use the Export Report button to download the complete HTML file
+3. Or copy this email and manually download the attached report file
+
+The full report includes:
+• Interactive vulnerability details
+• Filtering and search capabilities  
+• Professional formatting for presentations
+• Complete CVSS scores and descriptions
+• Exportable CSV data
 
 Best regards,
+Anna Salkovsky
 OWASP Dependency Audit Tool
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔗 Tool: https://github.com/annasalkovsky/OWASP
+📧 Contact: anna.salkovsky@imd-soft.com
     `.trim();
 
-    // Create mailto link
+    // Create mailto link with enhanced content
     const mailtoLink = `mailto:anna.salkovsky@imd-soft.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
     
-    // Check if mailto link is too long (some email clients have limits)
+    // Check if mailto link is too long and provide fallback
     if (mailtoLink.length > 2000) {
-      // Fallback to shorter version
+      // Show a modal with instructions for manual email
       const shortBody = `Hello,
 
 Please find the ${subject} generated on ${timestamp}.
+${detailedSummary}
 
-${summaryText}
+Full interactive report available at: https://annasalkovsky.github.io/OWASP/
 
 Best regards,
-OWASP Tool`;
+Anna Salkovsky`;
+      
       const shortMailto = `mailto:anna.salkovsky@imd-soft.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(shortBody)}`;
+      
+      // Also show instructions
+      alert(`📧 Email Report Instructions:
+
+1. Your email client will open with a detailed report summary
+2. For the FULL INTERACTIVE REPORT:
+   - Click "Export Report" button to download HTML file
+   - Attach the downloaded file to your email
+   
+3. The complete report includes all vulnerability details,
+   interactive features, and professional formatting.`);
+      
       window.open(shortMailto, '_blank');
     } else {
       window.open(mailtoLink, '_blank');
     }
+    
+    // Clean up the blob URL after a delay
+    setTimeout(() => URL.revokeObjectURL(reportUrl), 60000);
     
   } catch (err) {
     console.error('Email failed', err);
@@ -764,6 +1187,15 @@ function severityCounts(items){
 
 function renderDeltaReport(delta){
   reportArea.hidden = false;
+  
+  // Store delta data globally for email export
+  window.lastDeltaData = {
+    fixed: delta.fixed,
+    newVulnerabilities: delta.newUnsuppressed,
+    suppressedVulnerabilities: delta.newSuppressed,
+    totalNew: delta.newUnsuppressed.length + delta.newSuppressed.length,
+    fixedCount: delta.fixed.length
+  };
   
   const fixedCounts = severityCounts(delta.fixed);
   const newCounts = severityCounts(delta.newUnsuppressed);
@@ -1110,7 +1542,7 @@ function initTableControls(items){
   // CSV export button
   const csvBtn = document.getElementById('export-csv-btn');
   if(csvBtn){ csvBtn.disabled = false; csvBtn.addEventListener('click', ()=>{
-    const csv = generateCSVFromTable();
+    const csv = generateCSVFromData(items); // Use actual data instead of DOM
     const blob = new Blob([csv], {type:'text/csv'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = `owasp-report-${new Date().toISOString().split('T')[0]}.csv`; a.click(); URL.revokeObjectURL(url);
@@ -1173,6 +1605,35 @@ function generateCSVFromTable(){
     rows.push([cols[0].textContent.trim(), cols[1].textContent.trim(), cols[2].textContent.trim(), cols[3].textContent.trim(), cols[4].textContent.trim(), cols[5].textContent.trim()].map(c=>`"${c.replace(/"/g,'""')}"`));
   });
   return rows.map(r=>r.join(',')).join('\n');
+}
+
+function generateCSVFromData(items){
+  const rows = [];
+  rows.push(['#','Vulnerability','Severity','CVSS','Description','File']);
+  
+  // Apply current filters to get the same filtered data that would be shown
+  const sev = document.getElementById('severity-filter') ? document.getElementById('severity-filter').value : 'ALL';
+  const q = document.getElementById('search-filter') ? document.getElementById('search-filter').value.trim().toLowerCase() : '';
+  
+  let filteredItems = items.filter(it=>{
+    if(sev !== 'ALL' && (it.severity||'').toUpperCase() !== sev) return false;
+    if(q && !((it.name||'').toLowerCase().includes(q) || (it.file||'').toLowerCase().includes(q))) return false;
+    return true;
+  });
+  
+  // Export all filtered data (not just current page)
+  filteredItems.forEach((item, index) => {
+    rows.push([
+      (index + 1).toString(),
+      item.name || '',
+      item.severity || '',
+      item.cvss || '',
+      (item.description || '').replace(/\n/g, ' ').substring(0, 500), // Limit description length
+      item.file || ''
+    ].map(c => `"${c.replace(/"/g, '""')}"`));
+  });
+  
+  return rows.map(r => r.join(',')).join('\n');
 }
 
 function generateDeltaCSV(delta){
