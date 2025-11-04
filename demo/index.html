@@ -245,18 +245,65 @@
             </div>
         </div>
 
-        <!-- Slide 2: Upload Process -->
+        <!-- Slide 2: Basic Upload Interface -->
         <div class="slide" data-slide="2">
-            <div class="slide-number">2/8</div>
-            <h2>🚀 Simple Upload Process</h2>
-            <p>Upload your OWASP dependency-check XML files and optional suppressions to generate comprehensive reports in seconds.</p>
+            <div class="slide-number">2/12</div>
+            <h2>🚀 Upload Interface - Basic Mode</h2>
+            <p>Simple upload process with basic delta comparison toggle unchecked.</p>
             <div class="screenshot-container">
-                <!-- Real interface based on your screenshot -->
-                <div style="padding: 2rem; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; text-align: center;">
-                    <h1 style="font-size: 2rem; margin: 0 0 0.5rem 0;">🛡️ OWASP Dependency Audit Tool</h1>
+                <!-- First screenshot - basic upload -->
+                <div style="padding: 1.5rem; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; text-align: center;">
+                    <h1 style="font-size: 2rem; margin: 0 0 0.5rem 0;">OWASP Dependency Audit Tool</h1>
                     <p style="margin: 0; opacity: 0.9;">Generate audit-ready reports from dependency-check XML</p>
                 </div>
                 <div style="padding: 2rem; background: #f8fafc; color: #1e293b;">
+                    <!-- Unchecked Delta Mode -->
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; color: #6b7280;">
+                            <input type="checkbox" style="transform: scale(1.2);"> 
+                            <span>Enable Delta Comparison Mode</span>
+                            <span style="font-size: 0.9rem; color: #9ca3af;">(Compare two reports to see fixed/new vulnerabilities)</span>
+                        </label>
+                    </div>
+                    <!-- Basic Upload Areas -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                        <div style="border: 2px dashed #9ca3af; padding: 2rem; border-radius: 8px; text-align: center; background: white;">
+                            <h3 style="margin: 0 0 1rem 0; color: #374151;">Dependency Check Report (Current)</h3>
+                            <p style="margin: 0 0 0.5rem 0; color: #6b7280;">Upload dependency-check XML file</p>
+                        </div>
+                        <div style="border: 2px dashed #9ca3af; padding: 2rem; border-radius: 8px; text-align: center; background: white;">
+                            <h3 style="margin: 0 0 1rem 0; color: #374151;">Suppressions File</h3>
+                            <p style="margin: 0 0 0.5rem 0; color: #6b7280;">Upload suppressions.xml (optional)</p>
+                        </div>
+                    </div>
+                    <!-- Action Buttons -->
+                    <div style="display: flex; gap: 1rem; justify-content: flex-start; flex-wrap: wrap;">
+                        <button style="background: #6366f1; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-weight: 500;">Generate Audit Report</button>
+                        <button style="background: #e5e7eb; color: #6b7280; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-weight: 500;">Export Report</button>
+                        <button style="background: #e5e7eb; color: #6b7280; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-weight: 500;">Export CSV</button>
+                        <button style="background: #e5e7eb; color: #6b7280; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">📧 Email Report</button>
+                        <button style="background: #e5e7eb; color: #6b7280; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">🔍 Compare Suppressions Only</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: Delta Mode Enabled -->
+        <div class="slide" data-slide="3">
+            <div class="slide-number">3/12</div>
+            <h2>� Delta Comparison Mode Enabled</h2>
+            <p>When delta comparison is enabled, upload areas change to show both current and baseline files with uploaded status.</p>
+            <div class="screenshot-container">
+                <!-- Second screenshot - delta mode enabled -->
+                <div style="padding: 1.5rem; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; text-align: center;">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                        <span style="font-size: 1.5rem;">🛡️</span>
+                        <h1 style="font-size: 2rem; margin: 0;">OWASP Dependency Audit Tool</h1>
+                    </div>
+                    <p style="margin: 0.5rem 0 0 0; opacity: 0.9;">Generate audit-ready reports from dependency-check XML</p>
+                </div>
+                <div style="padding: 2rem; background: #f8fafc; color: #1e293b;">
+                    <!-- Checked Delta Mode -->
                     <div style="margin-bottom: 1.5rem;">
                         <label style="display: flex; align-items: center; gap: 0.5rem; color: #6b7280;">
                             <input type="checkbox" checked style="transform: scale(1.2);"> 
@@ -264,6 +311,7 @@
                             <span style="font-size: 0.9rem; color: #9ca3af;">(Compare two reports to see fixed/new vulnerabilities)</span>
                         </label>
                     </div>
+                    <!-- Delta Upload Areas -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
                         <div style="border: 2px dashed #6366f1; padding: 2rem; border-radius: 8px; text-align: center; background: white;">
                             <h3 style="margin: 0 0 1rem 0; color: #374151;">Dependency Check Report (Current)</h3>
@@ -276,28 +324,29 @@
                             <p style="color: #6366f1; font-weight: bold; margin: 0;">✓ Uploaded</p>
                         </div>
                     </div>
-                    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    <!-- Action Buttons -->
+                    <div style="display: flex; gap: 1rem; justify-content: flex-start; flex-wrap: wrap;">
                         <button style="background: #6366f1; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-weight: 500;">Generate Audit Report</button>
                         <button style="background: #e5e7eb; color: #6b7280; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-weight: 500;">Export Report</button>
                         <button style="background: #e5e7eb; color: #6b7280; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-weight: 500;">Export CSV</button>
-                        <button style="background: #e5e7eb; color: #6b7280; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-weight: 500;">📧 Email Report</button>
-                        <button style="background: #e5e7eb; color: #6b7280; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-weight: 500;">🔍 Compare Suppressions Only</button>
+                        <button style="background: #e5e7eb; color: #6b7280; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">📧 Email Report</button>
+                        <button style="background: #e5e7eb; color: #6b7280; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">🔍 Compare Suppressions Only</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Slide 3: Audit Report Display -->
-        <div class="slide" data-slide="3">
-            <div class="slide-number">3/8</div>
-            <h2>📊 Professional Audit Dashboard</h2>
-            <p>Beautiful, comprehensive reports showing vulnerable dependencies with intelligent grouping and metadata.</p>
+        <!-- Slide 4: Audit Report Results -->
+        <div class="slide" data-slide="4">
+            <div class="slide-number">4/12</div>
+            <h2>📊 Generated Audit Report</h2>
+            <p>Professional audit dashboard showing vulnerable dependencies with severity breakdown and scan information.</p>
             <div class="screenshot-container">
-                <!-- Real interface based on your audit report screenshot -->
+                <!-- Third screenshot - audit report -->
                 <div style="padding: 1.5rem; background: white; color: #1e293b;">
                     <div style="text-align: center; margin-bottom: 2rem;">
                         <h2 style="color: #1e293b; margin: 0 0 0.5rem 0;">OWASP Dependency Check</h2>
-                        <p style="color: #6b7280; margin: 0;">Generated: 11/4/2025, 1:57:10 PM &nbsp;|&nbsp; <strong>Vulnerable Dependencies: 25</strong></p>
+                        <p style="color: #6b7280; margin: 0;">Generated: 11/4/2025, 4:25:06 PM &nbsp;|&nbsp; <strong>Vulnerable Dependencies: 25</strong></p>
                     </div>
                     
                     <!-- Scan Information Panel -->
@@ -305,68 +354,215 @@
                         <h3 style="margin: 0 0 1rem 0; color: #1e293b; display: flex; align-items: center; gap: 0.5rem;">
                             📋 Scan Information
                         </h3>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; font-family: monospace; font-size: 0.9rem; color: #374151;">
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; font-family: monospace; font-size: 0.9rem; color: #374151;">
                             <div><strong>dependency-check version:</strong> 12.1.0</div>
                             <div><strong>Dependencies Scanned:</strong> 591 (581 unique)</div>
                             <div><strong>Vulnerable Dependencies:</strong> 25</div>
-                            <div><strong>Vulnerabilities found:</strong> 170</div>
+                            <div><strong>Vulnerabilities Found:</strong> 170</div>
                         </div>
+                    </div>
+
+                    <!-- Filter Section -->
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="color: #374151;">Severity:</span>
+                            <select style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px; background: white;">
+                                <option>All</option>
+                            </select>
+                        </label>
+                        <input type="text" placeholder="Search dependency or file" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px; flex-grow: 1; max-width: 300px;">
+                        <button style="background: #f3f4f6; color: #374151; padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 4px;">Reset</button>
+                        <div style="background: #f59e0b; color: white; padding: 0.5rem 1rem; border-radius: 4px; font-weight: bold;">19</div>
                     </div>
 
                     <!-- Vulnerability Metrics -->
                     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem;">
-                        <div style="text-align: center; padding: 1.5rem; background: #fef2f2; border-radius: 8px; border-left: 4px solid #dc2626;">
+                        <div style="text-align: center; padding: 1.5rem; background: white; border-radius: 8px; border-left: 4px solid #dc2626; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                             <div style="font-size: 2.5rem; font-weight: bold; color: #dc2626; margin-bottom: 0.5rem;">19</div>
                             <div style="color: #6b7280; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;">CRITICAL</div>
                         </div>
-                        <div style="text-align: center; padding: 1.5rem; background: #fff7ed; border-radius: 8px; border-left: 4px solid #ea580c;">
+                        <div style="text-align: center; padding: 1.5rem; background: white; border-radius: 8px; border-left: 4px solid #ea580c; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                             <div style="font-size: 2.5rem; font-weight: bold; color: #ea580c; margin-bottom: 0.5rem;">99</div>
                             <div style="color: #6b7280; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;">HIGH</div>
                         </div>
-                        <div style="text-align: center; padding: 1.5rem; background: #fffbeb; border-radius: 8px; border-left: 4px solid #d97706;">
+                        <div style="text-align: center; padding: 1.5rem; background: white; border-radius: 8px; border-left: 4px solid #d97706; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                             <div style="font-size: 2.5rem; font-weight: bold; color: #d97706; margin-bottom: 0.5rem;">47</div>
                             <div style="color: #6b7280; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;">MEDIUM</div>
                         </div>
-                        <div style="text-align: center; padding: 1.5rem; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #059669;">
+                        <div style="text-align: center; padding: 1.5rem; background: white; border-radius: 8px; border-left: 4px solid #059669; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                             <div style="font-size: 2.5rem; font-weight: bold; color: #059669; margin-bottom: 0.5rem;">5</div>
                             <div style="color: #6b7280; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;">LOW</div>
                         </div>
                     </div>
 
-                    <!-- Vulnerable Dependencies Header -->
+                    <!-- Dependencies Table Header -->
                     <div style="margin-bottom: 1rem;">
                         <h3 style="color: #1e293b; margin: 0;">Vulnerable Dependencies (25)</h3>
-                        <p style="color: #6b7280; font-size: 0.9rem; margin: 0.5rem 0 0 0;">Instead of 170 individual vulnerabilities, we show 25 grouped dependencies</p>
+                    </div>
+
+                    <!-- Sample Dependency Row -->
+                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;">
+                        <div style="display: grid; grid-template-columns: auto 1fr auto auto auto auto; gap: 1rem; align-items: center; font-size: 0.9rem;">
+                            <div style="font-weight: bold; color: #6366f1;">1</div>
+                            <div>
+                                <a href="#" style="color: #3b82f6; text-decoration: none; font-weight: 500;">DevExpress.Xpf.Layout.v18.1.Core.dll</a>
+                            </div>
+                            <div style="background: #dc2626; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">CRITICAL</div>
+                            <div style="font-weight: bold;">4</div>
+                            <div style="color: #f59e0b;">C3 M:1</div>
+                            <div style="color: #6b7280; font-size: 0.8rem;">DevExpress.Xpf.Layout.v...</div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Slide 4: Enhanced Features -->
-        <div class="slide" data-slide="4">
-            <div class="slide-number">4/8</div>
-            <h2>⚡ Enhanced Features</h2>
-            <p>Powerful filtering, pagination, and export capabilities for professional security reporting.</p>
-            <div class="feature-grid">
-                <div class="feature-card" style="animation-delay: 0.3s;">
-                    <span class="feature-icon">🔍</span>
-                    <h3>Smart Filtering</h3>
-                    <p>Filter by severity level and search across dependencies with real-time results</p>
+        <!-- Slide 5: Delta Mode Interface -->
+        <div class="slide" data-slide="5">
+            <div class="slide-number">5/12</div>
+            <h2>🔄 Delta Comparison Setup</h2>
+            <p>Upload baseline reports and suppressions to compare current state with previous scans.</p>
+            <div class="screenshot-container">
+                <!-- Fourth screenshot - delta mode with all uploads -->
+                <div style="padding: 2rem; background: #f8fafc; color: #1e293b;">
+                    <!-- Checked Delta Mode -->
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; color: #6b7280;">
+                            <input type="checkbox" checked style="transform: scale(1.2);"> 
+                            <span>Enable Delta Comparison Mode</span>
+                            <span style="font-size: 0.9rem; color: #9ca3af;">(Compare two reports to see fixed/new vulnerabilities)</span>
+                        </label>
+                    </div>
+                    
+                    <!-- Current Files Row -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                        <div style="border: 2px dashed #6366f1; padding: 2rem; border-radius: 8px; text-align: center; background: white;">
+                            <h3 style="margin: 0 0 1rem 0; color: #374151;">Dependency Check Report (Current)</h3>
+                            <p style="margin: 0 0 0.5rem 0; color: #6b7280;">Upload dependency-check XML file</p>
+                            <p style="color: #6366f1; font-weight: bold; margin: 0;">✓ Uploaded</p>
+                        </div>
+                        <div style="border: 2px dashed #6366f1; padding: 2rem; border-radius: 8px; text-align: center; background: white;">
+                            <h3 style="margin: 0 0 1rem 0; color: #374151;">Suppressions File</h3>
+                            <p style="margin: 0 0 0.5rem 0; color: #6b7280;">Upload suppressions.xml (optional)</p>
+                            <p style="color: #6366f1; font-weight: bold; margin: 0;">✓ Uploaded</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Baseline Files Row -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                        <div style="border: 2px dashed #6366f1; padding: 2rem; border-radius: 8px; text-align: center; background: white;">
+                            <h3 style="margin: 0 0 1rem 0; color: #374151;">Baseline Report (Previous)</h3>
+                            <p style="margin: 0 0 0.5rem 0; color: #6b7280;">Upload previous dependency-check XML file for comparison</p>
+                            <p style="color: #6366f1; font-weight: bold; margin: 0;">✓ Uploaded</p>
+                        </div>
+                        <div style="border: 2px dashed #6366f1; padding: 2rem; border-radius: 8px; text-align: center; background: white;">
+                            <h3 style="margin: 0 0 1rem 0; color: #374151;">Baseline Suppressions</h3>
+                            <p style="margin: 0 0 0.5rem 0; color: #6b7280;">Upload previous suppressions.xml (optional)</p>
+                            <p style="color: #6366f1; font-weight: bold; margin: 0;">✓ Uploaded</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div style="display: flex; gap: 1rem; justify-content: flex-start; flex-wrap: wrap;">
+                        <button style="background: #6366f1; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-weight: 500;">Generate Delta Report</button>
+                        <button style="background: #e5e7eb; color: #6b7280; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-weight: 500;">Export Report</button>
+                        <button style="background: #e5e7eb; color: #6b7280; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-weight: 500;">Export CSV</button>
+                        <button style="background: #e5e7eb; color: #6b7280; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">📧 Email Report</button>
+                        <button style="background: #e5e7eb; color: #6b7280; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">🔍 Compare Suppressions Only</button>
+                    </div>
                 </div>
-                <div class="feature-card" style="animation-delay: 0.5s;">
-                    <span class="feature-icon">📄</span>
-                    <h3>Working Pagination</h3>
-                    <p>Navigate through large datasets with proper pagination and page counters</p>
+            </div>
+        </div>
+
+        <!-- Slide 6: Delta Report Results -->
+        <div class="slide" data-slide="6">
+            <div class="slide-number">6/12</div>
+            <h2>📈 Delta Report Analysis</h2>
+            <p>Comprehensive delta analysis showing fixed vulnerabilities, new vulnerabilities, and suppression changes.</p>
+            <div class="screenshot-container">
+                <!-- Fifth screenshot - delta report results -->
+                <div style="padding: 1.5rem; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; text-align: center;">
+                    <h1 style="font-size: 2.2rem; margin: 0 0 0.5rem 0; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                        🔄 OWASP Delta Report
+                    </h1>
+                    <p style="margin: 0; opacity: 0.9; font-size: 1rem;">Generated: 11/4/2025, 9:13:34 AM</p>
                 </div>
-                <div class="feature-card" style="animation-delay: 0.7s;">
-                    <span class="feature-icon">📊</span>
-                    <h3>Professional Excel Export</h3>
-                    <p>Beautiful Excel files with formatting, colors, and comprehensive metadata</p>
-                </div>
-                <div class="feature-card" style="animation-delay: 0.9s;">
-                    <span class="feature-icon">🎯</span>
-                    <h3>Focus Mode</h3>
-                    <p>Show only vulnerable dependencies instead of all individual vulnerabilities</p>
+                <div style="padding: 2rem; background: white; color: #1e293b;">
+                    <!-- Analysis Summary -->
+                    <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; border-left: 4px solid #6366f1;">
+                        <h3 style="margin: 0 0 1rem 0; color: #1e293b; display: flex; align-items: center; gap: 0.5rem;">
+                            📊 Analysis Summary
+                        </h3>
+                        <p style="margin: 0; color: #6b7280; font-size: 0.95rem;">
+                            <strong style="color: #10b981;">Fixed:</strong> 27 vulnerabilities &nbsp;|&nbsp;
+                            <strong style="color: #f59e0b;">New:</strong> 15 vulnerabilities &nbsp;|&nbsp;
+                            <strong style="color: #6366f1;">Current Total:</strong> 170 vulnerabilities
+                        </p>
+                    </div>
+
+                    <!-- Delta Cards -->
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
+                        <!-- Fixed Vulnerabilities -->
+                        <div style="background: #ecfdf5; padding: 1.5rem; border-radius: 8px; text-align: center; border-left: 4px solid #10b981;">
+                            <h3 style="color: #10b981; margin: 0 0 1rem 0; font-size: 1.1rem;">✅ Fixed Vulnerabilities (27)</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                                <div style="background: #fef2f2; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #dc2626;">
+                                    <div style="font-size: 1.4rem; font-weight: bold; color: #dc2626;">1</div>
+                                    <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase;">CRITICAL</div>
+                                </div>
+                                <div style="background: #fff7ed; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #ea580c;">
+                                    <div style="font-size: 1.4rem; font-weight: bold; color: #ea580c;">7</div>
+                                    <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase;">HIGH</div>
+                                </div>
+                                <div style="background: #fffbeb; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #d97706;">
+                                    <div style="font-size: 1.4rem; font-weight: bold; color: #d97706;">19</div>
+                                    <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase;">MEDIUM</div>
+                                </div>
+                                <div style="background: #f0fdf4; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #059669;">
+                                    <div style="font-size: 1.4rem; font-weight: bold; color: #059669;">0</div>
+                                    <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase;">LOW</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- New Vulnerabilities -->
+                        <div style="background: #fff7ed; padding: 1.5rem; border-radius: 8px; text-align: center; border-left: 4px solid #f59e0b;">
+                            <h3 style="color: #f59e0b; margin: 0 0 1rem 0; font-size: 1.1rem;">📋 New Vulnerabilities (15)</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                                <div style="background: #fef2f2; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #dc2626;">
+                                    <div style="font-size: 1.4rem; font-weight: bold; color: #dc2626;">6</div>
+                                    <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase;">CRITICAL</div>
+                                </div>
+                                <div style="background: #fff7ed; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #ea580c;">
+                                    <div style="font-size: 1.4rem; font-weight: bold; color: #ea580c;">5</div>
+                                    <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase;">HIGH</div>
+                                </div>
+                                <div style="background: #fffbeb; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #d97706;">
+                                    <div style="font-size: 1.4rem; font-weight: bold; color: #d97706;">4</div>
+                                    <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase;">MEDIUM</div>
+                                </div>
+                                <div style="background: #f0fdf4; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #059669;">
+                                    <div style="font-size: 1.4rem; font-weight: bold; color: #059669;">0</div>
+                                    <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase;">LOW</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Suppression Changes -->
+                        <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; text-align: center; border-left: 4px solid #6366f1;">
+                            <h3 style="color: #6366f1; margin: 0 0 1rem 0; font-size: 1.1rem;">📊 Suppression Changes</h3>
+                            <div style="background: white; padding: 1rem; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <div style="margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-weight: 600; color: #374151; font-size: 0.9rem;">Added:</span>
+                                    <span style="font-size: 1.5rem; font-weight: bold; color: #10b981;">25</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-weight: 600; color: #374151; font-size: 0.9rem;">Removed:</span>
+                                    <span style="font-size: 1.5rem; font-weight: bold; color: #ef4444;">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -580,9 +776,38 @@
             </div>
         </div>
 
-        <!-- Slide 8: Export Features -->
-        <div class="slide" data-slide="8">
-            <div class="slide-number">8/10</div>
+        <!-- Slide 9: Enhanced Features -->
+        <div class="slide" data-slide="9">
+            <div class="slide-number">9/12</div>
+            <h2>⚡ Enhanced Features</h2>
+            <p>Powerful filtering, pagination, and export capabilities for professional security reporting.</p>
+            <div class="feature-grid">
+                <div class="feature-card" style="animation-delay: 0.3s;">
+                    <span class="feature-icon">🔍</span>
+                    <h3>Smart Filtering</h3>
+                    <p>Filter by severity level and search across dependencies with real-time results</p>
+                </div>
+                <div class="feature-card" style="animation-delay: 0.5s;">
+                    <span class="feature-icon">📄</span>
+                    <h3>Working Pagination</h3>
+                    <p>Navigate through large datasets with proper pagination and page counters</p>
+                </div>
+                <div class="feature-card" style="animation-delay: 0.7s;">
+                    <span class="feature-icon">📊</span>
+                    <h3>Professional Excel Export</h3>
+                    <p>Beautiful Excel files with formatting, colors, and comprehensive metadata</p>
+                </div>
+                <div class="feature-card" style="animation-delay: 0.9s;">
+                    <span class="feature-icon">🎯</span>
+                    <h3>Focus Mode</h3>
+                    <p>Show only vulnerable dependencies instead of all individual vulnerabilities</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: Professional Export Features -->
+        <div class="slide" data-slide="10">
+            <div class="slide-number">10/12</div>
             <h2>📤 Professional Export Features</h2>
             <p>Generate audit-ready reports in multiple formats with comprehensive metadata and professional styling.</p>
             <div class="feature-grid">
@@ -609,9 +834,9 @@
             </div>
         </div>
 
-        <!-- Slide 9: Technical Excellence -->
-        <div class="slide" data-slide="9">
-            <div class="slide-number">9/10</div>
+        <!-- Slide 11: Technical Excellence -->
+        <div class="slide" data-slide="11">
+            <div class="slide-number">11/12</div>
             <h2>🛠️ Technical Excellence</h2>
             <p>Built with modern web technologies for reliability, security, and ease of use.</p>
             <div class="feature-grid">
@@ -638,9 +863,9 @@
             </div>
         </div>
 
-        <!-- Slide 10: Call to Action -->
-        <div class="slide" data-slide="10">
-            <div class="slide-number">10/10</div>
+        <!-- Slide 12: Call to Action -->
+        <div class="slide" data-slide="12">
+            <div class="slide-number">12/12</div>
             <h2>🚀 Ready to Transform Your Security Reports?</h2>
             <p>Start generating professional OWASP dependency audit reports today.</p>
             <div style="margin: 3rem 0;">
@@ -664,7 +889,7 @@
 
     <script>
         let currentSlide = 0;
-        const totalSlides = 10;
+        const totalSlides = 12;
         let autoPlay = true;
         let autoPlayInterval;
 
