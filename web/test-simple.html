@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OWASP Tool - Simple Test</title>
+    <style>
+        .dropzone { 
+            border: 2px dashed #ccc; 
+            padding: 20px; 
+            text-align: center; 
+            margin: 10px;
+            cursor: pointer;
+        }
+        .dropzone:hover { border-color: #007cba; }
+        .uploaded { border-color: green; background: #f0fff0; }
+        .btn { 
+            padding: 10px 20px; 
+            background: #007cba; 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            margin: 5px;
+        }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <h1>OWASP Tool - Simple Test</h1>
+    
+    <div class="dropzone" id="report-drop">
+        <input type="file" id="report-file" accept=".xml" style="display: none;" />
+        <p>Click to upload dependency-check XML</p>
+        <div id="report-status">No file selected</div>
+    </div>
+    
+    <button id="generate-btn" class="btn" disabled>Generate Report</button>
+    <button id="test-btn" class="btn">Test JavaScript</button>
+    
+    <div id="output"></div>
+    
+    <script>
+        console.log('Simple test script loaded');
+        
+        // Get elements
+        const reportDrop = document.getElementById('report-drop');
+        const reportInput = document.getElementById('report-file');
+        const generateBtn = document.getElementById('generate-btn');
+        const testBtn = document.getElementById('test-btn');
+        const reportStatus = document.getElementById('report-status');
+        const output = document.getElementById('output');
+        
+        // Test if elements exist
+        console.log('Elements found:', {
+            reportDrop: !!reportDrop,
+            reportInput: !!reportInput,
+            generateBtn: !!generateBtn,
+            testBtn: !!testBtn
+        });
+        
+        // Test button
+        testBtn.addEventListener('click', () => {
+            console.log('Test button clicked');
+            output.innerHTML = '<p style="color: green;">✓ JavaScript is working!</p>';
+        });
+        
+        // Click dropzone to open file dialog
+        reportDrop.addEventListener('click', () => {
+            console.log('Dropzone clicked');
+            reportInput.click();
+        });
+        
+        // Handle file selection
+        reportInput.addEventListener('change', (e) => {
+            console.log('File input changed');
+            const file = e.target.files[0];
+            if (file) {
+                console.log('File selected:', file.name);
+                reportStatus.textContent = `Selected: ${file.name}`;
+                reportDrop.classList.add('uploaded');
+                generateBtn.disabled = false;
+            }
+        });
+        
+        // Generate button
+        generateBtn.addEventListener('click', () => {
+            console.log('Generate button clicked');
+            output.innerHTML = '<p style="color: blue;">✓ Generate button works!</p>';
+        });
+        
+        console.log('All event listeners attached');
+    </script>
+</body>
+</html>
