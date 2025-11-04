@@ -1392,13 +1392,44 @@ function parseDependencyCheck(xml){
       metadata.projectName = safeText(projectInfo.querySelector('name'));
     }
     
-    // Extract summary statistics
-    const summary = xml.querySelector('summary');
+    // Extract summary statistics - try multiple possible element structures
+    let summary = xml.querySelector('summary');
+    if (!summary) {
+      // Sometimes it's in analysisStatistics or similar
+      summary = xml.querySelector('analysisStatistics') || xml.querySelector('statistics');
+    }
+    
     if (summary) {
       metadata.dependenciesScanned = parseInt(safeText(summary.querySelector('dependencies')) || '0');
       metadata.vulnerableDependencies = parseInt(safeText(summary.querySelector('vulnerableDependencies')) || '0');
       metadata.vulnerabilitiesFound = parseInt(safeText(summary.querySelector('vulnerabilitiesFound')) || '0');
       metadata.vulnerabilitiesSuppressed = parseInt(safeText(summary.querySelector('vulnerabilitiesSuppressed')) || '0');
+    }
+    
+    // If summary data not found in XML, calculate from dependencies
+    const depEls = Array.from(xml.getElementsByTagName('dependency'));
+    if (!metadata.dependenciesScanned && depEls.length > 0) {
+      metadata.dependenciesScanned = depEls.length;
+      
+      // Calculate unique dependencies by grouping by filename
+      const uniqueFiles = new Set();
+      const vulnerableFiles = new Set();
+      let totalVulns = 0;
+      
+      depEls.forEach(dep => {
+        const fileName = safeText(dep.getElementsByTagName('fileName')[0]) || safeText(dep.getElementsByTagName('filePath')[0]) || 'unknown';
+        uniqueFiles.add(fileName);
+        
+        const vulnEls = Array.from(dep.getElementsByTagName('vulnerability'));
+        if (vulnEls.length > 0) {
+          vulnerableFiles.add(fileName);
+          totalVulns += vulnEls.length;
+        }
+      });
+      
+      metadata.uniqueDependencies = uniqueFiles.size;
+      metadata.vulnerableDependencies = metadata.vulnerableDependencies || vulnerableFiles.size;
+      metadata.vulnerabilitiesFound = metadata.vulnerabilitiesFound || totalVulns;
     }
     
     // dependency elements
@@ -1588,11 +1619,11 @@ function renderDeltaReport(delta, metadata = {}){
       ${metadata.projectName || metadata.version || metadata.scanDate ? `
       <div class="metadata-section" style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; margin: 0 2rem; border-left: 4px solid #6366f1;">
         <h3 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1.1rem;">📋 Scan Information</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; font-family: monospace; font-size: 0.9rem; color: #374151;">
           ${metadata.projectName ? `<div><strong>Project:</strong> ${escapeHtml(metadata.projectName)}</div>` : ''}
-          ${metadata.version ? `<div><strong>Dependency-check version:</strong> ${escapeHtml(metadata.version)}</div>` : ''}
+          ${metadata.version ? `<div><strong>dependency-check version:</strong> ${escapeHtml(metadata.version)}</div>` : ''}
           ${metadata.scanDate ? `<div><strong>Report Generated On:</strong> ${escapeHtml(metadata.scanDate)}</div>` : ''}
-          ${metadata.dependenciesScanned ? `<div><strong>Dependencies Scanned:</strong> ${metadata.dependenciesScanned}${metadata.dependenciesScanned ? ' (' + (metadata.dependenciesScanned - (metadata.vulnerableDependencies || 0)) + ' unique)' : ''}</div>` : ''}
+          ${metadata.dependenciesScanned ? `<div><strong>Dependencies Scanned:</strong> ${metadata.dependenciesScanned}${metadata.uniqueDependencies ? ` (${metadata.uniqueDependencies} unique)` : ''}</div>` : ''}
           ${metadata.vulnerableDependencies !== undefined ? `<div><strong>Vulnerable Dependencies:</strong> ${metadata.vulnerableDependencies}</div>` : ''}
           ${metadata.vulnerabilitiesFound !== undefined ? `<div><strong>Vulnerabilities Found:</strong> ${metadata.vulnerabilitiesFound}</div>` : ''}
           ${metadata.vulnerabilitiesSuppressed !== undefined ? `<div><strong>Vulnerabilities Suppressed:</strong> ${metadata.vulnerabilitiesSuppressed}</div>` : ''}
@@ -1815,11 +1846,11 @@ function renderReport(items, metadata = {}){
     ${metadata.projectName || metadata.version || metadata.scanDate ? `
     <div class="metadata-section" style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; margin: 1rem 0; border-left: 4px solid #6366f1;">
       <h3 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1.1rem;">📋 Scan Information</h3>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; font-family: monospace; font-size: 0.9rem; color: #374151;">
         ${metadata.projectName ? `<div><strong>Project:</strong> ${escapeHtml(metadata.projectName)}</div>` : ''}
-        ${metadata.version ? `<div><strong>Dependency-check version:</strong> ${escapeHtml(metadata.version)}</div>` : ''}
+        ${metadata.version ? `<div><strong>dependency-check version:</strong> ${escapeHtml(metadata.version)}</div>` : ''}
         ${metadata.scanDate ? `<div><strong>Report Generated On:</strong> ${escapeHtml(metadata.scanDate)}</div>` : ''}
-        ${metadata.dependenciesScanned ? `<div><strong>Dependencies Scanned:</strong> ${metadata.dependenciesScanned}${metadata.dependenciesScanned ? ' (' + (metadata.dependenciesScanned - vulnerableDependencies) + ' unique)' : ''}</div>` : ''}
+        ${metadata.dependenciesScanned ? `<div><strong>Dependencies Scanned:</strong> ${metadata.dependenciesScanned}${metadata.uniqueDependencies ? ` (${metadata.uniqueDependencies} unique)` : ''}</div>` : ''}
         ${metadata.vulnerableDependencies !== undefined ? `<div><strong>Vulnerable Dependencies:</strong> ${metadata.vulnerableDependencies}</div>` : ''}
         ${metadata.vulnerabilitiesFound !== undefined ? `<div><strong>Vulnerabilities Found:</strong> ${metadata.vulnerabilitiesFound}</div>` : ''}
         ${metadata.vulnerabilitiesSuppressed !== undefined ? `<div><strong>Vulnerabilities Suppressed:</strong> ${metadata.vulnerabilitiesSuppressed}</div>` : ''}
