@@ -523,22 +523,6 @@ function getCurrentReportData() {
     timestamp: new Date().toLocaleString()
   };
 }
-    if (label) metrics[label] = parseInt(value);
-  });
-
-  const total = vulnerabilities.length;
-  const generated = document.querySelector('.report-header')?.textContent.includes('Generated:') ? 
-    document.querySelector('.report-header').textContent.match(/Generated: ([^Total]+)/)?.[1]?.trim() : 
-    new Date().toLocaleString();
-
-  return {
-    type: 'normal',
-    vulnerabilities,
-    metrics,
-    total,
-    generated: generated || new Date().toLocaleString()
-  };
-}
 
 function generateBeautifulReportHTML(data) {
   if (data.type === 'delta') {
