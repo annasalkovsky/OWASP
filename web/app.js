@@ -12,6 +12,7 @@ const baselineSuppressionsDrop = document.getElementById('baseline-suppressions-
 const baselineReportInput = document.getElementById('baseline-report-file');
 const baselineSuppressionsInput = document.getElementById('baseline-suppressions-file');
 const deltaToggle = document.getElementById('delta-mode-toggle');
+console.log('Delta toggle element found:', deltaToggle);
 const generateBtn = document.getElementById('generate-btn');
 const exportBtn = document.getElementById('export-btn');
 const emailBtn = document.getElementById('email-btn');
@@ -54,8 +55,12 @@ baselineSuppressionsInput.addEventListener('change', e => {
 
 // Delta mode toggle
 deltaToggle.addEventListener('change', () => {
+  console.log('Delta toggle changed:', deltaToggle.checked);
   isDeltaMode = deltaToggle.checked;
-  document.getElementById('delta-uploads').style.display = isDeltaMode ? 'flex' : 'none';
+  const deltaUploads = document.getElementById('delta-uploads');
+  console.log('Delta uploads element:', deltaUploads);
+  deltaUploads.style.display = isDeltaMode ? 'flex' : 'none';
+  console.log('Set display to:', isDeltaMode ? 'flex' : 'none');
   updateGenerateButtonText();
 });
 
