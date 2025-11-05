@@ -348,7 +348,7 @@ function generateDeltaReport(){
     
     // Render delta report
     console.log('Rendering delta report...');
-    renderDeltaReport(delta, currentResult.metadata);
+    renderDeltaReport(delta, currentResult.metadata, currentResult.vulnerabilities, baselineResult.vulnerabilities);
     console.log('Delta report rendered successfully');
     
     // Enable export buttons for delta reports
@@ -529,10 +529,21 @@ function generateBeautifulReportHTML(data) {
     // Generate proper delta report HTML
     const deltaData = data.data;
     const timestamp = data.timestamp;
-    const newVulns = deltaData.newVulnerabilities || [];
+    
+    // For export, use ALL current vulnerabilities to match what's shown in the UI (170 total)
+    // This includes both suppressed and unsuppressed vulnerabilities from the current report
+    const allCurrentVulns = deltaData.currentAllVulnerabilities || [];
+    const newVulns = deltaData.newVulnerabilities || []; // Only unsuppressed new ones (15)
     const fixedVulns = deltaData.fixed || [];
     
-    // Count by severity for new vulnerabilities
+    // Count by severity for ALL current vulnerabilities (to match UI showing 170 total)
+    const currentCounts = {CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0};
+    allCurrentVulns.forEach(vuln => {
+      const severity = vuln.severity?.toUpperCase() || 'UNKNOWN';
+      if (currentCounts[severity] !== undefined) currentCounts[severity]++;
+    });
+    
+    // Count by severity for new vulnerabilities (unsuppressed only - 15)
     const newCounts = {CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0};
     newVulns.forEach(vuln => {
       const severity = vuln.severity?.toUpperCase() || 'UNKNOWN';
@@ -661,24 +672,19 @@ function generateBeautifulReportHTML(data) {
         
         <div class="metrics-grid">
             <div class="metrics-section">
-                <h2>⚠️ New Vulnerabilities (${newVulns.length})</h2>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
-                    <div class="metric-card critical">
-                        <div class="metric-number">${newCounts.CRITICAL}</div>
-                        <div class="metric-label">Critical</div>
+                <h2>📊 Analysis Summary</h2>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 20px;">
+                    <div style="text-align: center; background: #e8f5e8; padding: 15px; border-radius: 8px;">
+                        <div style="font-size: 2rem; color: #27ae60; font-weight: bold;">${fixedVulns.length}</div>
+                        <div style="color: #2c3e50;">Fixed Vulnerabilities</div>
                     </div>
-                    <div class="metric-card high">
-                        <div class="metric-number">${newCounts.HIGH}</div>
-                        <div class="metric-label">High</div>
+                    <div style="text-align: center; background: #fff3e0; padding: 15px; border-radius: 8px;">
+                        <div style="font-size: 2rem; color: #f39c12; font-weight: bold;">${newVulns.length}</div>
+                        <div style="color: #2c3e50;">Unhandled (Unsuppressed)</div>
                     </div>
-                    <div class="metric-card medium">
-                        <div class="metric-number">${newCounts.MEDIUM}</div>
-                        <div class="metric-label">Medium</div>
-                    </div>
-                    <div class="metric-card low">
-                        <div class="metric-number">${newCounts.LOW}</div>
-                        <div class="metric-label">Low</div>
-                    </div>
+                </div>
+                <div style="text-align: center; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <div style="font-size: 1.5rem; color: #2c3e50; font-weight: bold;">Current Total: ${allCurrentVulns.length} vulnerabilities</div>
                 </div>
             </div>
             
@@ -703,26 +709,48 @@ function generateBeautifulReportHTML(data) {
                     </div>
                 </div>
             </div>
+            
+            <div class="metrics-section">
+                <h2>⚠️ Unhandled Vulnerabilities (${newVulns.length})</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                    <div class="metric-card critical">
+                        <div class="metric-number">${newCounts.CRITICAL}</div>
+                        <div class="metric-label">Critical</div>
+                    </div>
+                    <div class="metric-card high">
+                        <div class="metric-number">${newCounts.HIGH}</div>
+                        <div class="metric-label">High</div>
+                    </div>
+                    <div class="metric-card medium">
+                        <div class="metric-number">${newCounts.MEDIUM}</div>
+                        <div class="metric-label">Medium</div>
+                    </div>
+                    <div class="metric-card low">
+                        <div class="metric-number">${newCounts.LOW}</div>
+                        <div class="metric-label">Low</div>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <div class="content">
             ${newVulns.length > 0 ? `
-            <h2 class="section-title">⚠️ Unhandled Vulnerabilities Detected (${newVulns.length} total)</h2>
+            <h2 class="section-title">⚠️ Unhandled Vulnerabilities (${newVulns.length})</h2>
             <table class="vuln-table">
                 <thead>
                     <tr>
-                        <th>Package</th>
+                        <th>#</th>
                         <th>Vulnerability</th>
                         <th>Severity</th>
-                        <th>CVSS</th>
+                        <th>CVSS Score</th>
                         <th>Description</th>
                         <th>File</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${newVulns.map(vuln => `
+                    ${newVulns.map((vuln, index) => `
                         <tr>
-                            <td>${vuln.package || ''}</td>
+                            <td>${index + 1}</td>
                             <td>${vuln.vulnerability || ''}</td>
                             <td>
                                 <span class="severity-badge severity-${(vuln.severity || '').toLowerCase()}">
@@ -736,25 +764,22 @@ function generateBeautifulReportHTML(data) {
                     `).join('')}
                 </tbody>
             </table>
-            ` : '<div style="text-align: center; padding: 60px; color: #27ae60; font-size: 1.2rem;">🎉 No new vulnerabilities found!</div>'}
+            ` : '<div style="text-align: center; padding: 60px; color: #27ae60; font-size: 1.2rem;">🎉 No unhandled vulnerabilities found!</div>'}
             
             ${fixedVulns.length > 0 ? `
-            <h2 class="section-title">✅ Fixed Vulnerabilities (${fixedVulns.length} total)</h2>
+            <h2 class="section-title">✅ Fixed Vulnerabilities (${fixedVulns.length})</h2>
             <table class="vuln-table">
                 <thead>
                     <tr>
-                        <th>Package</th>
                         <th>Vulnerability</th>
                         <th>Severity</th>
                         <th>CVSS</th>
-                        <th>Description</th>
                         <th>File</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${fixedVulns.map(vuln => `
                         <tr>
-                            <td>${vuln.package || ''}</td>
                             <td>${vuln.vulnerability || ''}</td>
                             <td>
                                 <span class="severity-badge severity-${(vuln.severity || '').toLowerCase()}">
@@ -762,13 +787,12 @@ function generateBeautifulReportHTML(data) {
                                 </span>
                             </td>
                             <td>${vuln.cvssScore || ''}</td>
-                            <td>${vuln.description || ''}</td>
                             <td>${vuln.filePath || ''}</td>
                         </tr>
                     `).join('')}
                 </tbody>
             </table>
-            ` : ''}
+            ` : '<div style="text-align: center; padding: 60px; color: #27ae60; font-size: 1.2rem;">🎉 No fixed vulnerabilities to report!</div>'}
         </div>
         
         <div class="footer">
@@ -1801,7 +1825,7 @@ function severityCounts(items){
   return counts;
 }
 
-function renderDeltaReport(delta, metadata = {}){
+function renderDeltaReport(delta, metadata = {}, currentAllVulns = [], baselineAllVulns = []){
   reportArea.hidden = false;
 
   // Extra defensive logging to help diagnose issues
@@ -1828,7 +1852,12 @@ function renderDeltaReport(delta, metadata = {}){
     suppressedNewCount,
     totalNew: totalNewAll,
     fixedCount: Array.isArray(delta.fixed) ? delta.fixed.length : 0,
-    summary: delta.summary || {}
+    summary: delta.summary || {},
+    // Store original full vulnerability arrays for export (including suppressed ones)
+    currentAllVulnerabilities: currentAllVulns,
+    baselineAllVulnerabilities: baselineAllVulns,
+    // Store all new vulnerabilities (including suppressed) for export
+    allNewVulnerabilities: Array.isArray(delta.newVulns) ? delta.newVulns : []
   };
 
   // Debug logging for delta data
