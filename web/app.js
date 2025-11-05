@@ -98,14 +98,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Delta mode toggle logic
   if (deltaToggle) {
-    deltaToggle.addEventListener('change', () => {
+    // Helper to update upload rows visibility
+    function updateUploadRows() {
       isDeltaMode = deltaToggle.checked;
       const deltaUploads = document.getElementById('delta-uploads');
+      const mainUploadRow = document.querySelector('.upload-row:not(.delta-uploads)');
       if (deltaUploads) {
         deltaUploads.style.display = isDeltaMode ? 'flex' : 'none';
       }
+      if (mainUploadRow) {
+        mainUploadRow.style.display = 'flex'; // Always show main upload row
+      }
       updateGenerateButtonText();
-    });
+    }
+    // On load
+    updateUploadRows();
+    // On toggle
+    deltaToggle.addEventListener('change', updateUploadRows);
   }
 });
 
