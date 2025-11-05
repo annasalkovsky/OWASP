@@ -102,12 +102,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateUploadRows() {
       isDeltaMode = deltaToggle.checked;
       const deltaUploads = document.getElementById('delta-uploads');
+      // Always show the main upload row
       const mainUploadRow = document.querySelector('.upload-row:not(.delta-uploads)');
+      if (mainUploadRow) {
+        mainUploadRow.style.display = 'flex';
+      }
+      // Only show/hide the delta upload row
       if (deltaUploads) {
         deltaUploads.style.display = isDeltaMode ? 'flex' : 'none';
-      }
-      if (mainUploadRow) {
-        mainUploadRow.style.display = 'flex'; // Always show main upload row
       }
       updateGenerateButtonText();
     }
