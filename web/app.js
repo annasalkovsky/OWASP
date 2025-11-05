@@ -530,19 +530,20 @@ function getCurrentReportData() {
 }
 
 function generateBeautifulReportHTML(data) {
-  if (data.type === 'delta') {
-    // Generate proper delta report HTML
-    const deltaData = data.data;
-    const timestamp = data.timestamp;
+  console.log('Export called with data type:', data.type);
+  console.log('Export data:', data);
+  
+  // Check if this is a delta report
+  if (data.type === 'delta' && window.lastDeltaData) {
+    console.log('Generating delta export with lastDeltaData:', window.lastDeltaData);
     
-    // Debug logging for delta export
-    console.log('Delta export data:', {
-      deltaDataKeys: Object.keys(deltaData),
-      currentAllVulnsLength: deltaData.currentAllVulnerabilities?.length,
-      newVulnsLength: deltaData.newVulnerabilities?.length,
-      fixedLength: deltaData.fixed?.length,
-      allNewVulnsLength: deltaData.allNewVulnerabilities?.length
-    });
+    // Get data directly from window.lastDeltaData - this is what the UI uses
+    const fixedVulns = window.lastDeltaData.fixed || [];
+    const newVulns = window.lastDeltaData.newVulnerabilities || [];
+    const fixedCount = fixedVulns.length;
+    const newCount = newVulns.length;
+    
+    console.log('Delta export counts:', {fixedCount, newCount});
     
     // For export, use ALL current vulnerabilities to match what's shown in the UI (170 total)
     // This includes both suppressed and unsuppressed vulnerabilities from the current report
