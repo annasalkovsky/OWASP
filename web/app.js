@@ -53,6 +53,94 @@ baselineSuppressionsInput.addEventListener('change', e => {
 // Toggle uploaded visual state - now handled in loadFile callbacks
 // Removed immediate setUploadedState calls as they were causing timing issues
 
+// Debug function for testing delta toggle
+function debugDeltaToggle() {
+  console.log('=== DEBUG DELTA TOGGLE ===');
+  const toggle = document.getElementById('delta-mode-toggle');
+  const uploads = document.getElementById('delta-uploads');
+  
+  console.log('Toggle element:', toggle);
+  console.log('Toggle checked:', toggle ? toggle.checked : 'N/A');
+  console.log('Uploads element:', uploads);
+  console.log('Uploads display style:', uploads ? uploads.style.display : 'N/A');
+  console.log('Uploads computed style:', uploads ? window.getComputedStyle(uploads).display : 'N/A');
+  
+  if (uploads) {
+    console.log('Forcing uploads to show...');
+    uploads.style.display = 'flex';
+    uploads.style.visibility = 'visible';
+    uploads.style.opacity = '1';
+    console.log('After forcing - display:', uploads.style.display);
+    console.log('After forcing - computed:', window.getComputedStyle(uploads).display);
+  }
+  
+  console.log('isDeltaMode variable:', isDeltaMode);
+  console.log('=== END DEBUG ===');
+}
+
+// Make it globally available
+window.debugDeltaToggle = debugDeltaToggle;
+
+// Wait for DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('DOM Content Loaded');
+  initializeDeltaToggle();
+});
+
+// Also try on window load as backup
+window.addEventListener('load', function() {
+  console.log('Window Load Event');
+  if (!deltaToggle.hasAttribute('data-initialized')) {
+    initializeDeltaToggle();
+  }
+});
+
+function initializeDeltaToggle() {
+  console.log('Initializing delta toggle...');
+  const toggle = document.getElementById('delta-mode-toggle');
+  const uploads = document.getElementById('delta-uploads');
+  
+  console.log('Toggle element:', toggle);
+  console.log('Uploads element:', uploads);
+  
+  if (!toggle) {
+    console.error('Delta toggle element not found in the DOM. Check if the ID "delta-mode-toggle" is correct.');
+    return;
+  }
+  
+  if (!uploads) {
+    console.error('Delta uploads element not found in the DOM. Check if the ID "delta-uploads" is correct.');
+    return;
+  }
+  
+  toggle.setAttribute('data-initialized', 'true');
+  console.log('Delta toggle initialized successfully:', toggle);
+  
+  // Remove any existing event listeners
+  toggle.removeEventListener('change', handleDeltaToggle);
+  // Add the event listener
+  toggle.addEventListener('change', handleDeltaToggle);
+  
+  console.log('Event listener added to delta toggle');
+}
+
+function handleDeltaToggle(event) {
+  console.log('Delta toggle state changed:', event.target.checked);
+  isDeltaMode = event.target.checked;
+  console.log('isDeltaMode updated to:', isDeltaMode);
+  const deltaUploads = document.getElementById('delta-uploads');
+  console.log('Delta uploads element:', deltaUploads);
+  if (deltaUploads) {
+    deltaUploads.style.display = isDeltaMode ? 'flex' : 'none';
+    console.log('Set display to:', isDeltaMode ? 'flex' : 'none');
+    console.log('Actual computed style:', window.getComputedStyle(deltaUploads).display);
+  } else {
+    console.error('Delta uploads element not found!');
+  }
+  updateGenerateButtonText();
+}
+
+// Legacy initialization (keeping for compatibility)
 // Delta mode toggle
 if (!deltaToggle) {
   console.error('Delta toggle element not found in the DOM. Check if the ID "delta-mode-toggle" is correct.');
