@@ -1843,6 +1843,14 @@ function renderDeltaReport(delta, metadata = {}, currentAllVulns = [], baselineA
   reportArea.hidden = false;
 
   // Extra defensive logging to help diagnose issues
+  console.log('renderDeltaReport received parameters:', {
+    deltaKeys: Object.keys(delta || {}),
+    currentAllVulnsLength: currentAllVulns.length,
+    baselineAllVulnsLength: baselineAllVulns.length,
+    currentAllVulnsSample: currentAllVulns[0],
+    metadataKeys: Object.keys(metadata)
+  });
+
   console.log('renderDeltaReport received delta object:', {
     keys: Object.keys(delta || {}),
     fixedType: Array.isArray(delta.fixed) ? `array[${delta.fixed.length}]` : typeof delta.fixed,
@@ -1874,13 +1882,16 @@ function renderDeltaReport(delta, metadata = {}, currentAllVulns = [], baselineA
     allNewVulnerabilities: Array.isArray(delta.newVulns) ? delta.newVulns : []
   };
 
-  // Debug logging for delta data
-  console.log('Delta data prepared:', {
+  // Debug logging for what we stored
+  console.log('window.lastDeltaData stored:', {
     fixedCount: window.lastDeltaData.fixedCount,
     newVulnerabilitiesCount: window.lastDeltaData.newVulnerabilities.length,
-    totalNewUnsuppressed,
-    deltaNewUnsuppressedCount: delta.newUnsuppressedCount,
-    sampleNewVuln: window.lastDeltaData.newVulnerabilities[0]
+    currentAllVulnerabilitiesCount: window.lastDeltaData.currentAllVulnerabilities.length,
+    baselineAllVulnerabilitiesCount: window.lastDeltaData.baselineAllVulnerabilities.length,
+    allNewVulnerabilitiesCount: window.lastDeltaData.allNewVulnerabilities.length,
+    sampleCurrentVuln: window.lastDeltaData.currentAllVulnerabilities[0],
+    sampleNewVuln: window.lastDeltaData.newVulnerabilities[0],
+    sampleFixedVuln: window.lastDeltaData.fixed[0]
   });
 
   // Guard against undefined arrays before passing to severityCounts
