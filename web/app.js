@@ -55,34 +55,15 @@ baselineSuppressionsInput.addEventListener('change', e => {
 // Delta mode toggle
 // Delta toggle with null check
 if (deltaToggle) {
-  console.log('Delta toggle found, adding event listener');
   deltaToggle.addEventListener('change', () => {
-    console.log('Delta toggle changed to:', deltaToggle.checked);
     isDeltaMode = deltaToggle.checked;
     const deltaUploads = document.getElementById('delta-uploads');
-    console.log('Delta uploads element:', deltaUploads);
     if (deltaUploads) {
       deltaUploads.style.display = isDeltaMode ? 'flex' : 'none';
-      console.log('Set display to:', isDeltaMode ? 'flex' : 'none');
-      console.log('Current style.display:', deltaUploads.style.display);
-    } else {
-      console.error('Delta uploads element not found!');
     }
     updateGenerateButtonText();
   });
-} else {
-  console.error('Delta toggle element not found!');
 }
-
-// Force show delta uploads for testing (remove this after debugging)
-window.addEventListener('load', () => {
-  const deltaUploads = document.getElementById('delta-uploads');
-  if (deltaUploads) {
-    console.log('Force showing delta uploads for testing');
-    deltaUploads.style.display = 'flex';
-    deltaUploads.style.visibility = 'visible';
-  }
-});
 
 function setUploadedState(which, state){
   const configs = {
@@ -508,35 +489,40 @@ exportBtn.addEventListener('click', async () => {
 });
 
 function getCurrentReportData() {
-  // Extract current report data from the DOM
-  const isDelta = document.querySelector('.delta-container') !== null;
+  // Check if this is a delta report
+  const isDelta = window.lastDeltaData && document.querySelector('.delta-container');
   
   if (isDelta) {
-    // For delta reports, we'll handle this separately
-    return { type: 'delta', html: reportArea.innerHTML };
+    // For delta reports, return the stored delta data
+    return {
+      type: 'delta',
+      data: window.lastDeltaData,
+      timestamp: new Date().toLocaleString()
+    };
   }
   
-  // For normal reports, extract the data
+  // For normal reports, extract the data from DOM
   const vulnerabilities = [];
   document.querySelectorAll('#vuln-table tbody tr.vuln-row').forEach((row, idx) => {
     const cells = row.querySelectorAll('td');
     if (cells.length >= 6) {
       vulnerabilities.push({
-        number: cells[0].textContent.trim(),
-        name: cells[1].textContent.trim(),
-        severity: cells[2].textContent.trim(),
-        cvss: cells[3].textContent.trim(),
-        description: cells[4].textContent.trim(),
-        file: cells[5].textContent.trim()
+        Package: cells[0].textContent.trim(),
+        Vulnerability: cells[1].textContent.trim(),
+        Severity: cells[2].textContent.trim(),
+        CVSS: cells[3].textContent.trim(),
+        Description: cells[4].textContent.trim(),
+        File: cells[5].textContent.trim()
       });
     }
   });
 
-  // Extract summary statistics
-  const metrics = {};
-  document.querySelectorAll('.metric').forEach(metric => {
-    const value = metric.querySelector('strong')?.textContent || '0';
-    const label = metric.querySelector('.small')?.textContent || '';
+  return {
+    type: 'regular',
+    vulnerabilities: vulnerabilities,
+    timestamp: new Date().toLocaleString()
+  };
+}
     if (label) metrics[label] = parseInt(value);
   });
 
@@ -556,25 +542,257 @@ function getCurrentReportData() {
 
 function generateBeautifulReportHTML(data) {
   if (data.type === 'delta') {
-    // For delta reports, return the existing beautiful HTML
+    // Generate proper delta report HTML
+    const deltaData = data.data;
+    const timestamp = data.timestamp;
+    const newVulns = deltaData.newVulnerabilities || [];
+    const fixedVulns = deltaData.fixed || [];
+    
+    // Count by severity for new vulnerabilities
+    const newCounts = {CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0};
+    newVulns.forEach(vuln => {
+      const severity = vuln.severity?.toUpperCase() || 'UNKNOWN';
+      if (newCounts[severity] !== undefined) newCounts[severity]++;
+    });
+    
+    // Count by severity for fixed vulnerabilities  
+    const fixedCounts = {CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0};
+    fixedVulns.forEach(vuln => {
+      const severity = vuln.severity?.toUpperCase() || 'UNKNOWN';
+      if (fixedCounts[severity] !== undefined) fixedCounts[severity]++;
+    });
+
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OWASP Delta Report</title>
+    <title>OWASP Delta Security Report</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e293b; background: #f8fafc; padding: 2rem; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        ${getCommonStyles()}
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #2c3e50;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2.5rem; margin-bottom: 10px; font-weight: 700; }
+        .header .subtitle { font-size: 1.2rem; opacity: 0.9; margin-bottom: 5px; }
+        .header .timestamp { font-size: 1rem; opacity: 0.8; }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 40px;
+            background: #f8f9fa;
+        }
+        .metrics-section {
+            margin-bottom: 30px;
+        }
+        .metrics-section h2 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #764ba2;
+            text-align: center;
+        }
+        .metric-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .metric-card:hover { transform: translateY(-2px); }
+        .metric-number { font-size: 2rem; font-weight: bold; margin-bottom: 5px; }
+        .metric-label { font-size: 0.9rem; color: #666; text-transform: uppercase; }
+        .critical .metric-number { color: #e74c3c; }
+        .high .metric-number { color: #f39c12; }
+        .medium .metric-number { color: #f1c40f; }
+        .low .metric-number { color: #27ae60; }
+        .content { padding: 40px; }
+        .section-title { font-size: 1.8rem; margin-bottom: 20px; color: #2c3e50; }
+        .vuln-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .vuln-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        .vuln-table td { padding: 12px 15px; border-bottom: 1px solid #eee; }
+        .vuln-table tr:hover { background: #f8f9fa; }
+        .severity-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: white;
+        }
+        .severity-critical { background-color: #e74c3c; }
+        .severity-high { background-color: #f39c12; }
+        .severity-medium { background-color: #f1c40f; color: #2c3e50; }
+        .severity-low { background-color: #27ae60; }
+        .footer {
+            background: #2c3e50;
+            color: white;
+            padding: 30px 40px;
+            text-align: center;
+        }
+        .footer p { margin-bottom: 10px; }
     </style>
 </head>
 <body>
     <div class="container">
-        ${data.html}
+        <div class="header">
+            <h1>🔄 OWASP Delta Security Report</h1>
+            <div class="subtitle">Comprehensive Security Analysis Report</div>
+            <div class="timestamp">Generated on ${timestamp}</div>
+        </div>
+        
+        <div class="metrics-grid">
+            <div class="metrics-section">
+                <h2>⚠️ New Vulnerabilities (${newVulns.length})</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                    <div class="metric-card critical">
+                        <div class="metric-number">${newCounts.CRITICAL}</div>
+                        <div class="metric-label">Critical</div>
+                    </div>
+                    <div class="metric-card high">
+                        <div class="metric-number">${newCounts.HIGH}</div>
+                        <div class="metric-label">High</div>
+                    </div>
+                    <div class="metric-card medium">
+                        <div class="metric-number">${newCounts.MEDIUM}</div>
+                        <div class="metric-label">Medium</div>
+                    </div>
+                    <div class="metric-card low">
+                        <div class="metric-number">${newCounts.LOW}</div>
+                        <div class="metric-label">Low</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="metrics-section">
+                <h2>✅ Fixed Vulnerabilities (${fixedVulns.length})</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                    <div class="metric-card critical">
+                        <div class="metric-number">${fixedCounts.CRITICAL}</div>
+                        <div class="metric-label">Critical</div>
+                    </div>
+                    <div class="metric-card high">
+                        <div class="metric-number">${fixedCounts.HIGH}</div>
+                        <div class="metric-label">High</div>
+                    </div>
+                    <div class="metric-card medium">
+                        <div class="metric-number">${fixedCounts.MEDIUM}</div>
+                        <div class="metric-label">Medium</div>
+                    </div>
+                    <div class="metric-card low">
+                        <div class="metric-number">${fixedCounts.LOW}</div>
+                        <div class="metric-label">Low</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="content">
+            ${newVulns.length > 0 ? `
+            <h2 class="section-title">⚠️ Unhandled Vulnerabilities Detected (${newVulns.length} total)</h2>
+            <table class="vuln-table">
+                <thead>
+                    <tr>
+                        <th>Package</th>
+                        <th>Vulnerability</th>
+                        <th>Severity</th>
+                        <th>CVSS</th>
+                        <th>Description</th>
+                        <th>File</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${newVulns.map(vuln => `
+                        <tr>
+                            <td>${vuln.package || ''}</td>
+                            <td>${vuln.vulnerability || ''}</td>
+                            <td>
+                                <span class="severity-badge severity-${(vuln.severity || '').toLowerCase()}">
+                                    ${vuln.severity || ''}
+                                </span>
+                            </td>
+                            <td>${vuln.cvssScore || ''}</td>
+                            <td>${vuln.description || ''}</td>
+                            <td>${vuln.filePath || ''}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            ` : '<div style="text-align: center; padding: 60px; color: #27ae60; font-size: 1.2rem;">🎉 No new vulnerabilities found!</div>'}
+            
+            ${fixedVulns.length > 0 ? `
+            <h2 class="section-title">✅ Fixed Vulnerabilities (${fixedVulns.length} total)</h2>
+            <table class="vuln-table">
+                <thead>
+                    <tr>
+                        <th>Package</th>
+                        <th>Vulnerability</th>
+                        <th>Severity</th>
+                        <th>CVSS</th>
+                        <th>Description</th>
+                        <th>File</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${fixedVulns.map(vuln => `
+                        <tr>
+                            <td>${vuln.package || ''}</td>
+                            <td>${vuln.vulnerability || ''}</td>
+                            <td>
+                                <span class="severity-badge severity-${(vuln.severity || '').toLowerCase()}">
+                                    ${vuln.severity || ''}
+                                </span>
+                            </td>
+                            <td>${vuln.cvssScore || ''}</td>
+                            <td>${vuln.description || ''}</td>
+                            <td>${vuln.filePath || ''}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            ` : ''}
+        </div>
+        
+        <div class="footer">
+            <p><strong>OWASP Dependency Audit Tool</strong></p>
+            <p>Visit: <a href="https://annasalkovsky.github.io/OWASP/" style="color: #3498db;">https://annasalkovsky.github.io/OWASP/</a></p>
+            <p>Contact: anna.salkovsky@imd-soft.com</p>
+        </div>
     </div>
-    <script>${getInteractivityScript()}</script>
 </body>
 </html>`;
   }
