@@ -55,15 +55,34 @@ baselineSuppressionsInput.addEventListener('change', e => {
 // Delta mode toggle
 // Delta toggle with null check
 if (deltaToggle) {
+  console.log('Delta toggle found, adding event listener');
   deltaToggle.addEventListener('change', () => {
+    console.log('Delta toggle changed to:', deltaToggle.checked);
     isDeltaMode = deltaToggle.checked;
     const deltaUploads = document.getElementById('delta-uploads');
+    console.log('Delta uploads element:', deltaUploads);
     if (deltaUploads) {
       deltaUploads.style.display = isDeltaMode ? 'flex' : 'none';
+      console.log('Set display to:', isDeltaMode ? 'flex' : 'none');
+      console.log('Current style.display:', deltaUploads.style.display);
+    } else {
+      console.error('Delta uploads element not found!');
     }
     updateGenerateButtonText();
   });
+} else {
+  console.error('Delta toggle element not found!');
 }
+
+// Force show delta uploads for testing (remove this after debugging)
+window.addEventListener('load', () => {
+  const deltaUploads = document.getElementById('delta-uploads');
+  if (deltaUploads) {
+    console.log('Force showing delta uploads for testing');
+    deltaUploads.style.display = 'flex';
+    deltaUploads.style.visibility = 'visible';
+  }
+});
 
 function setUploadedState(which, state){
   const configs = {
