@@ -491,7 +491,7 @@ exportBtn.addEventListener('click', async () => {
 function getCurrentReportData() {
   // Check if this is a delta report
   const isDelta = window.lastDeltaData && document.querySelector('.delta-container');
-  
+
   if (isDelta) {
     // For delta reports, return the stored delta data
     return {
@@ -500,14 +500,14 @@ function getCurrentReportData() {
       timestamp: new Date().toLocaleString()
     };
   }
-  
+
   // For normal reports, extract ALL vulnerabilities from DOM (not just filtered ones)
   const vulnerabilities = [];
-  
+
   // Try to get all vulnerability rows, including those that might be hidden by filters
   const allRows = document.querySelectorAll('#vuln-table tbody tr');
   console.log('Regular report export - found rows:', allRows.length);
-  
+
   allRows.forEach((row, idx) => {
     const cells = row.querySelectorAll('td');
     if (cells.length >= 6 && !row.classList.contains('no-data')) {
@@ -521,6 +521,9 @@ function getCurrentReportData() {
       });
     }
   });
+
+  // Debug: Log vulnerabilities array before returning
+  console.log('Exported vulnerabilities array:', vulnerabilities);
 
   return {
     type: 'regular',
@@ -536,38 +539,32 @@ function generateBeautifulReportHTML(data) {
   // Check if this is a delta report
   if (data.type === 'delta' && window.lastDeltaData) {
     console.log('Generating delta export with lastDeltaData:', window.lastDeltaData);
-    
     // Get data directly from window.lastDeltaData - this is what the UI uses
-    const fixedVulns = window.lastDeltaData.fixed || [];
-    const newVulns = window.lastDeltaData.newVulnerabilities || [];
-    const fixedCount = fixedVulns.length;
-    const newCount = newVulns.length;
-    
+    const fixedVulnsDelta = window.lastDeltaData.fixed || [];
+    const newVulnsDelta = window.lastDeltaData.newVulnerabilities || [];
+    const fixedCount = fixedVulnsDelta.length;
+    const newCount = newVulnsDelta.length;
     console.log('Delta export counts:', {fixedCount, newCount});
-    
     // For export, use ALL current vulnerabilities to match what's shown in the UI (170 total)
     // This includes both suppressed and unsuppressed vulnerabilities from the current report
     const allCurrentVulns = deltaData.currentAllVulnerabilities || [];
-    const newVulns = deltaData.newVulnerabilities || []; // Only unsuppressed new ones (15)
-    const fixedVulns = deltaData.fixed || [];
-    
+    const newVulnsExport = deltaData.newVulnerabilities || []; // Only unsuppressed new ones (15)
+    const fixedVulnsExport = deltaData.fixed || [];
     // Count by severity for ALL current vulnerabilities (to match UI showing 170 total)
     const currentCounts = {CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0};
     allCurrentVulns.forEach(vuln => {
       const severity = vuln.severity?.toUpperCase() || 'UNKNOWN';
       if (currentCounts[severity] !== undefined) currentCounts[severity]++;
     });
-    
     // Count by severity for new vulnerabilities (unsuppressed only - 15)
     const newCounts = {CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0};
-    newVulns.forEach(vuln => {
+    newVulnsExport.forEach(vuln => {
       const severity = vuln.severity?.toUpperCase() || 'UNKNOWN';
       if (newCounts[severity] !== undefined) newCounts[severity]++;
     });
-    
     // Count by severity for fixed vulnerabilities  
     const fixedCounts = {CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0};
-    fixedVulns.forEach(vuln => {
+    fixedVulnsExport.forEach(vuln => {
       const severity = vuln.severity?.toUpperCase() || 'UNKNOWN';
       if (fixedCounts[severity] !== undefined) fixedCounts[severity]++;
     });
