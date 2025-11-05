@@ -501,11 +501,16 @@ function getCurrentReportData() {
     };
   }
   
-  // For normal reports, extract the data from DOM
+  // For normal reports, extract ALL vulnerabilities from DOM (not just filtered ones)
   const vulnerabilities = [];
-  document.querySelectorAll('#vuln-table tbody tr.vuln-row').forEach((row, idx) => {
+  
+  // Try to get all vulnerability rows, including those that might be hidden by filters
+  const allRows = document.querySelectorAll('#vuln-table tbody tr');
+  console.log('Regular report export - found rows:', allRows.length);
+  
+  allRows.forEach((row, idx) => {
     const cells = row.querySelectorAll('td');
-    if (cells.length >= 6) {
+    if (cells.length >= 6 && !row.classList.contains('no-data')) {
       vulnerabilities.push({
         Package: cells[0].textContent.trim(),
         Vulnerability: cells[1].textContent.trim(),
@@ -529,6 +534,15 @@ function generateBeautifulReportHTML(data) {
     // Generate proper delta report HTML
     const deltaData = data.data;
     const timestamp = data.timestamp;
+    
+    // Debug logging for delta export
+    console.log('Delta export data:', {
+      deltaDataKeys: Object.keys(deltaData),
+      currentAllVulnsLength: deltaData.currentAllVulnerabilities?.length,
+      newVulnsLength: deltaData.newVulnerabilities?.length,
+      fixedLength: deltaData.fixed?.length,
+      allNewVulnsLength: deltaData.allNewVulnerabilities?.length
+    });
     
     // For export, use ALL current vulnerabilities to match what's shown in the UI (170 total)
     // This includes both suppressed and unsuppressed vulnerabilities from the current report
