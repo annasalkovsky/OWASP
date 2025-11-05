@@ -52,18 +52,9 @@ baselineSuppressionsInput.addEventListener('change', e => {
 // Toggle uploaded visual state - now handled in loadFile callbacks
 // Removed immediate setUploadedState calls as they were causing timing issues
 
-// Delta mode toggle
-// Delta toggle with null check
-if (deltaToggle) {
-  deltaToggle.addEventListener('change', () => {
-    isDeltaMode = deltaToggle.checked;
-    const deltaUploads = document.getElementById('delta-uploads');
-    if (deltaUploads) {
-      deltaUploads.style.display = isDeltaMode ? 'flex' : 'none';
-    }
-    updateGenerateButtonText();
-  });
-}
+
+// Delta mode toggle logic moved inside DOMContentLoaded to ensure DOM is ready
+
 
 function setUploadedState(which, state){
   const configs = {
@@ -104,6 +95,18 @@ document.addEventListener('DOMContentLoaded', () => {
   setUploadedState('report', !!reportInput.files.length);
   setUploadedState('suppressions', !!suppressionsInput.files.length);
   refreshUploadedDisplay();
+
+  // Delta mode toggle logic
+  if (deltaToggle) {
+    deltaToggle.addEventListener('change', () => {
+      isDeltaMode = deltaToggle.checked;
+      const deltaUploads = document.getElementById('delta-uploads');
+      if (deltaUploads) {
+        deltaUploads.style.display = isDeltaMode ? 'flex' : 'none';
+      }
+      updateGenerateButtonText();
+    });
+  }
 });
 
 // drag styling (optional UX)
