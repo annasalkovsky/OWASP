@@ -765,15 +765,15 @@ function generateBeautifulReportHTML(data) {
                     ${newVulns.map((vuln, index) => `
                         <tr>
                             <td>${index + 1}</td>
-                            <td>${vuln.vulnerability || ''}</td>
+                            <td>${vuln.name || ''}</td>
                             <td>
                                 <span class="severity-badge severity-${(vuln.severity || '').toLowerCase()}">
                                     ${vuln.severity || ''}
                                 </span>
                             </td>
-                            <td>${vuln.cvssScore || ''}</td>
+                            <td>${vuln.cvss || ''}</td>
                             <td>${vuln.description || ''}</td>
-                            <td>${vuln.filePath || ''}</td>
+                            <td>${vuln.file || ''}</td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -794,14 +794,14 @@ function generateBeautifulReportHTML(data) {
                 <tbody>
                     ${fixedVulns.map(vuln => `
                         <tr>
-                            <td>${vuln.vulnerability || ''}</td>
+                            <td>${vuln.name || ''}</td>
                             <td>
                                 <span class="severity-badge severity-${(vuln.severity || '').toLowerCase()}">
                                     ${vuln.severity || ''}
                                 </span>
                             </td>
-                            <td>${vuln.cvssScore || ''}</td>
-                            <td>${vuln.filePath || ''}</td>
+                            <td>${vuln.cvss || ''}</td>
+                            <td>${vuln.file || ''}</td>
                         </tr>
                     `).join('')}
                 </tbody>
