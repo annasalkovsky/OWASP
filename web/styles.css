@@ -29,6 +29,122 @@ body{
 .btn.secondary{background:#e5e7eb;color:#111}
 .report-area{background:var(--card);padding:20px;border-radius:8px;margin-top:16px}
 /* Enhanced Metrics Cards */
+.comprehensive-summary {
+  background: linear-gradient(135deg, #f8fafc, #ffffff);
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.comprehensive-summary h2 {
+  margin: 0 0 20px 0;
+  color: #374151;
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.summary-section {
+  background: rgba(255, 255, 255, 0.8);
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.summary-section h3 {
+  margin: 0 0 12px 0;
+  color: #374151;
+  font-size: 16px;
+  font-weight: 600;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 8px;
+}
+
+.summary-section.dependencies h3 {
+  border-bottom-color: #3b82f6;
+  color: #1e40af;
+}
+
+.summary-section.vulnerabilities h3 {
+  border-bottom-color: #f59e0b;
+  color: #d97706;
+}
+
+.summary-section.suppressions h3 {
+  border-bottom-color: #10b981;
+  color: #047857;
+}
+
+.summary-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 6px;
+  border: 1px solid #f1f5f9;
+  font-size: 14px;
+}
+
+.stat-label {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.stat-value {
+  color: #374151;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.stat-percentage {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+.stat-item.highlight {
+  background: linear-gradient(135deg, #dbeafe, #ffffff);
+  border-color: #3b82f6;
+}
+
+.stat-item.highlight .stat-value {
+  color: #1e40af;
+}
+
+.stat-item.warning {
+  background: linear-gradient(135deg, #fef3c7, #ffffff);
+  border-color: #f59e0b;
+}
+
+.stat-item.warning .stat-value {
+  color: #d97706;
+}
+
+.stat-item.success {
+  background: linear-gradient(135deg, #dcfce7, #ffffff);
+  border-color: #10b981;
+}
+
+.stat-item.success .stat-value {
+  color: #047857;
+}
+
 .metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));

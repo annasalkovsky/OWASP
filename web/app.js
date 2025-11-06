@@ -305,6 +305,10 @@ function generateAuditReport() {
     
     try {
         const vulnerabilities = extractVulnerabilitiesFromXML(dependencyXml, suppressionsXml);
+        
+        // Store for export functionality
+        window.lastGeneratedVulnerabilities = vulnerabilities;
+        
         displayReport(vulnerabilities, 'audit');
         
         // Enable export buttons
@@ -503,7 +507,21 @@ function extractVulnerabilitiesFromXML(depXml, suppXml) {
         return !suppressed;
     });
     
+    // Calculate vulnerable dependencies count
+    const vulnerableDependencies = new Set(filteredVulns.map(vuln => vuln.Package)).size;
+    
     console.log(`After applying suppressions: ${filteredVulns.length} vulnerabilities remain (${suppressionAppliedCount} were suppressed)`);
+    console.log(`Vulnerabilities found in ${vulnerableDependencies} out of ${dependencies.length} dependencies`);
+    
+    // Store comprehensive scan statistics for use in reports
+    filteredVulns.scanStats = {
+        totalDependencies: dependencies.length,
+        totalVulnerabilitiesBeforeSuppressions: allVulnerabilities.length,
+        totalSuppressions: suppressions.length,
+        totalSuppressionsApplied: suppressionAppliedCount,
+        totalVulnerabilitiesAfterSuppressions: filteredVulns.length,
+        vulnerableDependencies: vulnerableDependencies
+    };
     
     return filteredVulns;
 }
@@ -632,9 +650,59 @@ function displayReport(vulnerabilities, type) {
     if (!reportArea) return;
     
     const severityCounts = calculateSeverityCounts(vulnerabilities);
+    const stats = vulnerabilities.scanStats || {};
     
     const html = `
         <div class="report-container">
+            <div class="comprehensive-summary">
+                <h2>📊 Comprehensive Scan Summary</h2>
+                <div class="summary-grid">
+                    <div class="summary-section dependencies">
+                        <h3>📁 Dependencies Analysis</h3>
+                        <div class="summary-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Total Dependencies Scanned:</span>
+                                <span class="stat-value">${stats.totalDependencies || 'N/A'}</span>
+                            </div>
+                            <div class="stat-item highlight">
+                                <span class="stat-label">Vulnerable Dependencies:</span>
+                                <span class="stat-value">${stats.vulnerableDependencies || 'N/A'}</span>
+                                <span class="stat-percentage">(${stats.totalDependencies ? Math.round((stats.vulnerableDependencies/stats.totalDependencies)*100) : 'N/A'}%)</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-section vulnerabilities">
+                        <h3>🔍 Vulnerability Analysis</h3>
+                        <div class="summary-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Total Vulnerabilities Found (Before Suppressions):</span>
+                                <span class="stat-value">${stats.totalVulnerabilitiesBeforeSuppressions || 'N/A'}</span>
+                            </div>
+                            <div class="stat-item warning">
+                                <span class="stat-label">Total Vulnerabilities Found (After Suppressions):</span>
+                                <span class="stat-value">${stats.totalVulnerabilitiesAfterSuppressions || vulnerabilities.length}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-section suppressions">
+                        <h3>🛡️ Suppressions Analysis</h3>
+                        <div class="summary-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Total Suppression Rules:</span>
+                                <span class="stat-value">${stats.totalSuppressions || 'N/A'}</span>
+                            </div>
+                            <div class="stat-item success">
+                                <span class="stat-label">Suppressions Applied:</span>
+                                <span class="stat-value">${stats.totalSuppressionsApplied || 'N/A'}</span>
+                                <span class="stat-percentage">(${stats.totalVulnerabilitiesBeforeSuppressions ? Math.round((stats.totalSuppressionsApplied/stats.totalVulnerabilitiesBeforeSuppressions)*100) : 'N/A'}% filtered)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <div class="metrics">
                 <div class="metric critical">
                     <strong>${severityCounts.CRITICAL}</strong>
@@ -694,13 +762,22 @@ function displayDeltaReport(newVulns, fixedVulns) {
                         <strong>dependency-check version:</strong> 12.4.0
                     </div>
                     <div class="scan-item">
-                        <strong>Dependencies Scanned:</strong> ${data.currentTotal + data.baselineTotal} (total unique)
+                        <strong>Current Dependencies Scanned:</strong> ${data.currentRaw?.totalDependenciesCount || 'N/A'}
                     </div>
                     <div class="scan-item">
-                        <strong>Vulnerable Dependencies:</strong> ${currentTotal}
+                        <strong>Current Vulnerable Dependencies:</strong> ${data.currentRaw?.vulnerableDependenciesCount || 'N/A'}
                     </div>
                     <div class="scan-item highlight">
-                        <strong>Vulnerabilities Found:</strong> ${newVulns.length}
+                        <strong>Current Vulnerabilities Found:</strong> ${currentTotal}
+                    </div>
+                    <div class="scan-item">
+                        <strong>Baseline Dependencies Scanned:</strong> ${data.baselineRaw?.totalDependenciesCount || 'N/A'}
+                    </div>
+                    <div class="scan-item">
+                        <strong>Baseline Vulnerable Dependencies:</strong> ${data.baselineRaw?.vulnerableDependenciesCount || 'N/A'}
+                    </div>
+                    <div class="scan-item">
+                        <strong>Baseline Vulnerabilities:</strong> ${baselineTotal}
                     </div>
                 </div>
             </div>
@@ -952,6 +1029,12 @@ function getCurrentReportData() {
         }
     });
     
+    // Try to get scan statistics from the last generated report
+    // This will preserve the comprehensive statistics for export
+    if (window.lastGeneratedVulnerabilities && window.lastGeneratedVulnerabilities.scanStats) {
+        vulnerabilities.scanStats = window.lastGeneratedVulnerabilities.scanStats;
+    }
+    
     return {
         type: 'regular',
         vulnerabilities: vulnerabilities,
@@ -966,16 +1049,58 @@ function generateExportHTML(reportData) {
     const vulnerabilities = isDelta ? (reportData.data?.newVulnerabilities || []) : (reportData.vulnerabilities || []);
     const severityCounts = calculateSeverityCounts(vulnerabilities);
     
+    // Get scan statistics
+    let scanStatsHTML = '';
+    if (!isDelta && reportData.vulnerabilities && reportData.vulnerabilities.length > 0) {
+        const stats = reportData.vulnerabilities.scanStats || {};
+        scanStatsHTML = `
+            <div class="export-scan-summary">
+                <h2>📊 Comprehensive Scan Summary</h2>
+                
+                <div class="export-summary-section">
+                    <h3>📁 Dependencies Analysis</h3>
+                    <table class="summary-table">
+                        <tr><td>Total Dependencies Scanned:</td><td><strong>${stats.totalDependencies || 'N/A'}</strong></td></tr>
+                        <tr><td>Vulnerable Dependencies:</td><td><strong>${stats.vulnerableDependencies || 'N/A'}</strong> (${stats.totalDependencies ? Math.round((stats.vulnerableDependencies/stats.totalDependencies)*100) : 'N/A'}%)</td></tr>
+                    </table>
+                </div>
+                
+                <div class="export-summary-section">
+                    <h3>🔍 Vulnerability Analysis</h3>
+                    <table class="summary-table">
+                        <tr><td>Total Vulnerabilities Found (Before Suppressions):</td><td><strong>${stats.totalVulnerabilitiesBeforeSuppressions || 'N/A'}</strong></td></tr>
+                        <tr><td>Total Vulnerabilities Found (After Suppressions):</td><td><strong>${stats.totalVulnerabilitiesAfterSuppressions || vulnerabilities.length}</strong></td></tr>
+                    </table>
+                </div>
+                
+                <div class="export-summary-section">
+                    <h3>🛡️ Suppressions Analysis</h3>
+                    <table class="summary-table">
+                        <tr><td>Total Suppression Rules:</td><td><strong>${stats.totalSuppressions || 'N/A'}</strong></td></tr>
+                        <tr><td>Suppressions Applied:</td><td><strong>${stats.totalSuppressionsApplied || 'N/A'}</strong> (${stats.totalVulnerabilitiesBeforeSuppressions ? Math.round((stats.totalSuppressionsApplied/stats.totalVulnerabilitiesBeforeSuppressions)*100) : 'N/A'}% filtered)</td></tr>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+    
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>${title}</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .metrics { display: flex; gap: 20px; margin-bottom: 30px; }
-        .metric { padding: 15px; border-radius: 5px; text-align: center; }
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+        .header { text-align: center; margin-bottom: 30px; padding: 20px; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; border-radius: 8px; }
+        .export-scan-summary { margin: 30px 0; padding: 20px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .export-summary-section { margin: 20px 0; }
+        .export-summary-section h3 { color: #374151; margin-bottom: 10px; font-size: 16px; }
+        .summary-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .summary-table td { padding: 8px 12px; border-bottom: 1px solid #e5e7eb; }
+        .summary-table td:first-child { width: 60%; color: #6b7280; }
+        .summary-table td:last-child { font-weight: 600; color: #374151; }
+        .metrics { display: flex; gap: 20px; margin-bottom: 30px; flex-wrap: wrap; }
+        .metric { padding: 15px; border-radius: 5px; text-align: center; flex: 1; min-width: 120px; }
         .metric.critical { background: #ffebee; border-left: 4px solid #f44336; }
         .metric.high { background: #fff3e0; border-left: 4px solid #ff9800; }
         .metric.medium { background: #fffde7; border-left: 4px solid #ffeb3b; }
@@ -987,6 +1112,7 @@ function generateExportHTML(reportData) {
         .severity-high { background: #ff9800; color: white; padding: 4px 8px; border-radius: 3px; }
         .severity-medium { background: #ffeb3b; color: black; padding: 4px 8px; border-radius: 3px; }
         .severity-low { background: #4caf50; color: white; padding: 4px 8px; border-radius: 3px; }
+        .footer { margin-top: 50px; text-align: center; color: #666; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -994,6 +1120,8 @@ function generateExportHTML(reportData) {
         <h1>${title}</h1>
         <p>Generated on ${reportData.timestamp}</p>
     </div>
+    
+    ${scanStatsHTML}
     
     <div class="metrics">
         <div class="metric critical">
@@ -1040,7 +1168,7 @@ function generateExportHTML(reportData) {
         </table>`
     }
     
-    <div style="margin-top: 50px; text-align: center; color: #666;">
+    <div class="footer">
         <p><strong>OWASP Dependency Audit Tool</strong></p>
         <p>Contact: anna.salkovsky@imd-soft.com</p>
     </div>
