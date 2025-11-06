@@ -23,6 +23,7 @@ body{
 .dropzone .uploaded-msg{position:absolute;left:16px;bottom:12px;color:var(--accent);font-weight:700;display:none}
 .dropzone.uploaded{border-color:rgba(59,130,246,0.6);background:linear-gradient(180deg,#f8fbff,#ffffff)}
 .dropzone.uploaded .uploaded-msg{display:block}
+.dropzone.drag-over{border-color:var(--accent);background:rgba(59,130,246,0.1);transform:scale(1.02)}
 .actions{display:flex;gap:12px;margin:12px 0}
 .btn{background:var(--accent);color:#fff;border:none;padding:10px 16px;border-radius:8px;cursor:pointer}
 .btn.secondary{background:#e5e7eb;color:#111}
@@ -293,7 +294,260 @@ body{
   100% { transform: translateX(400%); }
 }
 
-/* Progress states */
+/* Delta Report Styles - Matching Original Design */
+.delta-container {
+  background: var(--card);
+  border-radius: 12px;
+  margin-top: 20px;
+  overflow: hidden;
+}
+
+.delta-header {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  padding: 24px;
+  text-align: center;
+}
+
+.delta-header h1 {
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.timestamp {
+  margin: 0;
+  opacity: 0.9;
+  font-size: 14px;
+}
+
+.scan-info, .analysis-summary {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.scan-info h2, .analysis-summary h2 {
+  margin: 0 0 16px 0;
+  color: #374151;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.scan-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.scan-item {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.scan-item.highlight {
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.summary-text {
+  margin: 0;
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.delta-results {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0;
+}
+
+@media (max-width: 768px) {
+  .delta-results {
+    grid-template-columns: 1fr;
+  }
+  
+  .result-section {
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .result-section:last-child {
+    border-bottom: none;
+  }
+}
+
+.result-section {
+  padding: 20px;
+  border-right: 1px solid #e5e7eb;
+}
+
+.result-section:last-child {
+  border-right: none;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.section-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+.section-header.fixed h3 {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.section-header.unhandled h3 {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.section-header.suppression h3 {
+  background: #e0e7ff;
+  color: #6366f1;
+}
+
+.severity-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.severity-box {
+  text-align: center;
+  padding: 12px 8px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+}
+
+.severity-box.critical {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.severity-box.high {
+  background: #fef7ed;
+  border-color: #fdba74;
+}
+
+.severity-box.medium {
+  background: #fffbeb;
+  border-color: #fcd34d;
+}
+
+.severity-box.low {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.severity-box .count {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.severity-box.critical .count {
+  color: #dc2626;
+}
+
+.severity-box.high .count {
+  color: #ea580c;
+}
+
+.severity-box.medium .count {
+  color: #d97706;
+}
+
+.severity-box.low .count {
+  color: #16a34a;
+}
+
+.severity-box .label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.suppression-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.suppression-change {
+  text-align: center;
+  padding: 16px 12px;
+  border-radius: 8px;
+}
+
+.suppression-change.added {
+  background: #dcfce7;
+  border: 2px solid #86efac;
+}
+
+.suppression-change.removed {
+  background: #fef2f2;
+  border: 2px solid #fca5a5;
+}
+
+.suppression-change .change-count {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.suppression-change.added .change-count {
+  color: #16a34a;
+}
+
+.suppression-change.removed .change-count {
+  color: #dc2626;
+}
+
+.suppression-change .change-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+.vulnerabilities-details {
+  padding: 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.vulnerabilities-details h3 {
+  margin: 0 0 20px 0;
+  color: #374151;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* Table styling for new/fixed vulnerabilities */
+#vuln-table.unhandled-vulns {
+  border-left: 4px solid #d97706;
+}
+
+#vuln-table.fixed-vulns {
+  border-left: 4px solid #16a34a;
+}
+
+#vuln-table.unhandled-vulns thead {
+  background-color: #fef3c7;
+}
+
+#vuln-table.fixed-vulns thead {
+  background-color: #dcfce7;
+}
 .progress-bar.success .progress-fill {
   width: 100%;
   background: linear-gradient(90deg, #10b981, #059669);

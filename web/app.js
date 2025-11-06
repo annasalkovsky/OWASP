@@ -55,11 +55,62 @@ function setupDeltaToggle() {
 }
 
 function setupFileUploads() {
-    // Set up file input listeners
+    // Set up file input listeners and drag & drop
     setupFileInput('report-file', 'report', 'report-progress');
     setupFileInput('suppressions-file', 'suppressions', 'suppressions-progress');
     setupFileInput('baseline-report-file', 'baseline-report', 'baseline-progress');
     setupFileInput('baseline-suppressions-file', 'baseline-suppressions', 'baseline-suppressions-progress');
+    
+    // Set up drag and drop zones
+    setupDropZone('report-drop', 'report-file', 'report', 'report-progress');
+    setupDropZone('suppressions-drop', 'suppressions-file', 'suppressions', 'suppressions-progress');
+    setupDropZone('baseline-report-drop', 'baseline-report-file', 'baseline-report', 'baseline-progress');
+    setupDropZone('baseline-suppressions-drop', 'baseline-suppressions-file', 'baseline-suppressions', 'baseline-suppressions-progress');
+}
+
+function setupDropZone(dropZoneId, inputId, type, progressId) {
+    const dropZone = document.getElementById(dropZoneId);
+    const input = document.getElementById(inputId);
+    
+    if (!dropZone || !input) return;
+    
+    // Handle drop zone clicks
+    dropZone.addEventListener('click', function(e) {
+        if (e.target === dropZone || e.target.classList.contains('drop-text')) {
+            input.click();
+        }
+    });
+    
+    // Prevent default drag behaviors
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+    });
+    
+    // Highlight drop zone when item is dragged over it
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, function() {
+            dropZone.classList.add('drag-over');
+        });
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, function() {
+            dropZone.classList.remove('drag-over');
+        });
+    });
+    
+    // Handle dropped files
+    dropZone.addEventListener('drop', function(e) {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const file = files[0];
+            input.files = files; // Update the input files
+            handleFileUpload(file, type, progressId);
+        }
+    });
 }
 
 function setupFileInput(inputId, type, progressId) {
@@ -76,18 +127,26 @@ function setupFileInput(inputId, type, progressId) {
 }
 
 function handleFileUpload(file, type, progressId) {
-    console.log('Uploading file:', file.name, 'Type:', type);
+    console.log('Uploading file:', file.name, 'Type:', type, 'Progress ID:', progressId);
+    
+    // Debug: Check if progress elements exist
+    const progressBar = document.getElementById(progressId);
+    console.log('Progress bar element found:', !!progressBar, progressId);
     
     // Show progress bar
-    const progressBar = document.getElementById(progressId);
     if (progressBar) {
         progressBar.style.display = 'block';
         const progressFill = progressBar.querySelector('.progress-fill');
         const progressText = progressBar.querySelector('.progress-text');
         
+        console.log('Progress fill found:', !!progressFill);
+        console.log('Progress text found:', !!progressText);
+        
         if (progressText) {
             progressText.textContent = 'Loading 0%';
         }
+    } else {
+        console.error('Progress bar not found for ID:', progressId);
     }
     
     const reader = new FileReader();
@@ -220,27 +279,746 @@ function setupButtons() {
                     alert('Please upload both current and baseline dependency reports for delta comparison');
                     return;
                 }
-                alert('Delta report generation - functionality will be implemented');
+                generateDeltaReport();
             } else {
                 if (!dependencyXml) {
                     alert('Please upload a dependency report first');
                     return;
                 }
-                alert('Audit report generation - functionality will be implemented');
+                generateAuditReport();
             }
         });
     }
     
     if (exportBtn) {
-        exportBtn.addEventListener('click', function() {
-            alert('Export functionality will be implemented');
-        });
+        exportBtn.addEventListener('click', handleExportReport);
     }
     
     if (emailBtn) {
-        emailBtn.addEventListener('click', function() {
-            alert('Email functionality will be implemented');
+        emailBtn.addEventListener('click', handleEmailReport);
+    }
+}
+
+// Generate standard audit report
+function generateAuditReport() {
+    console.log('Generating audit report...');
+    
+    try {
+        const vulnerabilities = extractVulnerabilitiesFromXML(dependencyXml, suppressionsXml);
+        displayReport(vulnerabilities, 'audit');
+        
+        // Enable export buttons
+        const exportBtn = document.getElementById('export-btn');
+        const emailBtn = document.getElementById('email-btn');
+        if (exportBtn) exportBtn.disabled = false;
+        if (emailBtn) emailBtn.disabled = false;
+        
+        console.log(`Audit report generated with ${vulnerabilities.length} vulnerabilities`);
+        
+    } catch (error) {
+        console.error('Error generating audit report:', error);
+        alert('Error generating audit report: ' + error.message);
+    }
+}
+
+// Generate delta comparison report
+function generateDeltaReport() {
+    console.log('Generating delta report...');
+    console.log('Current dependency XML:', !!dependencyXml);
+    console.log('Current suppressions XML:', !!suppressionsXml);
+    console.log('Baseline dependency XML:', !!baselineDependencyXml);
+    console.log('Baseline suppressions XML:', !!baselineSuppressionsXml);
+    
+    try {
+        // Extract vulnerabilities with suppressions applied
+        console.log('Extracting current vulnerabilities...');
+        const currentVulns = extractVulnerabilitiesFromXML(dependencyXml, suppressionsXml);
+        
+        console.log('Extracting baseline vulnerabilities...');
+        const baselineVulns = extractVulnerabilitiesFromXML(baselineDependencyXml, baselineSuppressionsXml);
+        
+        console.log(`Current vulnerabilities after suppressions: ${currentVulns.length}`);
+        console.log(`Baseline vulnerabilities after suppressions: ${baselineVulns.length}`);
+        
+        // Find differences
+        const newVulns = findNewVulnerabilities(currentVulns, baselineVulns);
+        const fixedVulns = findFixedVulnerabilities(currentVulns, baselineVulns);
+        
+        console.log(`New vulnerabilities found: ${newVulns.length}`);
+        console.log(`Fixed vulnerabilities found: ${fixedVulns.length}`);
+        
+        // Log some examples for debugging
+        if (newVulns.length > 0) {
+            console.log('Example new vulnerability:', newVulns[0]);
+        }
+        if (fixedVulns.length > 0) {
+            console.log('Example fixed vulnerability:', fixedVulns[0]);
+        }
+        
+        // Store delta data for export
+        window.lastDeltaData = {
+            newVulnerabilities: newVulns,
+            fixedVulnerabilities: fixedVulns,
+            currentTotal: currentVulns.length,
+            baselineTotal: baselineVulns.length,
+            currentRaw: currentVulns,
+            baselineRaw: baselineVulns
+        };
+        
+        displayDeltaReport(newVulns, fixedVulns);
+        
+        // Enable export buttons
+        const exportBtn = document.getElementById('export-btn');
+        const emailBtn = document.getElementById('email-btn');
+        if (exportBtn) exportBtn.disabled = false;
+        if (emailBtn) emailBtn.disabled = false;
+        
+        console.log(`Delta report generated: ${newVulns.length} new, ${fixedVulns.length} fixed`);
+        
+    } catch (error) {
+        console.error('Error generating delta report:', error);
+        alert('Error generating delta report: ' + error.message);
+    }
+}
+
+// Extract vulnerabilities from XML with suppressions applied
+function extractVulnerabilitiesFromXML(depXml, suppXml) {
+    if (!depXml) {
+        console.warn('No dependency XML provided');
+        return [];
+    }
+    
+    const dependencies = Array.from(depXml.querySelectorAll('dependency'));
+    const suppressions = suppXml ? Array.from(suppXml.querySelectorAll('suppress')) : [];
+    
+    console.log(`Processing ${dependencies.length} dependencies with ${suppressions.length} suppressions`);
+    
+    let allVulnerabilities = [];
+    
+    dependencies.forEach(dependency => {
+        const vulnerabilities = Array.from(dependency.querySelectorAll('vulnerability'));
+        const packageName = getTextContent(dependency, 'fileName') || getTextContent(dependency, 'artifactId') || 'Unknown';
+        const filePath = getTextContent(dependency, 'filePath') || 'Unknown';
+        
+        vulnerabilities.forEach(vuln => {
+            // Get vulnerability identifier (CVE or name)
+            let vulnId = getTextContent(vuln, 'name');
+            const cveRefs = Array.from(vuln.querySelectorAll('reference[type="CVE"]'));
+            if (cveRefs.length > 0) {
+                vulnId = getTextContent(cveRefs[0], 'name') || vulnId;
+            }
+            
+            // Get CVSS score
+            let cvssScore = 'N/A';
+            const cvssV3 = vuln.querySelector('cvssV3');
+            const cvssV2 = vuln.querySelector('cvssV2');
+            if (cvssV3) {
+                cvssScore = getTextContent(cvssV3, 'baseScore') || getTextContent(cvssV3, 'baseSeverity') || cvssScore;
+            } else if (cvssV2) {
+                cvssScore = getTextContent(cvssV2, 'score') || cvssScore;
+            }
+            
+            const vulnData = {
+                Package: packageName,
+                Vulnerability: vulnId || 'Unknown',
+                Severity: getTextContent(vuln, 'severity') || 'Unknown',
+                CVSS: cvssScore,
+                Description: truncateText(getTextContent(vuln, 'description'), 100) || 'No description',
+                File: filePath,
+                // Additional fields for better matching
+                Source: getTextContent(vuln, 'source') || 'Unknown',
+                References: Array.from(vuln.querySelectorAll('reference')).map(ref => ({
+                    type: ref.getAttribute('type') || 'Unknown',
+                    name: getTextContent(ref, 'name') || '',
+                    url: getTextContent(ref, 'url') || ''
+                }))
+            };
+            
+            allVulnerabilities.push(vulnData);
         });
+    });
+    
+    console.log(`Found ${allVulnerabilities.length} total vulnerabilities before suppression filtering`);
+    
+    // Filter out suppressed vulnerabilities
+    const filteredVulns = allVulnerabilities.filter(vuln => !isSuppressed(vuln, suppressions));
+    
+    console.log(`After applying suppressions: ${filteredVulns.length} vulnerabilities remain`);
+    
+    return filteredVulns;
+}
+
+// Helper function to get text content from XML element
+function getTextContent(parent, selector) {
+    const element = parent.querySelector(selector);
+    return element ? element.textContent.trim() : null;
+}
+
+// Helper function to truncate text
+function truncateText(text, maxLength) {
+    if (!text) return '';
+    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+}
+
+// Check if vulnerability is suppressed
+function isSuppressed(vulnerability, suppressions) {
+    return suppressions.some(suppress => {
+        // Check if suppression applies to this vulnerability
+        const filePath = suppress.querySelector('filePath');
+        const cpe = suppress.querySelector('cpe');
+        const packageUrl = suppress.querySelector('packageUrl');
+        const gav = suppress.querySelector('gav');
+        const vulnerabilityName = suppress.querySelector('vulnerabilityName');
+        const cve = suppress.querySelector('cve');
+        const cvss = suppress.querySelector('cvssScore');
+        const cwe = suppress.querySelector('cwe');
+        
+        // If file path is specified, check if it matches
+        if (filePath && filePath.textContent.trim()) {
+            const filePathPattern = filePath.textContent.trim();
+            if (!vulnerability.File.includes(filePathPattern) && !vulnerability.Package.includes(filePathPattern)) {
+                return false; // File path doesn't match, skip this suppression
+            }
+        }
+        
+        // Check vulnerability name/CVE match
+        if (vulnerabilityName && vulnerabilityName.textContent.trim()) {
+            const vulnNamePattern = vulnerabilityName.textContent.trim();
+            if (vulnerability.Vulnerability.includes(vulnNamePattern)) {
+                return true; // Vulnerability name matches
+            }
+        }
+        
+        // Check CVE match
+        if (cve && cve.textContent.trim()) {
+            const cvePattern = cve.textContent.trim();
+            if (vulnerability.Vulnerability.includes(cvePattern)) {
+                return true; // CVE matches
+            }
+        }
+        
+        // Check CPE match (for package/component)
+        if (cpe && cpe.textContent.trim()) {
+            const cpePattern = cpe.textContent.trim();
+            if (vulnerability.Package.includes(cpePattern)) {
+                return true; // CPE matches package
+            }
+        }
+        
+        // Check GAV (groupId:artifactId:version) match
+        if (gav && gav.textContent.trim()) {
+            const gavPattern = gav.textContent.trim();
+            if (vulnerability.Package.includes(gavPattern) || vulnerability.File.includes(gavPattern)) {
+                return true; // GAV matches
+            }
+        }
+        
+        // Check package URL match
+        if (packageUrl && packageUrl.textContent.trim()) {
+            const packageUrlPattern = packageUrl.textContent.trim();
+            if (vulnerability.Package.includes(packageUrlPattern)) {
+                return true; // Package URL matches
+            }
+        }
+        
+        return false;
+    });
+}
+
+// Find new vulnerabilities (in current but not in baseline)
+function findNewVulnerabilities(current, baseline) {
+    return current.filter(currentVuln => 
+        !baseline.some(baselineVuln => vulnerabilitiesMatch(currentVuln, baselineVuln))
+    );
+}
+
+// Find fixed vulnerabilities (in baseline but not in current)
+function findFixedVulnerabilities(current, baseline) {
+    return baseline.filter(baselineVuln => 
+        !current.some(currentVuln => vulnerabilitiesMatch(currentVuln, baselineVuln))
+    );
+}
+
+// Check if two vulnerabilities are the same
+function vulnerabilitiesMatch(vuln1, vuln2) {
+    return vuln1.Vulnerability === vuln2.Vulnerability && 
+           vuln1.Package === vuln2.Package &&
+           vuln1.File === vuln2.File;
+}
+
+// Display standard audit report
+function displayReport(vulnerabilities, type) {
+    const reportArea = document.getElementById('report-area');
+    if (!reportArea) return;
+    
+    const severityCounts = calculateSeverityCounts(vulnerabilities);
+    
+    const html = `
+        <div class="report-container">
+            <div class="metrics">
+                <div class="metric critical">
+                    <strong>${severityCounts.CRITICAL}</strong>
+                    <span>Critical</span>
+                </div>
+                <div class="metric high">
+                    <strong>${severityCounts.HIGH}</strong>
+                    <span>High</span>
+                </div>
+                <div class="metric medium">
+                    <strong>${severityCounts.MEDIUM}</strong>
+                    <span>Medium</span>
+                </div>
+                <div class="metric low">
+                    <strong>${severityCounts.LOW}</strong>
+                    <span>Low</span>
+                </div>
+            </div>
+            
+            <h2>Security Vulnerabilities (${vulnerabilities.length} total)</h2>
+            
+            ${generateVulnerabilityTable(vulnerabilities)}
+        </div>
+    `;
+    
+    reportArea.innerHTML = html;
+    reportArea.hidden = false;
+}
+
+// Display delta comparison report
+function displayDeltaReport(newVulns, fixedVulns) {
+    const reportArea = document.getElementById('report-area');
+    if (!reportArea) return;
+    
+    const data = window.lastDeltaData || {};
+    const currentTotal = data.currentTotal || 0;
+    const baselineTotal = data.baselineTotal || 0;
+    
+    // Calculate severity breakdowns
+    const fixedSeverities = calculateSeverityCounts(fixedVulns);
+    const newSeverities = calculateSeverityCounts(newVulns);
+    
+    // Calculate suppression changes (simplified for now)
+    const suppressionChanges = calculateSuppressionChanges();
+    
+    const html = `
+        <div class="delta-container">
+            <div class="delta-header">
+                <h1>🛡️ OWASP Delta Report</h1>
+                <p class="timestamp">Generated: ${new Date().toLocaleString()}</p>
+            </div>
+            
+            <div class="scan-info">
+                <h2>📋 Scan Information</h2>
+                <div class="scan-details">
+                    <div class="scan-item">
+                        <strong>dependency-check version:</strong> 12.4.0
+                    </div>
+                    <div class="scan-item">
+                        <strong>Dependencies Scanned:</strong> ${data.currentTotal + data.baselineTotal} (total unique)
+                    </div>
+                    <div class="scan-item">
+                        <strong>Vulnerable Dependencies:</strong> ${currentTotal}
+                    </div>
+                    <div class="scan-item highlight">
+                        <strong>Vulnerabilities Found:</strong> ${newVulns.length}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="analysis-summary">
+                <h2>📊 Analysis Summary</h2>
+                <p class="summary-text">
+                    <strong>Fixed:</strong> ${fixedVulns.length} vulnerabilities | 
+                    <strong>Unhandled (Unsuppressed):</strong> ${newVulns.length} | 
+                    <strong>Unhandled (Suppressed):</strong> 0 | 
+                    <strong>Current Total:</strong> ${currentTotal} vulnerabilities
+                </p>
+            </div>
+            
+            <div class="delta-results">
+                <div class="result-section fixed-section">
+                    <div class="section-header fixed">
+                        <h3>✅ Fixed Vulnerabilities (${fixedVulns.length})</h3>
+                    </div>
+                    <div class="severity-grid">
+                        <div class="severity-box critical">
+                            <div class="count">${fixedSeverities.CRITICAL}</div>
+                            <div class="label">CRITICAL</div>
+                        </div>
+                        <div class="severity-box high">
+                            <div class="count">${fixedSeverities.HIGH}</div>
+                            <div class="label">HIGH</div>
+                        </div>
+                        <div class="severity-box medium">
+                            <div class="count">${fixedSeverities.MEDIUM}</div>
+                            <div class="label">MEDIUM</div>
+                        </div>
+                        <div class="severity-box low">
+                            <div class="count">${fixedSeverities.LOW}</div>
+                            <div class="label">LOW</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="result-section unhandled-section">
+                    <div class="section-header unhandled">
+                        <h3>⚠️ Unhandled Vulnerabilities (${newVulns.length})</h3>
+                    </div>
+                    <div class="severity-grid">
+                        <div class="severity-box critical">
+                            <div class="count">${newSeverities.CRITICAL}</div>
+                            <div class="label">CRITICAL</div>
+                        </div>
+                        <div class="severity-box high">
+                            <div class="count">${newSeverities.HIGH}</div>
+                            <div class="label">HIGH</div>
+                        </div>
+                        <div class="severity-box medium">
+                            <div class="count">${newSeverities.MEDIUM}</div>
+                            <div class="label">MEDIUM</div>
+                        </div>
+                        <div class="severity-box low">
+                            <div class="count">${newSeverities.LOW}</div>
+                            <div class="label">LOW</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="result-section suppression-section">
+                    <div class="section-header suppression">
+                        <h3>📝 Suppression Changes</h3>
+                    </div>
+                    <div class="suppression-grid">
+                        <div class="suppression-change added">
+                            <div class="change-count">${suppressionChanges.added}</div>
+                            <div class="change-label">Added</div>
+                        </div>
+                        <div class="suppression-change removed">
+                            <div class="change-count">${suppressionChanges.removed}</div>
+                            <div class="change-label">Removed</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            ${newVulns.length > 0 ? `
+                <div class="vulnerabilities-details">
+                    <h3>🔍 Unhandled Vulnerabilities Details</h3>
+                    ${generateVulnerabilityTable(newVulns, 'unhandled-vulns')}
+                </div>
+            ` : ''}
+            
+            ${fixedVulns.length > 0 ? `
+                <div class="vulnerabilities-details">
+                    <h3>✅ Fixed Vulnerabilities Details</h3>
+                    ${generateVulnerabilityTable(fixedVulns, 'fixed-vulns')}
+                </div>
+            ` : ''}
+        </div>
+    `;
+    
+    reportArea.innerHTML = html;
+    reportArea.hidden = false;
+}
+
+// Calculate suppression changes between current and baseline
+function calculateSuppressionChanges() {
+    const currentSuppressions = suppressionsXml ? Array.from(suppressionsXml.querySelectorAll('suppress')) : [];
+    const baselineSuppressions = baselineSuppressionsXml ? Array.from(baselineSuppressionsXml.querySelectorAll('suppress')) : [];
+    
+    // Convert suppressions to comparable strings
+    const currentSuppSet = new Set(currentSuppressions.map(supp => getSuppressionSignature(supp)));
+    const baselineSuppSet = new Set(baselineSuppressions.map(supp => getSuppressionSignature(supp)));
+    
+    // Find added suppressions (in current but not in baseline)
+    const addedSuppressions = [...currentSuppSet].filter(supp => !baselineSuppSet.has(supp));
+    
+    // Find removed suppressions (in baseline but not in current)
+    const removedSuppressions = [...baselineSuppSet].filter(supp => !currentSuppSet.has(supp));
+    
+    console.log(`Suppression analysis: ${addedSuppressions.length} added, ${removedSuppressions.length} removed`);
+    
+    return {
+        added: addedSuppressions.length,
+        removed: removedSuppressions.length,
+        addedList: addedSuppressions,
+        removedList: removedSuppressions
+    };
+}
+
+// Generate a unique signature for a suppression rule
+function getSuppressionSignature(suppressElement) {
+    const filePath = getTextContent(suppressElement, 'filePath') || '';
+    const cpe = getTextContent(suppressElement, 'cpe') || '';
+    const packageUrl = getTextContent(suppressElement, 'packageUrl') || '';
+    const gav = getTextContent(suppressElement, 'gav') || '';
+    const vulnerabilityName = getTextContent(suppressElement, 'vulnerabilityName') || '';
+    const cve = getTextContent(suppressElement, 'cve') || '';
+    const cvss = getTextContent(suppressElement, 'cvssScore') || '';
+    const cwe = getTextContent(suppressElement, 'cwe') || '';
+    
+    // Create a signature by combining all relevant fields
+    return `${filePath}|${cpe}|${packageUrl}|${gav}|${vulnerabilityName}|${cve}|${cvss}|${cwe}`;
+}
+
+// Calculate severity counts
+function calculateSeverityCounts(vulnerabilities) {
+    const counts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+    
+    vulnerabilities.forEach(vuln => {
+        const severity = vuln.Severity.toUpperCase();
+        if (counts[severity] !== undefined) {
+            counts[severity]++;
+        }
+    });
+    
+    return counts;
+}
+
+// Generate HTML table for vulnerabilities
+function generateVulnerabilityTable(vulnerabilities, tableClass = '') {
+    if (vulnerabilities.length === 0) {
+        return '<p class="no-vulnerabilities">No vulnerabilities found.</p>';
+    }
+    
+    const tableRows = vulnerabilities.map(vuln => `
+        <tr>
+            <td>${escapeHtml(vuln.Package)}</td>
+            <td>${escapeHtml(vuln.Vulnerability)}</td>
+            <td><span class="severity-${vuln.Severity.toLowerCase()}">${escapeHtml(vuln.Severity)}</span></td>
+            <td>${escapeHtml(vuln.CVSS)}</td>
+            <td>${escapeHtml(vuln.Description)}</td>
+            <td>${escapeHtml(vuln.File)}</td>
+        </tr>
+    `).join('');
+    
+    return `
+        <table id="vuln-table" class="${tableClass}">
+            <thead>
+                <tr>
+                    <th>Package</th>
+                    <th>Vulnerability</th>
+                    <th>Severity</th>
+                    <th>CVSS</th>
+                    <th>Description</th>
+                    <th>File</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRows}
+            </tbody>
+        </table>
+    `;
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Handle export report
+function handleExportReport() {
+    try {
+        const reportData = getCurrentReportData();
+        const htmlContent = generateExportHTML(reportData);
+        
+        // Create and download file
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `OWASP-${reportData.type}-Report-${new Date().toISOString().split('T')[0]}.html`;
+        link.click();
+        URL.revokeObjectURL(url);
+        
+        console.log('Report exported successfully');
+        
+    } catch (error) {
+        console.error('Export failed:', error);
+        alert('Export failed: ' + error.message);
+    }
+}
+
+// Get current report data for export
+function getCurrentReportData() {
+    const isDelta = window.lastDeltaData && document.querySelector('.delta-container');
+    const timestamp = new Date().toLocaleString();
+    
+    if (isDelta) {
+        return {
+            type: 'delta',
+            data: window.lastDeltaData,
+            timestamp: timestamp
+        };
+    }
+    
+    // Extract vulnerabilities from current DOM
+    const vulnerabilities = [];
+    const rows = document.querySelectorAll('#vuln-table tbody tr');
+    
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 6) {
+            vulnerabilities.push({
+                Package: cells[0].textContent.trim(),
+                Vulnerability: cells[1].textContent.trim(),
+                Severity: cells[2].textContent.trim(),
+                CVSS: cells[3].textContent.trim(),
+                Description: cells[4].textContent.trim(),
+                File: cells[5].textContent.trim()
+            });
+        }
+    });
+    
+    return {
+        type: 'regular',
+        vulnerabilities: vulnerabilities,
+        timestamp: timestamp
+    };
+}
+
+// Generate HTML for export (simplified version)
+function generateExportHTML(reportData) {
+    const isDelta = reportData.type === 'delta';
+    const title = isDelta ? 'OWASP Delta Security Report' : 'OWASP Security Audit Report';
+    const vulnerabilities = isDelta ? (reportData.data?.newVulnerabilities || []) : (reportData.vulnerabilities || []);
+    const severityCounts = calculateSeverityCounts(vulnerabilities);
+    
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>${title}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .metrics { display: flex; gap: 20px; margin-bottom: 30px; }
+        .metric { padding: 15px; border-radius: 5px; text-align: center; }
+        .metric.critical { background: #ffebee; border-left: 4px solid #f44336; }
+        .metric.high { background: #fff3e0; border-left: 4px solid #ff9800; }
+        .metric.medium { background: #fffde7; border-left: 4px solid #ffeb3b; }
+        .metric.low { background: #e8f5e8; border-left: 4px solid #4caf50; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f5f5f5; font-weight: bold; }
+        .severity-critical { background: #f44336; color: white; padding: 4px 8px; border-radius: 3px; }
+        .severity-high { background: #ff9800; color: white; padding: 4px 8px; border-radius: 3px; }
+        .severity-medium { background: #ffeb3b; color: black; padding: 4px 8px; border-radius: 3px; }
+        .severity-low { background: #4caf50; color: white; padding: 4px 8px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>${title}</h1>
+        <p>Generated on ${reportData.timestamp}</p>
+    </div>
+    
+    <div class="metrics">
+        <div class="metric critical">
+            <strong>${severityCounts.CRITICAL}</strong><br>Critical
+        </div>
+        <div class="metric high">
+            <strong>${severityCounts.HIGH}</strong><br>High
+        </div>
+        <div class="metric medium">
+            <strong>${severityCounts.MEDIUM}</strong><br>Medium
+        </div>
+        <div class="metric low">
+            <strong>${severityCounts.LOW}</strong><br>Low
+        </div>
+    </div>
+    
+    <h2>${isDelta ? 'New Vulnerabilities Detected' : 'Security Vulnerabilities'} (${vulnerabilities.length} total)</h2>
+    
+    ${vulnerabilities.length === 0 ? 
+        '<p>No vulnerabilities found!</p>' :
+        `<table>
+            <thead>
+                <tr>
+                    <th>Package</th>
+                    <th>Vulnerability</th>
+                    <th>Severity</th>
+                    <th>CVSS</th>
+                    <th>Description</th>
+                    <th>File</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${vulnerabilities.map(vuln => `
+                    <tr>
+                        <td>${escapeHtml(vuln.Package || '')}</td>
+                        <td>${escapeHtml(vuln.Vulnerability || '')}</td>
+                        <td><span class="severity-${(vuln.Severity || '').toLowerCase()}">${escapeHtml(vuln.Severity || '')}</span></td>
+                        <td>${escapeHtml(vuln.CVSS || '')}</td>
+                        <td>${escapeHtml(vuln.Description || '')}</td>
+                        <td>${escapeHtml(vuln.File || '')}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>`
+    }
+    
+    <div style="margin-top: 50px; text-align: center; color: #666;">
+        <p><strong>OWASP Dependency Audit Tool</strong></p>
+        <p>Contact: anna.salkovsky@imd-soft.com</p>
+    </div>
+</body>
+</html>`;
+}
+
+// Handle email report
+function handleEmailReport() {
+    try {
+        const reportData = getCurrentReportData();
+        const subject = `OWASP ${reportData.type === 'delta' ? 'Delta' : 'Security'} Report - ${new Date().toLocaleDateString()}`;
+        
+        let body = `OWASP Security Report\n\nGenerated: ${reportData.timestamp}\n\n`;
+        
+        if (reportData.type === 'delta') {
+            const data = reportData.data || {};
+            body += `Delta Summary:\n`;
+            body += `New Vulnerabilities: ${data.newVulnerabilities?.length || 0}\n`;
+            body += `Fixed Vulnerabilities: ${data.fixedVulnerabilities?.length || 0}\n`;
+            body += `Current Total: ${data.currentTotal || 0}\n`;
+            body += `Baseline Total: ${data.baselineTotal || 0}\n\n`;
+            
+            if (data.newVulnerabilities?.length > 0) {
+                body += `New Vulnerabilities:\n`;
+                data.newVulnerabilities.forEach((vuln, index) => {
+                    body += `${index + 1}. ${vuln.Package} - ${vuln.Vulnerability} (${vuln.Severity})\n`;
+                });
+            }
+        } else {
+            const vulnerabilities = reportData.vulnerabilities || [];
+            const severityCounts = calculateSeverityCounts(vulnerabilities);
+            
+            body += `Total Vulnerabilities: ${vulnerabilities.length}\n`;
+            body += `Critical: ${severityCounts.CRITICAL}\n`;
+            body += `High: ${severityCounts.HIGH}\n`;
+            body += `Medium: ${severityCounts.MEDIUM}\n`;
+            body += `Low: ${severityCounts.LOW}\n\n`;
+            
+            if (vulnerabilities.length > 0) {
+                body += `Top Vulnerabilities:\n`;
+                vulnerabilities.slice(0, 10).forEach((vuln, index) => {
+                    body += `${index + 1}. ${vuln.Package} - ${vuln.Vulnerability} (${vuln.Severity})\n`;
+                });
+            }
+        }
+        
+        body += `\nFor detailed report, please use the Export function.\n\nContact: anna.salkovsky@imd-soft.com`;
+        
+        // Create mailto link
+        const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.location.href = mailtoLink;
+        
+        console.log('Email client opened with report summary');
+        
+    } catch (error) {
+        console.error('Email failed:', error);
+        alert('Email failed: ' + error.message);
     }
 }
 
