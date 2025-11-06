@@ -323,7 +323,10 @@ function generateAuditReport() {
 
 // Generate delta comparison report
 function generateDeltaReport() {
-    console.log('Generating delta report...');
+    console.log('=== DELTA REPORT GENERATION DEBUG ===');
+    // Reset debug counters
+    window.debugMatchCount = 0;
+    
     console.log('Current dependency XML:', !!dependencyXml);
     console.log('Current suppressions XML:', !!suppressionsXml);
     console.log('Baseline dependency XML:', !!baselineDependencyXml);
@@ -331,28 +334,56 @@ function generateDeltaReport() {
     
     try {
         // Extract vulnerabilities with suppressions applied
-        console.log('Extracting current vulnerabilities...');
+        console.log('=== EXTRACTING CURRENT VULNERABILITIES ===');
         const currentVulns = extractVulnerabilitiesFromXML(dependencyXml, suppressionsXml);
         
-        console.log('Extracting baseline vulnerabilities...');
+        console.log('=== EXTRACTING BASELINE VULNERABILITIES ===');
         const baselineVulns = extractVulnerabilitiesFromXML(baselineDependencyXml, baselineSuppressionsXml);
         
         console.log(`Current vulnerabilities after suppressions: ${currentVulns.length}`);
         console.log(`Baseline vulnerabilities after suppressions: ${baselineVulns.length}`);
         
+        // Log sample vulnerabilities for comparison
+        if (currentVulns.length > 0) {
+            console.log('Sample current vulnerability:', {
+                Package: currentVulns[0].Package,
+                Vulnerability: currentVulns[0].Vulnerability,
+                Severity: currentVulns[0].Severity,
+                File: currentVulns[0].File
+            });
+        }
+        
+        if (baselineVulns.length > 0) {
+            console.log('Sample baseline vulnerability:', {
+                Package: baselineVulns[0].Package,
+                Vulnerability: baselineVulns[0].Vulnerability,
+                Severity: baselineVulns[0].Severity,
+                File: baselineVulns[0].File
+            });
+        }
+        
         // Find differences
+        console.log('=== CALCULATING DIFFERENCES ===');
         const newVulns = findNewVulnerabilities(currentVulns, baselineVulns);
         const fixedVulns = findFixedVulnerabilities(currentVulns, baselineVulns);
         
         console.log(`New vulnerabilities found: ${newVulns.length}`);
         console.log(`Fixed vulnerabilities found: ${fixedVulns.length}`);
         
-        // Log some examples for debugging
+        // Debug vulnerability matching
+        console.log('=== VULNERABILITY MATCHING DEBUG ===');
         if (newVulns.length > 0) {
-            console.log('Example new vulnerability:', newVulns[0]);
+            console.log('First new vulnerability:', newVulns[0]);
+            // Check if this "new" vulnerability exists in baseline
+            const existsInBaseline = baselineVulns.some(bv => vulnerabilitiesMatch(newVulns[0], bv));
+            console.log('Does first new vuln exist in baseline?', existsInBaseline);
         }
+        
         if (fixedVulns.length > 0) {
-            console.log('Example fixed vulnerability:', fixedVulns[0]);
+            console.log('First fixed vulnerability:', fixedVulns[0]);
+            // Check if this "fixed" vulnerability exists in current
+            const existsInCurrent = currentVulns.some(cv => vulnerabilitiesMatch(fixedVulns[0], cv));
+            console.log('Does first fixed vuln exist in current?', existsInCurrent);
         }
         
         // Store delta data for export
@@ -373,8 +404,21 @@ function generateDeltaReport() {
         if (exportBtn) exportBtn.disabled = false;
         if (emailBtn) emailBtn.disabled = false;
         
-        console.log(`Delta report generated: ${newVulns.length} new, ${fixedVulns.length} fixed`);
+        console.log(`=== FINAL DELTA RESULTS ===`);
+        console.log(`New (Unhandled): ${newVulns.length}, Fixed: ${fixedVulns.length}`);
+        console.log(`Current total: ${currentVulns.length}, Baseline total: ${baselineVulns.length}`);
         
+        // Validation check against expected numbers
+        console.log(`=== VALIDATION CHECK ===`);
+        console.log(`Expected: Baseline=182, Current=170, Fixed=27, Added=15`);
+        console.log(`Actual: Baseline=${baselineVulns.length}, Current=${currentVulns.length}, Fixed=${fixedVulns.length}, Added=${newVulns.length}`);
+        
+        const expectedCurrentTotal = baselineVulns.length - fixedVulns.length + newVulns.length;
+        console.log(`Math check: ${baselineVulns.length} (baseline) - ${fixedVulns.length} (fixed) + ${newVulns.length} (added) = ${expectedCurrentTotal} (should equal ${currentVulns.length} current)`);
+        
+        if (Math.abs(expectedCurrentTotal - currentVulns.length) > 5) {
+            console.warn('WARNING: Math doesn\'t add up! There might be an issue with vulnerability matching or extraction.');
+        }
     } catch (error) {
         console.error('Error generating delta report:', error);
         alert('Error generating delta report: ' + error.message);
@@ -394,19 +438,24 @@ function extractVulnerabilitiesFromXML(depXml, suppXml) {
     console.log(`Processing ${dependencies.length} dependencies with ${suppressions.length} suppressions`);
     
     let allVulnerabilities = [];
+    let suppressionAppliedCount = 0;
     
-    dependencies.forEach(dependency => {
+    dependencies.forEach((dependency, depIndex) => {
         const vulnerabilities = Array.from(dependency.querySelectorAll('vulnerability'));
         const packageName = getTextContent(dependency, 'fileName') || getTextContent(dependency, 'artifactId') || 'Unknown';
         const filePath = getTextContent(dependency, 'filePath') || 'Unknown';
         
-        vulnerabilities.forEach(vuln => {
-            // Get vulnerability identifier (CVE or name)
-            let vulnId = getTextContent(vuln, 'name');
-            const cveRefs = Array.from(vuln.querySelectorAll('reference[type="CVE"]'));
-            if (cveRefs.length > 0) {
-                vulnId = getTextContent(cveRefs[0], 'name') || vulnId;
-            }
+        vulnerabilities.forEach((vuln, vulnIndex) => {
+            // Get vulnerability identifier - prefer name over CVE references for matching
+            let vulnId = getTextContent(vuln, 'name') || 'Unknown';
+            
+            // Get package name - try multiple fields
+            let packageName = getTextContent(dependency, 'fileName') || 
+                             getTextContent(dependency, 'artifactId') || 
+                             getTextContent(dependency, 'groupId') || 'Unknown';
+            
+            // Normalize package name (remove version info, paths, etc)
+            packageName = packageName.replace(/\.(jar|dll|exe|war)$/, '').replace(/.*[\\\/]/, '');
             
             // Get CVSS score
             let cvssScore = 'N/A';
@@ -420,19 +469,26 @@ function extractVulnerabilitiesFromXML(depXml, suppXml) {
             
             const vulnData = {
                 Package: packageName,
-                Vulnerability: vulnId || 'Unknown',
+                Vulnerability: vulnId,
                 Severity: getTextContent(vuln, 'severity') || 'Unknown',
                 CVSS: cvssScore,
                 Description: truncateText(getTextContent(vuln, 'description'), 100) || 'No description',
                 File: filePath,
-                // Additional fields for better matching
-                Source: getTextContent(vuln, 'source') || 'Unknown',
-                References: Array.from(vuln.querySelectorAll('reference')).map(ref => ({
-                    type: ref.getAttribute('type') || 'Unknown',
-                    name: getTextContent(ref, 'name') || '',
-                    url: getTextContent(ref, 'url') || ''
-                }))
+                // Keep original data for reference
+                OriginalPackage: getTextContent(dependency, 'fileName') || 'Unknown',
+                Source: getTextContent(vuln, 'source') || 'Unknown'
             };
+            
+            // Debug first few vulnerabilities
+            if (allVulnerabilities.length < 3) {
+                console.log(`Vulnerability ${allVulnerabilities.length + 1}:`, {
+                    Package: vulnData.Package,
+                    OriginalPackage: vulnData.OriginalPackage,
+                    Vulnerability: vulnData.Vulnerability,
+                    Severity: vulnData.Severity,
+                    File: vulnData.File
+                });
+            }
             
             allVulnerabilities.push(vulnData);
         });
@@ -441,9 +497,13 @@ function extractVulnerabilitiesFromXML(depXml, suppXml) {
     console.log(`Found ${allVulnerabilities.length} total vulnerabilities before suppression filtering`);
     
     // Filter out suppressed vulnerabilities
-    const filteredVulns = allVulnerabilities.filter(vuln => !isSuppressed(vuln, suppressions));
+    const filteredVulns = allVulnerabilities.filter(vuln => {
+        const suppressed = isSuppressed(vuln, suppressions);
+        if (suppressed) suppressionAppliedCount++;
+        return !suppressed;
+    });
     
-    console.log(`After applying suppressions: ${filteredVulns.length} vulnerabilities remain`);
+    console.log(`After applying suppressions: ${filteredVulns.length} vulnerabilities remain (${suppressionAppliedCount} were suppressed)`);
     
     return filteredVulns;
 }
@@ -541,9 +601,29 @@ function findFixedVulnerabilities(current, baseline) {
 
 // Check if two vulnerabilities are the same
 function vulnerabilitiesMatch(vuln1, vuln2) {
-    return vuln1.Vulnerability === vuln2.Vulnerability && 
-           vuln1.Package === vuln2.Package &&
-           vuln1.File === vuln2.File;
+    // Use a simpler matching strategy that might match the original tool
+    // Match based on vulnerability name/CVE and package, but be more flexible with file paths
+    
+    const vuln1Id = vuln1.Vulnerability || '';
+    const vuln2Id = vuln2.Vulnerability || '';
+    const vuln1Pkg = vuln1.Package || '';
+    const vuln2Pkg = vuln2.Package || '';
+    
+    // Primary match: same vulnerability ID and same package
+    const basicMatch = vuln1Id === vuln2Id && vuln1Pkg === vuln2Pkg;
+    
+    // Debug logging for first few comparisons
+    if (window.debugMatchCount < 10) {
+        console.log(`Vulnerability match check #${window.debugMatchCount + 1}:`, {
+            vuln1: { Vulnerability: vuln1Id, Package: vuln1Pkg, File: vuln1.File },
+            vuln2: { Vulnerability: vuln2Id, Package: vuln2Pkg, File: vuln2.File },
+            basicMatch: basicMatch,
+            fileMatch: vuln1.File === vuln2.File
+        });
+        window.debugMatchCount = (window.debugMatchCount || 0) + 1;
+    }
+    
+    return basicMatch;
 }
 
 // Display standard audit report
