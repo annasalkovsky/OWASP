@@ -25,9 +25,201 @@ body{
 .dropzone.uploaded .uploaded-msg{display:block}
 .dropzone.drag-over{border-color:var(--accent);background:rgba(59,130,246,0.1);transform:scale(1.02)}
 .actions{display:flex;gap:12px;margin:12px 0}
+.sonar-actions{display:flex;gap:12px;margin:16px 0;padding-top:12px;border-top:1px solid #e5e7eb}
 .btn{background:var(--accent);color:#fff;border:none;padding:10px 16px;border-radius:8px;cursor:pointer}
 .btn.secondary{background:#e5e7eb;color:#111}
+.btn.sonar-btn{background:#ff6b35;color:#fff}
+.btn.sonar-btn:hover{background:#e55a2b}
+.btn:disabled{background:#d1d5db;cursor:not-allowed}
 .report-area{background:var(--card);padding:20px;border-radius:8px;margin-top:16px}
+
+/* SonarQube Integration Styles */
+.section-divider {
+  margin: 32px 0 16px 0;
+  padding: 16px 0;
+  border-top: 2px solid #e5e7eb;
+}
+
+.section-divider h2 {
+  margin: 0 0 8px 0;
+  color: #374151;
+  font-size: 20px;
+}
+
+.section-description {
+  color: var(--muted);
+  margin: 0;
+  font-size: 14px;
+}
+
+.execution-log {
+  background: #1f2937;
+  color: #f9fafb;
+  padding: 16px;
+  border-radius: 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  white-space: pre-wrap;
+}
+
+.sonar-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+  background: var(--card);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.sonar-table th,
+.sonar-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.sonar-table th {
+  background: #f9fafb;
+  font-weight: 600;
+  color: #374151;
+}
+
+.sonar-table tr:hover {
+  background: #f9fafb;
+}
+
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-open {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.status-resolved {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.sonar-summary {
+  background: #f8fafc;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  border-left: 4px solid #3b82f6;
+}
+
+.sonar-summary p {
+  margin: 4px 0;
+  font-size: 14px;
+}
+
+.table-container {
+  max-height: 600px;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.issue-type {
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.paste-area {
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  margin: 16px 0;
+  border: 1px solid #e5e7eb;
+}
+
+.paste-area h4 {
+  margin: 0 0 8px 0;
+  color: #374151;
+}
+
+.paste-area textarea {
+  width: 100%;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  resize: vertical;
+  background: white;
+}
+
+.powershell-script-display {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin: 16px 0;
+  overflow: hidden;
+}
+
+.script-header {
+  background: #4f46e5;
+  color: white;
+  padding: 16px;
+}
+
+.script-header h3 {
+  margin: 0 0 8px 0;
+}
+
+.script-header p {
+  margin: 0;
+  opacity: 0.9;
+}
+
+.script-actions {
+  padding: 12px 16px;
+  background: #f1f5f9;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.script-content {
+  max-height: 400px;
+  overflow-y: auto;
+  background: #1f2937;
+  color: #f9fafb;
+}
+
+.script-content pre {
+  margin: 0;
+  padding: 16px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.script-footer {
+  padding: 12px 16px;
+  background: #f1f5f9;
+  border-top: 1px solid #e5e7eb;
+}
+
+.script-footer p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #374151;
+}
 /* Enhanced Metrics Cards */
 .comprehensive-summary {
   background: linear-gradient(135deg, #f8fafc, #ffffff);
@@ -687,4 +879,128 @@ body{
 /* Hide progress bar when upload area is in uploaded state */
 .dropzone.uploaded .progress-bar {
   display: none !important;
+}
+
+/* SonarQube Section Styles */
+.sonar-section {
+  margin: 24px 0;
+}
+
+.sonar-upload-area {
+  border: 3px dashed #ddd;
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: var(--card);
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.sonar-upload-area:hover,
+.sonar-upload-area.dragover {
+  border-color: #4CAF50;
+  background-color: #f8fdf8;
+  transform: translateY(-2px);
+}
+
+.sonar-upload-icon {
+  font-size: 3rem;
+  margin-bottom: 15px;
+}
+
+.sonar-upload-text {
+  color: #333;
+}
+
+.sonar-upload-text strong {
+  font-size: 1.2rem;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.sonar-upload-text small {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.sonar-results {
+  margin-top: 24px;
+  padding: 24px;
+  background: var(--card);
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.sonar-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.sonar-stat-card {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  border-left: 4px solid #4CAF50;
+}
+
+.sonar-stat-number {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #2E7D32;
+  margin-bottom: 4px;
+}
+
+.sonar-stat-label {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.sonar-export-section {
+  background: #f8f9fa;
+  padding: 24px;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid #e9ecef;
+}
+
+.sonar-export-btn {
+  background: linear-gradient(135deg, #2196F3, #1976D2);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sonar-export-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+}
+
+.sonar-export-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.sonar-export-info {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 0.9rem;
 }
