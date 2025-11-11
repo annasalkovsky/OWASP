@@ -75,11 +75,11 @@
 
     <section class="sonar-section">
       <div class="sonar-upload-area" id="sonarUploadArea" ondrop="dropSonarHandler(event);" ondragover="dragOverSonarHandler(event);" ondragleave="dragLeaveSonarHandler(event);" onclick="document.getElementById('sonarFileInput').click();">
-        <div style="font-size: 3rem; margin-bottom: 15px;">�</div>
-        <div style="font-size: 1.3rem; font-weight: 600; margin-bottom: 10px; color: #333;">
+        <div style="font-size: 4rem; margin-bottom: 20px; color: #4CAF50;">📁</div>
+        <div style="font-size: 1.4rem; font-weight: 600; margin-bottom: 15px; color: #333; line-height: 1.2; text-align: center;">
           Drop SonarQube HTML Report Here
         </div>
-        <div style="color: #666; font-size: 1rem;">
+        <div style="color: #666; font-size: 1rem; line-height: 1.2; text-align: center;">
           or click to browse files
         </div>
         <input type="file" id="sonarFileInput" accept=".html,.htm" style="display: none;" onchange="sonarFileSelected(event)">

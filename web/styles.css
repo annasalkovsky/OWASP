@@ -883,22 +883,26 @@ body{
 
 /* SonarQube Section Styles */
 .sonar-section {
-  margin: 24px 0;
+  margin: 32px 0;
+  padding: 0;
 }
 
 .sonar-upload-area {
   border: 3px dashed #ddd;
   border-radius: 12px;
-  padding: 40px;
+  padding: 50px 40px;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s ease;
   background: var(--card);
-  min-height: 140px;
+  min-height: 160px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  margin: 0 auto;
+  max-width: 600px;
+  position: relative;
 }
 
 .sonar-upload-area:hover,
@@ -906,30 +910,11 @@ body{
   border-color: #4CAF50;
   background-color: #f8fdf8;
   transform: translateY(-2px);
-}
-
-.sonar-upload-icon {
-  font-size: 3rem;
-  margin-bottom: 15px;
-}
-
-.sonar-upload-text {
-  color: #333;
-}
-
-.sonar-upload-text strong {
-  font-size: 1.2rem;
-  display: block;
-  margin-bottom: 8px;
-}
-
-.sonar-upload-text small {
-  color: var(--muted);
-  font-size: 0.9rem;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
 }
 
 .sonar-results {
-  margin-top: 24px;
+  margin-top: 32px;
   padding: 24px;
   background: var(--card);
   border-radius: 12px;
