@@ -98,8 +98,13 @@
           <input type="password" id="sonar-token" placeholder="squ_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace; font-size: 14px;" value="squ_e6852038fd0b432d1b093b8e81a1b53e20b1d48c">
         </div>
         
-        <button id="execute-sonar-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: transform 0.2s;">
+        <button id="execute-sonar-btn" onclick="generateSonarReport();" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: transform 0.2s;">
           🚀 Generate Security Report
+        </button>
+        
+        <!-- Test Button -->
+        <button onclick="alert('Simple test works!'); console.log('Simple test button clicked');" style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 6px; margin-left: 10px; cursor: pointer;">
+          Test Button
         </button>
       </div>
       
