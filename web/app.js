@@ -1231,358 +1231,76 @@ function handleEmailReport() {
     }
 }
 
-// SonarQube Integration Functions
-let sonarScript1Content = null;
-let sonarScript2Content = null;
+// SonarQube Integration Functions - Embedded Scripts
 let sonarResults = [];
 
+// Default SonarQube Configuration
+let sonarConfig = {
+    host: 'http://ubuntusrv01:9000',
+    token: 'squ_e6852038fd0b432d1b093b8e81a1b53e20b1d48c',
+    projectKey: 'MetaVision'
+};
+
 function setupSonarQubeIntegration() {
-    console.log('Setting up SonarQube integration...');
+    console.log('Setting up embedded SonarQube integration...');
     
-    // Setup PowerShell script file uploads
-    setupSonarFileUpload('sonar-script1');
-    setupSonarFileUpload('sonar-script2');
+    // Setup configuration form
+    setupSonarConfigForm();
     
-    // Setup execute button
+    // Setup execute button for embedded scripts
     const executeBtn = document.getElementById('execute-sonar-btn');
     if (executeBtn) {
-        executeBtn.addEventListener('click', executeSonarQubeScripts);
+        executeBtn.addEventListener('click', runEmbeddedSonarScript);
     }
     
-    // Setup SonarQube Excel export button (separate from OWASP)
+    // Setup SonarQube Excel export button
     const sonarExcelBtn = document.getElementById('export-sonar-btn');
     if (sonarExcelBtn) {
         sonarExcelBtn.addEventListener('click', exportSonarQubeToExcel);
     }
     
-    // Setup paste area functionality
-    setupPasteArea();
-    
-    console.log('SonarQube integration setup complete');
+    console.log('Embedded SonarQube integration setup complete');
 }
 
-function setupPasteArea() {
-    const processPasteBtn = document.getElementById('process-paste-btn');
-    const clearPasteBtn = document.getElementById('clear-paste-btn');
-    const pasteTextarea = document.getElementById('sonar-paste-data');
+function setupSonarConfigForm() {
+    // Pre-populate form fields with default values
+    const hostInput = document.getElementById('sonar-host');
+    const tokenInput = document.getElementById('sonar-token');
+    const projectInput = document.getElementById('sonar-project');
     
-    if (processPasteBtn) {
-        processPasteBtn.addEventListener('click', processPastedData);
-    }
+    if (hostInput) hostInput.value = sonarConfig.host;
+    if (tokenInput) tokenInput.value = sonarConfig.token;
+    if (projectInput) projectInput.value = sonarConfig.projectKey;
     
-    if (clearPasteBtn) {
-        clearPasteBtn.addEventListener('click', () => {
-            if (pasteTextarea) {
-                pasteTextarea.value = '';
-            }
-        });
-    }
+    // Add event listeners to update config when changed
+    if (hostInput) hostInput.addEventListener('change', updateSonarConfig);
+    if (tokenInput) tokenInput.addEventListener('change', updateSonarConfig);
+    if (projectInput) projectInput.addEventListener('change', updateSonarConfig);
 }
 
-function processPastedData() {
-    const pasteTextarea = document.getElementById('sonar-paste-data');
-    if (!pasteTextarea || !pasteTextarea.value.trim()) {
-        alert('Please paste your SonarQube data first');
+function updateSonarConfig() {
+    const hostInput = document.getElementById('sonar-host');
+    const tokenInput = document.getElementById('sonar-token');
+    const projectInput = document.getElementById('sonar-project');
+    
+    if (hostInput) sonarConfig.host = hostInput.value.trim();
+    if (tokenInput) sonarConfig.token = tokenInput.value.trim();
+    if (projectInput) sonarConfig.projectKey = projectInput.value.trim();
+    
+    console.log('SonarQube config updated:', sonarConfig);
+}
+
+async function runEmbeddedSonarScript() {
+    console.log('🚀 Running embedded SonarQube security report generation...');
+    
+    // Update config from form
+    updateSonarConfig();
+    
+    // Validate configuration
+    if (!sonarConfig.host || !sonarConfig.token || !sonarConfig.projectKey) {
+        alert('Please fill in all SonarQube configuration fields (Host, Token, Project Key)');
         return;
     }
-    
-    const pastedData = pasteTextarea.value.trim();
-    console.log('Processing pasted data, length:', pastedData.length);
-    
-    // Clear previous results
-    sonarResults = [];
-    const resultsArea = document.getElementById('sonar-results-area');
-    const executionLog = document.getElementById('sonar-execution-log');
-    const reportsContainer = document.getElementById('sonar-reports-container');
-    
-    if (!resultsArea) return;
-    
-    // Show results area
-    resultsArea.hidden = false;
-    
-    if (executionLog) executionLog.textContent = '';
-    if (reportsContainer) reportsContainer.innerHTML = '';
-    
-    try {
-        appendToLog(executionLog, '=== Processing Pasted SonarQube Data ===\n');
-        appendToLog(executionLog, `Data length: ${pastedData.length} characters\n`);
-        appendToLog(executionLog, `Processing ${pastedData.split('\n').length} lines...\n\n`);
-        
-        const parsedData = parsePastedSonarData(pastedData);
-        
-        if (parsedData.length > 0) {
-            sonarResults.push(...parsedData);
-            
-            appendToLog(executionLog, `✅ Successfully parsed ${parsedData.length} issues from pasted data.\n`);
-            
-            // Show breakdown
-            const securityIssues = parsedData.filter(item => item.issueType === 'Security Issue').length;
-            const securityHotspots = parsedData.filter(item => item.issueType === 'Security Hotspot').length;
-            const openIssues = parsedData.filter(item => 
-                item.status === 'OPEN' || item.status === 'TO_REVIEW' || item.status === 'NOT_REVIEWED'
-            ).length;
-            
-            appendToLog(executionLog, `   - Security Issues: ${securityIssues}\n`);
-            appendToLog(executionLog, `   - Security Hotspots: ${securityHotspots}\n`);
-            appendToLog(executionLog, `   - Open/To Review: ${openIssues}\n\n`);
-            
-            // Display the results
-            displaySonarReport('Pasted Data', parsedData, reportsContainer);
-            
-            // Update export button
-            updateExportButtons();
-            
-            appendToLog(executionLog, '=== Processing Complete ===\n');
-        } else {
-            appendToLog(executionLog, '❌ No valid data found in pasted content.\n');
-            appendToLog(executionLog, 'Please check the format and try again.\n');
-        }
-        
-    } catch (error) {
-        console.error('Paste processing error:', error);
-        appendToLog(executionLog, `❌ Error processing pasted data: ${error.message}\n`);
-    }
-}
-
-function parsePastedSonarData(pastedData) {
-    console.log('Parsing pasted SonarQube data...');
-    
-    const lines = pastedData.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-    const issues = [];
-    
-    if (lines.length < 2) {
-        console.log('Not enough lines in pasted data');
-        return issues;
-    }
-    
-    // Try to detect if first line is a header
-    const firstLine = lines[0].toLowerCase();
-    let startIndex = 0;
-    
-    if (firstLine.includes('key') || firstLine.includes('project') || firstLine.includes('status')) {
-        console.log('Detected header line, skipping it');
-        startIndex = 1;
-    }
-    
-    // Process each line
-    for (let i = startIndex; i < lines.length; i++) {
-        const line = lines[i];
-        
-        // Skip empty lines or lines that look like headers/separators
-        if (line.length < 10 || line.match(/^[-=\s]+$/)) {
-            continue;
-        }
-        
-        // Try different delimiters
-        let parts = [];
-        
-        // Try tab delimiter first (most common in copy-paste from tables)
-        if (line.includes('\t')) {
-            parts = line.split('\t');
-        }
-        // Try multiple spaces
-        else if (line.match(/\s{2,}/)) {
-            parts = line.split(/\s{2,}/);
-        }
-        // Try single tab or space with specific patterns
-        else {
-            // Look for common patterns in your data
-            const patterns = [
-                /^([a-f0-9-]+)\s+(\w+)\s+([\w:\/\\.]+)\s+(OPEN|RESOLVED|REVIEWED|TO_REVIEW|NOT_REVIEWED)\s*(.*)/i,
-                /^(\S+)\s+(\S+)\s+(.+?)\s+(OPEN|RESOLVED|REVIEWED|TO_REVIEW|NOT_REVIEWED)\s*(.*)/i
-            ];
-            
-            for (const pattern of patterns) {
-                const match = line.match(pattern);
-                if (match) {
-                    parts = [match[1], match[2], match[3], match[4], match[5] || ''];
-                    break;
-                }
-            }
-        }
-        
-        console.log(`Line ${i}: Found ${parts.length} parts:`, parts.slice(0, 3));
-        
-        if (parts.length >= 4) {
-            const key = parts[0]?.trim() || '';
-            const project = parts[1]?.trim() || 'MetaVision';
-            const component = parts[2]?.trim() || 'Unknown';
-            const status = normalizeStatus(parts[3]?.trim() || 'OPEN');
-            const resolution = parts[4]?.trim() || '';
-            const message = parts.length > 7 ? parts[7]?.trim() : parts[parts.length - 1]?.trim() || 'Security issue';
-            
-            const issue = {
-                key: key || `paste-${i}`,
-                project: project,
-                component: component,
-                status: status,
-                resolution: resolution,
-                resolutionComment: '',
-                created: '2025-11-05',
-                updated: '2025-11-05',
-                message: message,
-                issueType: guessIssueType(message, status),
-                script: 999 // Special marker for pasted data
-            };
-            
-            issues.push(issue);
-            
-            if (i < startIndex + 5) {
-                console.log(`Created issue ${i}:`, { key: issue.key, status: issue.status, type: issue.issueType });
-            }
-        }
-    }
-    
-    console.log(`Parsed ${issues.length} issues from pasted data`);
-    return issues;
-}
-
-function setupSonarFileUpload(scriptId) {
-    const dropzone = document.getElementById(`${scriptId}-drop`);
-    const fileInput = document.getElementById(`${scriptId}-file`);
-    const uploadedMsg = document.getElementById(`${scriptId}-uploaded`);
-    const progressBar = document.getElementById(`${scriptId}-progress`);
-    
-    if (!dropzone || !fileInput) return;
-    
-    // Drag and drop handlers
-    dropzone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropzone.classList.add('drag-over');
-    });
-    
-    dropzone.addEventListener('dragleave', () => {
-        dropzone.classList.remove('drag-over');
-    });
-    
-    dropzone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropzone.classList.remove('drag-over');
-        
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            handleSonarFile(files[0], scriptId, uploadedMsg, progressBar);
-        }
-    });
-    
-    // File input change handler
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            handleSonarFile(e.target.files[0], scriptId, uploadedMsg, progressBar);
-        }
-    });
-    
-    // Click to select file
-    dropzone.addEventListener('click', () => {
-        fileInput.click();
-    });
-}
-
-function handleSonarFile(file, scriptId, uploadedMsg, progressBar) {
-    console.log(`Handling SonarQube file: ${file.name} for ${scriptId}`);
-    
-    const isHtmlFile = file.name.toLowerCase().endsWith('.html');
-    const isPowerShellFile = file.name.toLowerCase().endsWith('.ps1');
-    
-    if (!isHtmlFile && !isPowerShellFile) {
-        alert('Please select a PowerShell (.ps1) or HTML (.html) file');
-        return;
-    }
-    
-    // Show progress
-    if (progressBar) {
-        progressBar.style.display = 'block';
-        const progressFill = progressBar.querySelector('.progress-fill');
-        const progressText = progressBar.querySelector('.progress-text');
-        
-        progressText.textContent = isHtmlFile ? 'Reading HTML report...' : 'Reading script...';
-        progressFill.style.width = '50%';
-    }
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const fileData = {
-                name: file.name,
-                content: e.target.result,
-                size: file.size,
-                type: isHtmlFile ? 'html' : 'powershell'
-            };
-            
-            if (scriptId === 'sonar-script1') {
-                sonarScript1Content = fileData;
-            } else {
-                sonarScript2Content = fileData;
-            }
-            
-            console.log(`${scriptId} loaded successfully:`, file.name, 'Type:', fileData.type);
-            
-            // Update UI
-            if (uploadedMsg) {
-                uploadedMsg.style.display = 'block';
-                uploadedMsg.textContent = `✓ ${file.name}`;
-            }
-            
-            if (progressBar) {
-                const progressFill = progressBar.querySelector('.progress-fill');
-                const progressText = progressBar.querySelector('.progress-text');
-                progressFill.style.width = '100%';
-                progressText.textContent = 'Complete';
-                
-                setTimeout(() => {
-                    progressBar.style.display = 'none';
-                }, 1000);
-            }
-            
-            // Update dropzone appearance
-            const dropzone = document.getElementById(`${scriptId}-drop`);
-            if (dropzone) {
-                dropzone.classList.add('uploaded');
-            }
-            
-            // Check if we can enable execute button
-            updateSonarExecuteButton();
-            
-        } catch (error) {
-            console.error(`Error reading ${scriptId}:`, error);
-            alert(`Error reading file: ${error.message}`);
-            
-            if (progressBar) {
-                progressBar.style.display = 'none';
-            }
-        }
-    };
-    
-    reader.onerror = function() {
-        console.error(`File read error for ${scriptId}`);
-        alert('Error reading file');
-        if (progressBar) {
-            progressBar.style.display = 'none';
-        }
-    };
-    
-    reader.readAsText(file);
-}
-
-function updateSonarExecuteButton() {
-    const executeBtn = document.getElementById('execute-sonar-btn');
-    if (executeBtn) {
-        const hasScript1 = sonarScript1Content !== null;
-        const hasScript2 = sonarScript2Content !== null;
-        const hasAnyScript = hasScript1 || hasScript2;
-        
-        executeBtn.disabled = !hasAnyScript;
-        
-        if (hasAnyScript) {
-            executeBtn.textContent = `🚀 Execute ${hasScript1 && hasScript2 ? 'Both' : 'Script'}`;
-        }
-        
-        console.log('Execute button updated:', { hasScript1, hasScript2, enabled: hasAnyScript });
-    }
-}
-
-async function executeSonarQubeScripts() {
-    console.log('Executing SonarQube scripts...');
     
     const resultsArea = document.getElementById('sonar-results-area');
     const executionLog = document.getElementById('sonar-execution-log');
@@ -1590,50 +1308,254 @@ async function executeSonarQubeScripts() {
     
     if (!resultsArea) return;
     
-    // Show results area
+    // Show results area and clear previous results
     resultsArea.hidden = false;
-    
-    // Clear previous results
     sonarResults = [];
     if (executionLog) executionLog.textContent = '';
     if (reportsContainer) reportsContainer.innerHTML = '';
     
     try {
-        // Log execution start
-        appendToLog(executionLog, '=== SonarQube Script Execution Started ===\n');
-        appendToLog(executionLog, `Timestamp: ${new Date().toISOString()}\n\n`);
-        
         const executeBtn = document.getElementById('execute-sonar-btn');
         if (executeBtn) {
             executeBtn.disabled = true;
-            executeBtn.textContent = '🔄 Executing...';
+            executeBtn.textContent = '🔄 Generating Report...';
         }
         
-        // Execute scripts sequentially
-        if (sonarScript1Content) {
-            await executeScript(sonarScript1Content, 1, executionLog, reportsContainer);
+        appendToLog(executionLog, '=== SonarQube Security Report Generation Started ===\n');
+        appendToLog(executionLog, `Timestamp: ${new Date().toISOString()}\n`);
+        appendToLog(executionLog, `SonarQube Host: ${sonarConfig.host}\n`);
+        appendToLog(executionLog, `Project Key: ${sonarConfig.projectKey}\n\n`);
+        
+        // Create auth header (Basic Auth with token)
+        const authHeader = 'Basic ' + btoa(sonarConfig.token + ':');
+        
+        // 1️⃣ Fetch Security Issues
+        appendToLog(executionLog, '📋 Fetching Security Issues...\n');
+        const securityIssues = await fetchSonarSecurityIssues(authHeader, executionLog);
+        
+        // 2️⃣ Fetch Security Hotspots
+        appendToLog(executionLog, '🔥 Fetching Security Hotspots...\n');
+        const securityHotspots = await fetchSonarSecurityHotspots(authHeader, executionLog);
+        
+        // Combine all results
+        const allIssues = [...securityIssues, ...securityHotspots];
+        sonarResults.push(...allIssues);
+        
+        appendToLog(executionLog, `\n✅ Report generation complete!\n`);
+        appendToLog(executionLog, `   - Security Issues: ${securityIssues.length}\n`);
+        appendToLog(executionLog, `   - Security Hotspots: ${securityHotspots.length}\n`);
+        appendToLog(executionLog, `   - Total: ${allIssues.length}\n\n`);
+        
+        // Display results
+        if (allIssues.length > 0) {
+            displaySonarReport('Generated Security Report', allIssues, reportsContainer);
+            updateExportButtons();
+        } else {
+            appendToLog(executionLog, '⚠️ No security issues or hotspots found for this project.\n');
         }
         
-        if (sonarScript2Content) {
-            await executeScript(sonarScript2Content, 2, executionLog, reportsContainer);
-        }
-        
-        appendToLog(executionLog, '\n=== Execution Complete ===\n');
-        appendToLog(executionLog, `Total SonarQube issues found: ${sonarResults.length}\n`);
-        
-        // Update export buttons
-        updateExportButtons();
+        appendToLog(executionLog, '=== Generation Complete ===\n');
         
     } catch (error) {
-        console.error('SonarQube execution error:', error);
-        appendToLog(executionLog, `\nERROR: ${error.message}\n`);
+        console.error('SonarQube script execution error:', error);
+        appendToLog(executionLog, `\n❌ ERROR: ${error.message}\n`);
+        appendToLog(executionLog, 'Please check your configuration and network connection.\n');
     } finally {
         const executeBtn = document.getElementById('execute-sonar-btn');
         if (executeBtn) {
             executeBtn.disabled = false;
-            executeBtn.textContent = '🚀 Execute Scripts';
+            executeBtn.textContent = '🚀 Generate Security Report';
         }
     }
+}
+
+async function fetchSonarSecurityIssues(authHeader, executionLog) {
+    const issuesUrl = `${sonarConfig.host}/api/issues/search?components=${sonarConfig.projectKey}&s=FILE_LINE&impactSoftwareQualities=SECURITY&ps=500&additionalFields=_all&timeZone=Asia/Jerusalem`;
+    
+    try {
+        appendToLog(executionLog, `   Calling: ${issuesUrl}\n`);
+        
+        const response = await fetch(issuesUrl, {
+            method: 'GET',
+            headers: {
+                'Authorization': authHeader,
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        const issues = data.issues || [];
+        
+        appendToLog(executionLog, `   ✓ Retrieved ${issues.length} security issues\n`);
+        
+        // Convert to standardized format
+        return issues.map(issue => ({
+            key: issue.key,
+            project: issue.project,
+            component: issue.component,
+            status: issue.status,
+            resolution: issue.resolution || '',
+            resolutionComment: extractResolutionComment(issue.comments),
+            created: formatDate(issue.creationDate),
+            updated: formatDate(issue.updateDate),
+            message: issue.message,
+            issueType: 'Security Issue',
+            script: 1,
+            severity: issue.severity || 'UNKNOWN',
+            rowClass: issue.status !== 'RESOLVED' ? 'NONRESOLVED' : ''
+        }));
+        
+    } catch (error) {
+        appendToLog(executionLog, `   ❌ Error fetching security issues: ${error.message}\n`);
+        throw error;
+    }
+}
+
+async function fetchSonarSecurityHotspots(authHeader, executionLog) {
+    const hotspotsUrl = `${sonarConfig.host}/api/hotspots/search?inNewCodePeriod=false&onlyMine=false&p=1&project=${sonarConfig.projectKey}&ps=500`;
+    
+    try {
+        appendToLog(executionLog, `   Calling: ${hotspotsUrl}\n`);
+        
+        const response = await fetch(hotspotsUrl, {
+            method: 'GET',
+            headers: {
+                'Authorization': authHeader,
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        const hotspots = data.hotspots || [];
+        
+        appendToLog(executionLog, `   ✓ Retrieved ${hotspots.length} security hotspots\n`);
+        
+        // Fetch details for each hotspot to get resolution comments
+        const detailedHotspots = [];
+        for (const hotspot of hotspots) {
+            try {
+                const details = await fetchHotspotDetails(hotspot.key, authHeader);
+                detailedHotspots.push({
+                    key: hotspot.key,
+                    project: hotspot.project,
+                    component: hotspot.component,
+                    status: hotspot.status,
+                    resolution: hotspot.resolution || '',
+                    resolutionComment: extractHotspotComment(details),
+                    created: formatDate(hotspot.creationDate),
+                    updated: formatDate(hotspot.updateDate),
+                    message: hotspot.message,
+                    issueType: 'Security Hotspot',
+                    script: 1,
+                    severity: hotspot.vulnerabilityProbability || 'UNKNOWN',
+                    rowClass: (hotspot.status === 'TO_REVIEW' || hotspot.status === 'PENDING') ? 'NONRESOLVED' : ''
+                });
+            } catch (detailError) {
+                // If details fetch fails, use basic hotspot info
+                detailedHotspots.push({
+                    key: hotspot.key,
+                    project: hotspot.project,
+                    component: hotspot.component,
+                    status: hotspot.status,
+                    resolution: hotspot.resolution || '',
+                    resolutionComment: '',
+                    created: formatDate(hotspot.creationDate),
+                    updated: formatDate(hotspot.updateDate),
+                    message: hotspot.message,
+                    issueType: 'Security Hotspot',
+                    script: 1,
+                    severity: hotspot.vulnerabilityProbability || 'UNKNOWN',
+                    rowClass: (hotspot.status === 'TO_REVIEW' || hotspot.status === 'PENDING') ? 'NONRESOLVED' : ''
+                });
+            }
+        }
+        
+        return detailedHotspots;
+        
+    } catch (error) {
+        appendToLog(executionLog, `   ❌ Error fetching security hotspots: ${error.message}\n`);
+        throw error;
+    }
+}
+
+async function fetchHotspotDetails(hotspotKey, authHeader) {
+    const detailUrl = `${sonarConfig.host}/api/hotspots/show?hotspot=${hotspotKey}`;
+    
+    const response = await fetch(detailUrl, {
+        method: 'GET',
+        headers: {
+            'Authorization': authHeader,
+            'Accept': 'application/json'
+        }
+    });
+    
+    if (!response.ok) {
+        throw new Error(`Failed to fetch hotspot details: HTTP ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data.hotspot || {};
+}
+
+// Helper functions
+function extractResolutionComment(comments) {
+    if (!comments || comments.length === 0) return '';
+    
+    const lastComment = comments[comments.length - 1];
+    return lastComment.htmlText || lastComment.markdown || '';
+}
+
+function extractHotspotComment(hotspotDetail) {
+    if (!hotspotDetail || !hotspotDetail.comment) return '';
+    
+    const comment = hotspotDetail.comment;
+    if (Array.isArray(comment) && comment.length > 0) {
+        const lastComment = comment[comment.length - 1];
+        return lastComment.htmlText || lastComment.markdown || '';
+    } else if (typeof comment === 'object') {
+        return comment.htmlText || comment.markdown || '';
+    }
+    
+    return '';
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '';
+    
+    try {
+        return new Date(dateString).toISOString().split('T')[0]; // yyyy-MM-dd format
+    } catch {
+        return dateString;
+    }
+}
+
+// Helper functions for normalization
+function normalizeStatus(status) {
+    if (!status) return 'UNKNOWN';
+    return status.toUpperCase();
+}
+
+function guessIssueType(message, status) {
+    if (status === 'TO_REVIEW' || message.toLowerCase().includes('hotspot')) {
+        return 'Security Hotspot';
+    }
+    return 'Security Issue';
+}
+
+function appendToLog(logElement, message) {
+    if (logElement) {
+        logElement.textContent += message;
+        logElement.scrollTop = logElement.scrollHeight;
+    }
+    console.log(message.replace(/\n/g, ''));
 }
 
 async function executeScript(scriptData, scriptNumber, executionLog, reportsContainer) {
@@ -2679,7 +2601,9 @@ function parseSonarQubeHtml(htmlContent) {
         // Check if this table contains security issues data
         const hasSecurityColumns = headers.some(header => 
             header.includes('key') || header.includes('status') || header.includes('component') || 
-            header.includes('project') || header.includes('message') || header.includes('description')
+            header.includes('project') || header.includes('message') || header.includes('description') ||
+            header.includes('severity') || header.includes('rule key') || header.includes('name') ||
+            header.includes('language') || header.includes('type')
         );
 
         if (!hasSecurityColumns) {
@@ -2689,19 +2613,27 @@ function parseSonarQubeHtml(htmlContent) {
 
         console.log(`✅ Processing table ${tableIndex + 1} as security issues table`);
 
-        // Find column indices
+        // Find column indices - enhanced to handle different report types
         const columnMap = {
-            key: findSonarColumnIndex(headers, ['key']),
+            key: findSonarColumnIndex(headers, ['key', 'rule key']),
             project: findSonarColumnIndex(headers, ['project']),
-            component: findSonarColumnIndex(headers, ['component', 'file', 'path']),
+            component: findSonarColumnIndex(headers, ['component', 'file', 'path', 'name']),
             status: findSonarColumnIndex(headers, ['status', 'state']),
             resolution: findSonarColumnIndex(headers, ['resolution']),
             created: findSonarColumnIndex(headers, ['created', 'date']),
             updated: findSonarColumnIndex(headers, ['updated', 'last updated']),
-            message: findSonarColumnIndex(headers, ['message', 'description', 'summary', 'rule'])
+            message: findSonarColumnIndex(headers, ['message', 'description', 'summary', 'rule', 'name']),
+            severity: findSonarColumnIndex(headers, ['severity']),
+            type: findSonarColumnIndex(headers, ['type']),
+            language: findSonarColumnIndex(headers, ['language']),
+            sysTags: findSonarColumnIndex(headers, ['systags', 'tags'])
         };
 
         console.log(`📍 Table ${tableIndex + 1} column mapping:`, columnMap);
+
+        // Detect report type based on available columns
+        const isRulesReport = columnMap.severity !== -1 && columnMap.type !== -1;
+        console.log(`📋 Report type detected: ${isRulesReport ? 'Rules Report' : 'Security Issues Report'}`);
 
         // Process data rows (skip header)
         for (let i = 1; i < rows.length; i++) {
@@ -2709,16 +2641,33 @@ function parseSonarQubeHtml(htmlContent) {
             
             if (cells.length < 3) continue; // Skip invalid rows
 
-            const issue = {
-                key: getSonarCellText(cells, columnMap.key) || `ISSUE-${allData.length + 1}`,
-                project: getSonarCellText(cells, columnMap.project) || 'Unknown',
-                component: getSonarCellText(cells, columnMap.component) || 'Unknown',
-                status: getSonarCellText(cells, columnMap.status) || 'UNKNOWN',
-                resolution: getSonarCellText(cells, columnMap.resolution) || '',
-                created: getSonarCellText(cells, columnMap.created) || '',
-                updated: getSonarCellText(cells, columnMap.updated) || '',
-                message: getSonarCellText(cells, columnMap.message) || 'No description available'
-            };
+            let issue;
+            
+            if (isRulesReport) {
+                // Handle SonarQube Rules Report format
+                issue = {
+                    key: getSonarCellText(cells, columnMap.key) || `RULE-${allData.length + 1}`,
+                    project: getSonarCellText(cells, columnMap.project) || 'SonarQube Rules',
+                    component: getSonarCellText(cells, columnMap.component) || getSonarCellText(cells, columnMap.language) || 'Unknown',
+                    status: getSonarCellText(cells, columnMap.severity) || 'UNKNOWN',
+                    resolution: getSonarCellText(cells, columnMap.sysTags) || '',
+                    created: '',
+                    updated: '',
+                    message: getSonarCellText(cells, columnMap.message) || 'No description available'
+                };
+            } else {
+                // Handle regular SonarQube Security Issues format
+                issue = {
+                    key: getSonarCellText(cells, columnMap.key) || `ISSUE-${allData.length + 1}`,
+                    project: getSonarCellText(cells, columnMap.project) || 'Unknown',
+                    component: getSonarCellText(cells, columnMap.component) || 'Unknown',
+                    status: getSonarCellText(cells, columnMap.status) || 'UNKNOWN',
+                    resolution: getSonarCellText(cells, columnMap.resolution) || '',
+                    created: getSonarCellText(cells, columnMap.created) || '',
+                    updated: getSonarCellText(cells, columnMap.updated) || '',
+                    message: getSonarCellText(cells, columnMap.message) || 'No description available'
+                };
+            }
 
             // Clean and normalize the data
             issue.status = issue.status.toUpperCase();
@@ -2822,12 +2771,26 @@ function updateSonarPreviewTable(data) {
 
 function getStatusStyle(status) {
     const statusLower = status.toLowerCase();
-    if (statusLower === 'open' || statusLower === 'confirmed') {
+    
+    // Handle SonarQube severity levels (Rules Report)
+    if (statusLower === 'critical') {
+        return 'background: #ffebee; color: #c62828;';
+    } else if (statusLower === 'blocker') {
+        return 'background: #fce4ec; color: #ad1457;';
+    } else if (statusLower === 'major') {
+        return 'background: #fff3e0; color: #f57c00;';
+    } else if (statusLower === 'minor') {
+        return 'background: #fff8e1; color: #f9a825;';
+    } else if (statusLower === 'info') {
+        return 'background: #e3f2fd; color: #1976d2;';
+    }
+    // Handle regular issue status
+    else if (statusLower === 'open' || statusLower === 'confirmed') {
         return 'background: #ffebee; color: #c62828;';
     } else if (statusLower === 'resolved' || statusLower === 'closed') {
         return 'background: #e8f5e8; color: #2e7d32;';
     } else {
-        return 'background: #fff3e0; color: #f57c00;';
+        return 'background: #f5f5f5; color: #666;';
     }
 }
 
@@ -2844,12 +2807,33 @@ function truncateText(text, maxLength) {
 
 function updateSonarStatistics(data) {
     const total = data.length;
-    const openIssues = data.filter(item => 
-        item.status === 'OPEN' || item.status === 'CONFIRMED'
-    ).length;
-    const resolvedIssues = data.filter(item => 
-        item.status === 'RESOLVED' || item.status === 'CLOSED'
-    ).length;
+    
+    // Detect if this is a rules report or security issues report
+    const isRulesReport = data.some(item => 
+        item.status === 'CRITICAL' || item.status === 'BLOCKER' || 
+        item.status === 'MAJOR' || item.status === 'MINOR'
+    );
+    
+    let openIssues, resolvedIssues;
+    
+    if (isRulesReport) {
+        // For rules reports, count by severity
+        openIssues = data.filter(item => 
+            item.status === 'CRITICAL' || item.status === 'BLOCKER'
+        ).length;
+        resolvedIssues = data.filter(item => 
+            item.status === 'MAJOR' || item.status === 'MINOR'
+        ).length;
+    } else {
+        // For security issues reports, count by status
+        openIssues = data.filter(item => 
+            item.status === 'OPEN' || item.status === 'CONFIRMED'
+        ).length;
+        resolvedIssues = data.filter(item => 
+            item.status === 'RESOLVED' || item.status === 'CLOSED'
+        ).length;
+    }
+    
     const uniqueComponents = new Set(data.map(item => item.component)).size;
 
     document.getElementById('sonarTotalIssues').textContent = total;
@@ -2892,33 +2876,67 @@ function loadXLSXLibrary(callback) {
 }
 
 function performSonarExcelExport() {
-    // Prepare data for Excel export
-    const exportData = sonarParsedData.map(item => ({
-        'Issue Key': item.key,
-        'Project': item.project,
-        'Component': item.component,
-        'Status': item.status,
-        'Resolution': item.resolution,
-        'Created Date': item.created,
-        'Updated Date': item.updated,
-        'Description': item.message
-    }));
+    // Detect report type
+    const isRulesReport = sonarParsedData.some(item => 
+        item.status === 'CRITICAL' || item.status === 'BLOCKER' || 
+        item.status === 'MAJOR' || item.status === 'MINOR'
+    );
+
+    let exportData;
+    
+    if (isRulesReport) {
+        // For Rules Reports - match your HTML structure exactly
+        exportData = sonarParsedData.map(item => ({
+            'Type': 'Security',
+            'Rule Key': item.key,
+            'Name': item.message,
+            'Language': item.component.includes('php') ? 'php' : 
+                       item.component.includes('python') || item.component.includes('ipython') ? 'python' :
+                       item.component,
+            'Severity': item.status,
+            'SysTags': item.resolution || 'cwe'
+        }));
+    } else {
+        // For Security Issues Reports - keep existing structure
+        exportData = sonarParsedData.map(item => ({
+            'Issue Key': item.key,
+            'Project': item.project,
+            'Component': item.component,
+            'Status': item.status,
+            'Resolution': item.resolution,
+            'Created Date': item.created,
+            'Updated Date': item.updated,
+            'Description': item.message
+        }));
+    }
 
     // Create workbook and worksheet
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(exportData);
 
-    // Set column widths for better readability
-    const columnWidths = [
-        { wch: 25 }, // Issue Key
-        { wch: 20 }, // Project
-        { wch: 50 }, // Component
-        { wch: 15 }, // Status
-        { wch: 20 }, // Resolution
-        { wch: 15 }, // Created Date
-        { wch: 15 }, // Updated Date
-        { wch: 60 }  // Description
-    ];
+    // Set column widths based on report type
+    let columnWidths;
+    if (isRulesReport) {
+        columnWidths = [
+            { wch: 12 }, // Type
+            { wch: 15 }, // Rule Key
+            { wch: 60 }, // Name
+            { wch: 12 }, // Language
+            { wch: 15 }, // Severity
+            { wch: 20 }  // SysTags
+        ];
+    } else {
+        columnWidths = [
+            { wch: 25 }, // Issue Key
+            { wch: 20 }, // Project
+            { wch: 50 }, // Component
+            { wch: 15 }, // Status
+            { wch: 20 }, // Resolution
+            { wch: 15 }, // Created Date
+            { wch: 15 }, // Updated Date
+            { wch: 60 }  // Description
+        ];
+    }
     ws['!cols'] = columnWidths;
 
     // Apply comprehensive styling
@@ -2931,8 +2949,84 @@ function performSonarExcelExport() {
             ws[cellRef].s = {
                 font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } },
                 fill: { fgColor: { rgb: "4CAF50" } },
-                alignment: { horizontal: 'center', vertical: 'center' }
+                alignment: { horizontal: 'center', vertical: 'center' },
+                border: {
+                    top: { style: 'thin', color: { rgb: "000000" } },
+                    bottom: { style: 'thin', color: { rgb: "000000" } },
+                    left: { style: 'thin', color: { rgb: "000000" } },
+                    right: { style: 'thin', color: { rgb: "000000" } }
+                }
             };
+        }
+    }
+
+    // Apply data row styling with severity/status-based row coloring
+    for (let row = 1; row <= range.e.r; row++) {
+        let rowBackgroundColor = "FFFFFF"; // Default white
+        let severityColumnIndex = isRulesReport ? 4 : 3; // Severity/Status column
+        
+        // Get severity/status value for this row
+        const statusCellRef = XLSX.utils.encode_cell({ r: row, c: severityColumnIndex });
+        if (ws[statusCellRef]) {
+            const severityValue = ws[statusCellRef].v;
+            
+            // Set row background color based on severity/status
+            if (severityValue === 'CRITICAL') {
+                rowBackgroundColor = "FFEBEE"; // Light red
+            } else if (severityValue === 'BLOCKER') {
+                rowBackgroundColor = "FCE4EC"; // Light pink
+            } else if (severityValue === 'MAJOR') {
+                rowBackgroundColor = "FFF3E0"; // Light orange
+            } else if (severityValue === 'MINOR') {
+                rowBackgroundColor = "FFFDE7"; // Light yellow
+            } else if (severityValue === 'OPEN' || severityValue === 'CONFIRMED') {
+                rowBackgroundColor = "FFEBEE"; // Light red
+            } else if (severityValue === 'RESOLVED' || severityValue === 'CLOSED') {
+                rowBackgroundColor = "E8F5E8"; // Light green
+            }
+        }
+
+        // Apply styling to all cells in the row
+        for (let col = range.s.c; col <= range.e.c; col++) {
+            const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
+            if (ws[cellRef]) {
+                let cellStyle = {
+                    alignment: { 
+                        vertical: 'top', 
+                        horizontal: col === severityColumnIndex ? 'center' : 'left',
+                        wrapText: true
+                    },
+                    border: {
+                        top: { style: 'thin', color: { rgb: "E0E0E0" } },
+                        bottom: { style: 'thin', color: { rgb: "E0E0E0" } },
+                        left: { style: 'thin', color: { rgb: "E0E0E0" } },
+                        right: { style: 'thin', color: { rgb: "E0E0E0" } }
+                    },
+                    fill: { fgColor: { rgb: rowBackgroundColor } }
+                };
+
+                // Special styling for severity/status column
+                if (col === severityColumnIndex) {
+                    cellStyle.font = { bold: true };
+                    const cellValue = ws[cellRef].v;
+                    
+                    if (cellValue === 'CRITICAL') {
+                        cellStyle.font.color = { rgb: "C62828" };
+                    } else if (cellValue === 'BLOCKER') {
+                        cellStyle.font.color = { rgb: "AD1457" };
+                    } else if (cellValue === 'MAJOR') {
+                        cellStyle.font.color = { rgb: "F57C00" };
+                    } else if (cellValue === 'MINOR') {
+                        cellStyle.font.color = { rgb: "F9A825" };
+                    } else if (cellValue === 'OPEN' || cellValue === 'CONFIRMED') {
+                        cellStyle.font.color = { rgb: "C62828" };
+                    } else if (cellValue === 'RESOLVED' || cellValue === 'CLOSED') {
+                        cellStyle.font.color = { rgb: "2E7D32" };
+                    }
+                }
+
+                ws[cellRef].s = cellStyle;
+            }
         }
     }
 
@@ -2940,18 +3034,34 @@ function performSonarExcelExport() {
     ws['!autofilter'] = { ref: ws['!ref'] };
     ws['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft' };
 
+    // Set row heights for better appearance
+    ws['!rows'] = [];
+    ws['!rows'][0] = { hpt: 25, hpx: 25 }; // Header row height
+    for (let i = 1; i <= exportData.length; i++) {
+        ws['!rows'][i] = { hpt: 30, hpx: 30 }; // Data row height (increased for wrapped text)
+    }
+
     // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(wb, ws, 'SonarQube Security Issues');
+    const sheetName = isRulesReport ? 'SonarQube Security Rules' : 'SonarQube Security Issues';
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+    // Add workbook properties
+    wb.Props = {
+        Title: isRulesReport ? 'SonarQube Security Rules Report' : 'SonarQube Security Issues Report',
+        Subject: 'Security Analysis Report',
+        Author: 'SonarQube Export Tool',
+        CreatedDate: new Date()
+    };
 
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-    const filename = `SonarQube_Security_Report_${timestamp}.xlsx`;
+    const filename = `SonarQube_${isRulesReport ? 'Rules' : 'Security'}_Report_${timestamp}.xlsx`;
 
     // Export the file
     XLSX.writeFile(wb, filename);
 
     console.log(`✅ Excel file exported successfully: ${filename}`);
-    showSonarSuccess(`📊 Successfully exported ${sonarParsedData.length} issues to ${filename}`);
+    showSonarSuccess(`📊 Successfully exported ${sonarParsedData.length} ${isRulesReport ? 'rules' : 'issues'} to ${filename} with colored rows and matching column structure`);
 }
 
 function showSonarError(message) {
@@ -2977,6 +3087,209 @@ function showSonarSuccess(message) {
     // Hide error message and show success message
     const errorDiv = document.getElementById('sonarErrorMessage');
     const successDiv = document.getElementById('sonarSuccessMessage');
+    
+    if (successDiv) {
+        successDiv.textContent = message;
+        successDiv.style.display = 'block';
+    }
+    
+    if (errorDiv) {
+        errorDiv.style.display = 'none';
+    }
+}
+
+// Security Rules section handlers
+let sonarRulesParsedData = [];
+
+function dropSonarRulesHandler(event) {
+    event.preventDefault();
+    event.currentTarget.classList.remove('dragover');
+    
+    const file = event.dataTransfer.files[0];
+    if (file && (file.type === 'text/html' || file.name.endsWith('.html') || file.name.endsWith('.htm'))) {
+        processSonarRulesFile(file);
+    } else {
+        showSonarRulesError('Please upload a valid HTML file.');
+    }
+}
+
+function sonarRulesFileSelected(event) {
+    const file = event.target.files[0];
+    if (file) {
+        processSonarRulesFile(file);
+    }
+}
+
+function processSonarRulesFile(file) {
+    console.log('Processing SonarQube Rules file:', file.name);
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const htmlContent = e.target.result;
+            sonarRulesParsedData = parseSonarQubeHtml(htmlContent);
+            
+            displaySonarRulesResults(sonarRulesParsedData);
+            showSonarRulesSuccess(`Successfully processed ${sonarRulesParsedData.length} security rules from ${file.name}`);
+            
+        } catch (error) {
+            console.error('Error processing SonarQube Rules file:', error);
+            showSonarRulesError('Error processing file: ' + error.message);
+        }
+    };
+
+    reader.onerror = function() {
+        showSonarRulesError('Error reading file. Please try again.');
+    };
+
+    reader.readAsText(file);
+}
+
+function displaySonarRulesResults(data) {
+    console.log('Displaying SonarQube Rules results:', data.length, 'items');
+    
+    const resultsDiv = document.getElementById('sonarRulesResults');
+    if (!resultsDiv) return;
+    
+    resultsDiv.style.display = 'block';
+    
+    // Calculate statistics
+    const totalRules = data.length;
+    const criticalRules = data.filter(item => 
+        item.severity === 'CRITICAL' || item.severity === 'Critical' ||
+        (item.type && item.type.toLowerCase().includes('critical'))
+    ).length;
+    const blockerRules = data.filter(item => 
+        item.severity === 'BLOCKER' || item.severity === 'Blocker' ||
+        (item.type && item.type.toLowerCase().includes('blocker'))
+    ).length;
+    const languages = [...new Set(data.map(item => item.language || 'Unknown').filter(l => l))].length;
+    
+    // Update statistics
+    document.getElementById('sonarRulesTotalRules').textContent = totalRules;
+    document.getElementById('sonarRulesCriticalRules').textContent = criticalRules;
+    document.getElementById('sonarRulesBlockerRules').textContent = blockerRules;
+    document.getElementById('sonarRulesLanguages').textContent = languages;
+    
+    // Setup export button
+    const exportBtn = document.getElementById('sonarRulesExportBtn');
+    if (exportBtn) {
+        exportBtn.onclick = () => performSonarRulesExcelExport(data);
+        exportBtn.disabled = false;
+    }
+    
+    // Populate preview table (first 10 rows)
+    const tableBody = document.getElementById('sonarRulesPreviewTableBody');
+    if (tableBody) {
+        tableBody.innerHTML = '';
+        
+        const previewData = data.slice(0, 10);
+        previewData.forEach((item, index) => {
+            const row = document.createElement('tr');
+            row.style.backgroundColor = index % 2 === 0 ? '#f8f9fa' : 'white';
+            
+            row.innerHTML = `
+                <td style="padding: 12px; border-bottom: 1px solid #dee2e6; color: #333;">${item.type || 'Rule'}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #dee2e6; color: #333;">${item.ruleKey || item.key || ''}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #dee2e6; color: #333;">${item.name || item.message || ''}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #dee2e6; color: #333;">${item.language || 'N/A'}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #dee2e6; color: #333;">${item.severity || 'N/A'}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #dee2e6; color: #333;">${item.sysTags || item.tags || ''}</td>
+            `;
+            
+            tableBody.appendChild(row);
+        });
+        
+        if (data.length > 10) {
+            const moreRow = document.createElement('tr');
+            moreRow.innerHTML = `
+                <td colspan="6" style="padding: 12px; text-align: center; font-style: italic; color: #666; border-bottom: 1px solid #dee2e6;">
+                    ... and ${data.length - 10} more rules (download Excel for complete data)
+                </td>
+            `;
+            tableBody.appendChild(moreRow);
+        }
+    }
+}
+
+function performSonarRulesExcelExport(data) {
+    console.log('🚀 Starting SonarQube Rules Excel export...');
+    
+    if (!data || data.length === 0) {
+        alert('No rules data to export');
+        return;
+    }
+    
+    try {
+        // Create workbook and worksheet
+        const wb = XLSX.utils.book_new();
+        
+        // Prepare data for Excel - Rules structure
+        const excelData = data.map((item, index) => ({
+            'Row': index + 1,
+            'Type': item.type || 'Rule',
+            'Rule Key': item.ruleKey || item.key || '',
+            'Name': item.name || item.message || '',
+            'Language': item.language || 'N/A',
+            'Severity': item.severity || 'N/A',
+            'SysTags': item.sysTags || item.tags || ''
+        }));
+        
+        // Create worksheet
+        const ws = XLSX.utils.json_to_sheet(excelData);
+        
+        // Set column widths
+        const colWidths = [
+            { wch: 8 },   // Row
+            { wch: 15 },  // Type
+            { wch: 25 },  // Rule Key
+            { wch: 40 },  // Name
+            { wch: 15 },  // Language
+            { wch: 12 },  // Severity
+            { wch: 30 }   // SysTags
+        ];
+        ws['!cols'] = colWidths;
+        
+        // Add worksheet to workbook
+        XLSX.utils.book_append_sheet(wb, ws, 'Security Rules');
+        
+        // Generate filename with timestamp
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
+        const filename = `SonarQube_Security_Rules_${timestamp}.xlsx`;
+        
+        // Save file
+        XLSX.writeFile(wb, filename);
+        
+        console.log('✅ SonarQube Rules Excel export completed:', filename);
+        showSonarRulesSuccess(`Excel file "${filename}" has been downloaded successfully!`);
+        
+    } catch (error) {
+        console.error('❌ Excel export error:', error);
+        alert('Error exporting to Excel: ' + error.message);
+    }
+}
+
+function showSonarRulesError(message) {
+    console.log('SonarQube Rules Error:', message);
+    
+    const errorDiv = document.getElementById('sonarRulesErrorMessage');
+    const successDiv = document.getElementById('sonarRulesSuccessMessage');
+    
+    if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+    }
+    
+    if (successDiv) {
+        successDiv.style.display = 'none';
+    }
+}
+
+function showSonarRulesSuccess(message) {
+    console.log('SonarQube Rules Success:', message);
+    
+    const errorDiv = document.getElementById('sonarRulesErrorMessage');
+    const successDiv = document.getElementById('sonarRulesSuccessMessage');
     
     if (successDiv) {
         successDiv.textContent = message;

@@ -67,10 +67,68 @@
       </div>
     </section>
 
-    <!-- SonarQube Integration Section -->
+    <!-- SonarQube Embedded Script Section -->
     <div class="section-divider">
-      <h2>� SonarQube Security Analysis</h2>
-      <p class="section-description">Upload SonarQube HTML reports and export to Excel with professional formatting</p>
+      <h2>🚀 SonarQube Security Report Generator</h2>
+      <p class="section-description">Generate comprehensive security reports directly from your SonarQube server using embedded scripts</p>
+    </div>
+
+    <section class="sonar-section">
+      <!-- Configuration Section -->
+      <div style="background: #f8f9fa; padding: 25px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #e9ecef;">
+        <h3 style="margin-bottom: 20px; color: #333; display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 1.5rem;">⚙️</span>
+          SonarQube Configuration
+        </h3>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+          <div>
+            <label for="sonar-host" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">SonarQube Host:</label>
+            <input type="text" id="sonar-host" placeholder="http://your-sonar-server:9000" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace; font-size: 14px;" value="http://ubuntusrv01:9000">
+          </div>
+          
+          <div>
+            <label for="sonar-project" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Project Key:</label>
+            <input type="text" id="sonar-project" placeholder="YourProjectKey" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace; font-size: 14px;" value="MetaVision">
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <label for="sonar-token" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Authentication Token:</label>
+          <input type="password" id="sonar-token" placeholder="squ_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace; font-size: 14px;" value="squ_e6852038fd0b432d1b093b8e81a1b53e20b1d48c">
+        </div>
+        
+        <button id="execute-sonar-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: transform 0.2s;">
+          🚀 Generate Security Report
+        </button>
+      </div>
+      
+      <!-- Results Section -->
+      <div id="sonar-results-area" style="display: none;">
+        <!-- Execution Log -->
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #e9ecef;">
+          <h4 style="margin-bottom: 15px; color: #333;">📋 Execution Log</h4>
+          <div id="sonar-execution-log" style="background: #fff; color: #333; font-family: 'Consolas', 'Monaco', monospace; font-size: 13px; padding: 15px; border-radius: 6px; border: 1px solid #ddd; height: 200px; overflow-y: auto; white-space: pre-wrap;"></div>
+        </div>
+        
+        <!-- Reports Container -->
+        <div id="sonar-reports-container"></div>
+        
+        <!-- Export Section -->
+        <div style="background: #f8f9fa; padding: 25px; border-radius: 12px; margin-top: 25px; border: 1px solid #e9ecef;">
+          <h3 style="margin-bottom: 20px; color: #333;">📊 Export Options</h3>
+          <button id="export-sonar-btn" disabled style="background: #28a745; color: white; padding: 12px 25px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; opacity: 0.6; transition: opacity 0.2s;">
+            📁 Export to Excel
+          </button>
+          <p style="color: #666; margin-top: 10px; font-size: 14px;">Export will be enabled after generating the report</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SonarQube Security Issues Section -->
+    <div class="section-divider">
+      <h2>🔍 SonarQube Security Issues</h2>
+      <p class="section-description">Upload SonarQube security issues HTML reports and export to Excel with professional formatting</p>
     </div>
 
     <section class="sonar-section">
@@ -138,6 +196,83 @@
               </tr>
             </thead>
             <tbody id="sonarPreviewTableBody">
+              <!-- Data will be inserted here -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SonarQube Security Rules Section -->
+    <div class="section-divider">
+      <h2>📋 SonarQube Security Rules</h2>
+      <p class="section-description">Upload SonarQube security rules HTML reports and export to Excel with proper rule formatting</p>
+    </div>
+
+    <section class="sonar-section">
+      <!-- Upload Section -->
+      <div class="sonar-upload-area" id="sonarRulesUploadArea" ondrop="dropSonarRulesHandler(event);" ondragover="dragOverSonarHandler(event);" ondragleave="dragLeaveSonarHandler(event);" onclick="document.getElementById('sonarRulesFileInput').click();">
+        <div style="font-size: 4rem; margin-bottom: 20px; color: #FF9800;">📋</div>
+        <div style="font-size: 1.4rem; font-weight: 600; margin-bottom: 15px; color: #333; line-height: 1.2; text-align: center;">
+          Drop SonarQube Security Rules Report Here
+        </div>
+        <div style="color: #666; font-size: 1rem; line-height: 1.2; text-align: center;">
+          or click to browse files
+        </div>
+        <input type="file" id="sonarRulesFileInput" accept=".html,.htm" style="display: none;" onchange="sonarRulesFileSelected(event)">
+      </div>
+      
+      <!-- Error Message -->
+      <div id="sonarRulesErrorMessage" style="background: #ffebee; color: #c62828; padding: 15px 20px; border-radius: 8px; margin: 20px 0; border-left: 5px solid #f44336; display: none;"></div>
+      
+      <!-- Success Message -->
+      <div id="sonarRulesSuccessMessage" style="background: #e8f5e8; color: #2e7d32; padding: 15px 20px; border-radius: 8px; margin: 20px 0; border-left: 5px solid #4caf50; display: none;"></div>
+      
+      <!-- Results Section -->
+      <div id="sonarRulesResults" class="sonar-results" style="display: none;">
+        <!-- Stats Cards -->
+        <div class="sonar-stats">
+          <div class="sonar-stat-card">
+            <div class="sonar-stat-number" id="sonarRulesTotalRules">0</div>
+            <div class="sonar-stat-label">Total Security Rules</div>
+          </div>
+          <div class="sonar-stat-card">
+            <div class="sonar-stat-number" id="sonarRulesCriticalRules">0</div>
+            <div class="sonar-stat-label">Critical Rules</div>
+          </div>
+          <div class="sonar-stat-card">
+            <div class="sonar-stat-number" id="sonarRulesBlockerRules">0</div>
+            <div class="sonar-stat-label">Blocker Rules</div>
+          </div>
+          <div class="sonar-stat-card">
+            <div class="sonar-stat-number" id="sonarRulesLanguages">0</div>
+            <div class="sonar-stat-label">Languages Covered</div>
+          </div>
+        </div>
+        
+        <!-- Export Section -->
+        <div class="sonar-export-section">
+          <h3 style="margin-bottom: 20px; color: #333;">📊 Export Security Rules to Excel</h3>
+          <button class="btn sonar-export-btn" id="sonarRulesExportBtn">
+            📋 Download Security Rules Report
+          </button>
+          <p class="sonar-export-info">Excel file will include rule structure: Type | Rule Key | Name | Language | Severity | SysTags</p>
+        </div>
+        
+        <!-- Preview Table -->
+        <div style="margin-top: 30px; overflow-x: auto; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <table style="width: 100%; border-collapse: collapse; background: white;">
+            <thead>
+              <tr>
+                <th style="background: #FF9800; color: white; padding: 15px 12px; text-align: left; font-weight: 500; font-size: 0.95rem;">Type</th>
+                <th style="background: #FF9800; color: white; padding: 15px 12px; text-align: left; font-weight: 500; font-size: 0.95rem;">Rule Key</th>
+                <th style="background: #FF9800; color: white; padding: 15px 12px; text-align: left; font-weight: 500; font-size: 0.95rem;">Name</th>
+                <th style="background: #FF9800; color: white; padding: 15px 12px; text-align: left; font-weight: 500; font-size: 0.95rem;">Language</th>
+                <th style="background: #FF9800; color: white; padding: 15px 12px; text-align: left; font-weight: 500; font-size: 0.95rem;">Severity</th>
+                <th style="background: #FF9800; color: white; padding: 15px 12px; text-align: left; font-weight: 500; font-size: 0.95rem;">SysTags</th>
+              </tr>
+            </thead>
+            <tbody id="sonarRulesPreviewTableBody">
               <!-- Data will be inserted here -->
             </tbody>
           </table>
