@@ -1562,6 +1562,115 @@ function exportToExcel() {
 // Make functions globally accessible
 window.generateSonarReport = generateSonarReport;
 
+// Load reports from file server
+function loadFromFileServer(reportType) {
+    console.log('Loading from file server:', reportType);
+    
+    let pathInput, resultsDiv, errorDiv, successDiv;
+    
+    if (reportType === 'issues') {
+        pathInput = document.getElementById('sonarFileServerPath');
+        resultsDiv = document.getElementById('sonarResults');
+        errorDiv = document.getElementById('sonarErrorMessage');
+        successDiv = document.getElementById('sonarSuccessMessage');
+    } else {
+        pathInput = document.getElementById('sonarRulesFileServerPath');
+        resultsDiv = document.getElementById('sonarRulesResults');
+        errorDiv = document.getElementById('sonarRulesErrorMessage');
+        successDiv = document.getElementById('sonarRulesSuccessMessage');
+    }
+    
+    const filePath = pathInput.value.trim();
+    
+    if (!filePath) {
+        showError(errorDiv, successDiv, 'Please enter the file server path');
+        return;
+    }
+    
+    // Show loading message
+    showSuccess(successDiv, errorDiv, `Loading report from: ${filePath}`);
+    
+    // Try to load file from server path
+    loadFileFromPath(filePath, reportType, resultsDiv, errorDiv, successDiv);
+}
+
+function loadFileFromPath(filePath, reportType, resultsDiv, errorDiv, successDiv) {
+    // Since browsers can't directly access file:// or UNC paths for security,
+    // we'll provide instructions for users to copy the file
+    
+    const instructions = `
+    To load the automated report:
+    
+    1. Navigate to: ${filePath}
+    2. Right-click the HTML file → Copy
+    3. Return to this tool
+    4. Use the "Drop HTML Report Here" section below
+    5. Paste or drag the copied file
+    
+    Alternative: Set up a web server to serve files from the file server.
+    `;
+    
+    showError(errorDiv, successDiv, 'Cannot directly access file server from browser. ' + instructions);
+    
+    // Better approach: Provide a direct link if the file server is web-accessible
+    const webPath = filePath.replace('\\\\aut-tfs-file\\', 'http://aut-tfs-file/').replace(/\\/g, '/');
+    
+    // Try to fetch if it's web-accessible
+    fetch(webPath)
+        .then(response => {
+            if (response.ok) {
+                return response.text();
+            }
+            throw new Error('File not accessible via web');
+        })
+        .then(htmlContent => {
+            // Process the loaded HTML content
+            const parsedData = parseSonarQubeHtml(htmlContent);
+            
+            if (reportType === 'issues') {
+                displaySonarResults(parsedData);
+            } else {
+                displaySonarRulesResults(parsedData);
+            }
+            
+            showSuccess(successDiv, errorDiv, `Successfully loaded ${parsedData.length} items from file server`);
+        })
+        .catch(error => {
+            console.log('Direct file access failed, showing manual instructions');
+            
+            // Show manual instructions
+            showError(errorDiv, successDiv, `
+                Automated file loading not available. Please:
+                
+                1. Open: ${filePath}
+                2. Save/download the HTML file  
+                3. Upload using the section below
+                
+                (Contact IT to set up web access to file server for direct loading)
+            `);
+        });
+}
+
+function showError(errorDiv, successDiv, message) {
+    if (errorDiv) {
+        errorDiv.innerHTML = message.replace(/\n/g, '<br>');
+        errorDiv.style.display = 'block';
+    }
+    if (successDiv) {
+        successDiv.style.display = 'none';
+    }
+}
+
+function showSuccess(successDiv, errorDiv, message) {
+    if (successDiv) {
+        successDiv.innerHTML = message.replace(/\n/g, '<br>');
+        successDiv.style.display = 'block';
+    }
+    if (errorDiv) {
+        errorDiv.style.display = 'none';
+    }
+}
+
 async function runFullSonarScript() {
     console.log('🚀 Running full embedded SonarQube security report generation...');
     
@@ -3586,6 +3695,76 @@ function showSonarRulesSuccess(message) {
 }
 
 console.log('App loaded successfully');
+
+// OWASP File Server Functions
+function openFileServerPath() {
+    const path = document.getElementById('owaspFileServerPath').value.trim();
+    if (path) {
+        // Try to open in Windows Explorer
+        try {
+            // This won't work in browser for security reasons, but provides instruction
+            alert(`Please open Windows Explorer and navigate to:\n\n${path}\n\nThen select the appropriate report folder and copy the path back to the text field.`);
+        } catch (error) {
+            console.log('Cannot open file explorer from browser');
+        }
+    } else {
+        alert('Please enter a file server path first');
+    }
+}
+
+function loadOWASPFromFileServer(reportType) {
+    console.log('Loading OWASP report from file server:', reportType);
+    
+    const pathInput = document.getElementById('owaspFileServerPath');
+    const basePath = pathInput.value.trim();
+    
+    if (!basePath) {
+        alert('Please enter the file server path first');
+        return;
+    }
+    
+    // Show instructions since browsers can't directly access file:// or UNC paths
+    const instructions = `
+To load the ${reportType} report from file server:
+
+1. Open Windows Explorer
+2. Navigate to: ${basePath}
+3. Select the appropriate folder (latest date/build)
+4. Find and copy the XML file:
+   ${reportType === 'current' ? '- dependency-check-report.xml' : '- baseline dependency-check-report.xml'}
+5. Return to this tool
+6. Use the upload sections below to drag/drop the copied file
+
+Alternative: Ask IT to set up web access to the file server for direct loading.
+    `;
+    
+    alert(instructions);
+    
+    // Highlight the appropriate upload section
+    if (reportType === 'current') {
+        document.getElementById('report-drop').style.border = '3px solid #4CAF50';
+        document.getElementById('report-drop').scrollIntoView({ behavior: 'smooth' });
+    } else {
+        // Enable delta mode if not already enabled
+        const deltaToggle = document.getElementById('delta-mode-toggle');
+        if (deltaToggle && !deltaToggle.checked) {
+            deltaToggle.click();
+        }
+        setTimeout(() => {
+            document.getElementById('baseline-report-drop').style.border = '3px solid #FF9800';
+            document.getElementById('baseline-report-drop').scrollIntoView({ behavior: 'smooth' });
+        }, 500);
+    }
+    
+    // Reset border after 3 seconds
+    setTimeout(() => {
+        document.getElementById('report-drop').style.border = '';
+        const baselineDropzone = document.getElementById('baseline-report-drop');
+        if (baselineDropzone) {
+            baselineDropzone.style.border = '';
+        }
+    }, 3000);
+}
 
 // Simple, working SonarQube report generator - GLOBAL FUNCTION
 function generateSonarReport() {
