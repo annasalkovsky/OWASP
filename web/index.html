@@ -32,7 +32,7 @@
         Load OWASP Reports from File Server
       </h3>
       <div style="display: grid; grid-template-columns: 1fr auto; gap: 15px; align-items: center; margin-bottom: 15px;">
-        <input type="text" id="owaspFileServerPath" placeholder="\\aut-tfs-file\OWASP Dependency-Checks\[select folder]\dependency-check-report.xml" value="\\aut-tfs-file\OWASP Dependency-Checks\" style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace; font-size: 14px;">
+        <input type="text" id="owaspFileServerPath" placeholder="\\aut-tfs-file\OWASP Dependency-Checks\[select folder]\dependency-check-report.xml" value="\\aut-tfs-file\OWASP Dependency-Checks" style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace; font-size: 14px;">
         <button onclick="openFileServerPath()" style="background: #2196F3; color: white; padding: 12px 25px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
           📂 Open File Server
         </button>
@@ -50,7 +50,10 @@
 
     <section class="upload-row">
       <div class="dropzone" id="report-drop">
-        <input type="file" id="report-file" accept=".xml" />
+        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+          <input type="file" id="report-file" accept=".xml" style="flex: 1;" />
+          <button onclick="openFileServerForCurrent()" style="background: #2196F3; color: white; padding: 8px 12px; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; flex-shrink: 0;" title="Open File Server">📂</button>
+        </div>
         <p class="drop-text">Dependency Check Report (Current)<br/><small>Upload dependency-check XML file</small></p>
         <div class="uploaded-msg" id="report-uploaded" aria-hidden="true" style="display:none">✓ Uploaded</div>
         <div class="progress-bar" id="report-progress" style="display:none">
@@ -72,7 +75,10 @@
 
     <section class="upload-row delta-uploads" id="delta-uploads" style="display: none;">
       <div class="dropzone" id="baseline-report-drop">
-        <input type="file" id="baseline-report-file" accept=".xml" />
+        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+          <input type="file" id="baseline-report-file" accept=".xml" style="flex: 1;" />
+          <button onclick="openFileServerForBaseline()" style="background: #2196F3; color: white; padding: 8px 12px; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; flex-shrink: 0;" title="Open File Server">📂</button>
+        </div>
         <p class="drop-text">Baseline Report (Previous)<br/><small>Upload previous dependency-check XML for comparison</small></p>
         <div class="uploaded-msg" id="baseline-uploaded" aria-hidden="true" style="display:none">✓ Uploaded</div>
         <div class="progress-bar" id="baseline-progress" style="display:none">

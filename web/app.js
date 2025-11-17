@@ -3698,72 +3698,71 @@ console.log('App loaded successfully');
 
 // OWASP File Server Functions
 function openFileServerPath() {
-    const path = document.getElementById('owaspFileServerPath').value.trim();
-    if (path) {
-        // Try to open in Windows Explorer
-        try {
-            // This won't work in browser for security reasons, but provides instruction
-            alert(`Please open Windows Explorer and navigate to:\n\n${path}\n\nThen select the appropriate report folder and copy the path back to the text field.`);
-        } catch (error) {
-            console.log('Cannot open file explorer from browser');
-        }
-    } else {
-        alert('Please enter a file server path first');
+    const defaultPath = "\\\\aut-tfs-file\\OWASP Dependency-Checks";
+    const pathInput = document.getElementById('owaspFileServerPath');
+    
+    // Set the default path if empty
+    if (!pathInput.value.trim()) {
+        pathInput.value = defaultPath;
+    }
+    
+    const path = pathInput.value.trim();
+    
+    try {
+        // Try to open Windows Explorer to the path
+        // This creates a file:// URL that Windows Explorer can handle
+        const explorerPath = path.replace(/\\\\/g, '\\').replace(/\\/g, '/');
+        const fileUrl = `file:///${explorerPath.replace(/^\\/, '')}`;
+        
+        // Try to open with file protocol
+        window.open(fileUrl, '_blank');
+        
+        // Also provide fallback instructions
+        setTimeout(() => {
+            alert(`Opening file server path:\n\n${path}\n\nIf the folder didn't open automatically:\n1. Press Windows+R\n2. Type: ${path}\n3. Press Enter`);
+        }, 500);
+        
+    } catch (error) {
+        // Fallback: Show instructions for manual navigation
+        alert(`Please open Windows Explorer and navigate to:\n\n${path}\n\nOr press Windows+R and type: ${path}`);
     }
 }
 
 function loadOWASPFromFileServer(reportType) {
     console.log('Loading OWASP report from file server:', reportType);
     
+    const defaultPath = "\\\\aut-tfs-file\\OWASP Dependency-Checks";
     const pathInput = document.getElementById('owaspFileServerPath');
-    const basePath = pathInput.value.trim();
     
-    if (!basePath) {
-        alert('Please enter the file server path first');
-        return;
+    // Ensure we have the default path
+    if (!pathInput.value.trim()) {
+        pathInput.value = defaultPath;
     }
     
-    // Show instructions since browsers can't directly access file:// or UNC paths
-    const instructions = `
-To load the ${reportType} report from file server:
-
-1. Open Windows Explorer
-2. Navigate to: ${basePath}
-3. Select the appropriate folder (latest date/build)
-4. Find and copy the XML file:
-   ${reportType === 'current' ? '- dependency-check-report.xml' : '- baseline dependency-check-report.xml'}
-5. Return to this tool
-6. Use the upload sections below to drag/drop the copied file
-
-Alternative: Ask IT to set up web access to the file server for direct loading.
-    `;
+    const basePath = pathInput.value.trim();
     
-    alert(instructions);
+    // Simply open the file server location without any dialogs
+    try {
+        // Try to open Windows Explorer to the path
+        const explorerPath = basePath.replace(/\\\\/g, '\\').replace(/\\/g, '/');
+        const fileUrl = `file:///${explorerPath.replace(/^\\/, '')}`;
+        window.open(fileUrl, '_blank');
+    } catch (error) {
+        // Fallback: try to open using different method
+        try {
+            window.location.href = `file://${basePath}`;
+        } catch (e) {
+            console.log('Could not open file explorer automatically');
+        }
+    }
     
-    // Highlight the appropriate upload section
-    if (reportType === 'current') {
-        document.getElementById('report-drop').style.border = '3px solid #4CAF50';
-        document.getElementById('report-drop').scrollIntoView({ behavior: 'smooth' });
-    } else {
-        // Enable delta mode if not already enabled
+    // Enable delta mode for baseline reports
+    if (reportType === 'baseline') {
         const deltaToggle = document.getElementById('delta-mode-toggle');
         if (deltaToggle && !deltaToggle.checked) {
             deltaToggle.click();
         }
-        setTimeout(() => {
-            document.getElementById('baseline-report-drop').style.border = '3px solid #FF9800';
-            document.getElementById('baseline-report-drop').scrollIntoView({ behavior: 'smooth' });
-        }, 500);
     }
-    
-    // Reset border after 3 seconds
-    setTimeout(() => {
-        document.getElementById('report-drop').style.border = '';
-        const baselineDropzone = document.getElementById('baseline-report-drop');
-        if (baselineDropzone) {
-            baselineDropzone.style.border = '';
-        }
-    }, 3000);
 }
 
 // Simple, working SonarQube report generator - GLOBAL FUNCTION
