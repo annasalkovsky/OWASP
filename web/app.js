@@ -3708,23 +3708,24 @@ function openFileServerPath() {
     
     const path = pathInput.value.trim();
     
+    // For UNC paths, we need to use a different approach
+    // Try multiple methods to open the network location
     try {
-        // Try to open Windows Explorer to the path
-        // This creates a file:// URL that Windows Explorer can handle
-        const explorerPath = path.replace(/\\\\/g, '\\').replace(/\\/g, '/');
-        const fileUrl = `file:///${explorerPath.replace(/^\\/, '')}`;
-        
-        // Try to open with file protocol
-        window.open(fileUrl, '_blank');
-        
-        // Also provide fallback instructions
-        setTimeout(() => {
-            alert(`Opening file server path:\n\n${path}\n\nIf the folder didn't open automatically:\n1. Press Windows+R\n2. Type: ${path}\n3. Press Enter`);
-        }, 500);
-        
+        // Method 1: Try direct UNC path with file protocol
+        window.open('file:///' + path.replace(/\\/g, '/'), '_blank');
     } catch (error) {
-        // Fallback: Show instructions for manual navigation
-        alert(`Please open Windows Explorer and navigate to:\n\n${path}\n\nOr press Windows+R and type: ${path}`);
+        try {
+            // Method 2: Try with explorer.exe protocol
+            window.open('ms-appx-web:////' + path, '_blank');
+        } catch (error2) {
+            // Method 3: Create a temporary link and click it
+            const link = document.createElement('a');
+            link.href = 'file:///' + path.replace(/\\/g, '/');
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
     }
 }
 
@@ -3741,18 +3742,22 @@ function loadOWASPFromFileServer(reportType) {
     
     const basePath = pathInput.value.trim();
     
-    // Simply open the file server location without any dialogs
+    // Open Windows Explorer to the UNC path directly - no dialogs
     try {
-        // Try to open Windows Explorer to the path
-        const explorerPath = basePath.replace(/\\\\/g, '\\').replace(/\\/g, '/');
-        const fileUrl = `file:///${explorerPath.replace(/^\\/, '')}`;
-        window.open(fileUrl, '_blank');
+        // Method 1: Direct UNC path opening
+        window.open('file:///' + basePath.replace(/\\/g, '/'), '_blank');
     } catch (error) {
-        // Fallback: try to open using different method
         try {
+            // Method 2: Alternative protocol
             window.location.href = `file://${basePath}`;
-        } catch (e) {
-            console.log('Could not open file explorer automatically');
+        } catch (error2) {
+            // Method 3: Create temporary link
+            const link = document.createElement('a');
+            link.href = 'file:///' + basePath.replace(/\\/g, '/');
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     }
     
