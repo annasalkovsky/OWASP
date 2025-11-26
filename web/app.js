@@ -2336,4 +2336,105 @@ function showSonarRulesSuccess(message) {
     }
 }
 
+// File Explorer Button Functions - Open directly without dialogs
+function openFileServerForCurrent() {
+    const pathInput = document.getElementById('owaspFileServerPath');
+    const defaultPath = '\\\\aut-tfs-file\\OWASP Dependency-Checks';
+    
+    // Set default path if empty
+    if (!pathInput.value.trim()) {
+        pathInput.value = defaultPath;
+    }
+    
+    const path = pathInput.value.trim();
+    console.log('Opening file server for current report:', path);
+    
+    // Highlight the current report upload area
+    const currentDropzone = document.getElementById('report-drop');
+    if (currentDropzone) {
+        currentDropzone.style.border = '3px solid #4CAF50';
+        currentDropzone.style.backgroundColor = '#e8f5e8';
+        setTimeout(() => {
+            currentDropzone.style.border = '';
+            currentDropzone.style.backgroundColor = '';
+        }, 3000);
+    }
+    
+    try {
+        // Try ActiveXObject first (IE/corporate environments)
+        if (window.ActiveXObject || "ActiveXObject" in window) {
+            const shell = new ActiveXObject("Shell.Application");
+            shell.Explore(path);
+            return;
+        }
+        
+        // Try to open Windows Explorer using explorer.exe
+        const explorerPath = path.replace(/\\\\/g, '\\').replace(/\//g, '\\');
+        window.open(`ms-appx-web:///shell:explorer.exe,${explorerPath}`, '_blank');
+        
+        // Fallback to file protocol
+        setTimeout(() => {
+            const fileUrl = `file:///${path.replace(/\\/g, '/')}`;
+            window.open(fileUrl, '_blank');
+        }, 100);
+        
+    } catch (error) {
+        console.log('Could not open file explorer automatically:', error);
+        alert(`Please open Windows Explorer and navigate to:\n\n${path}\n\n📂 Find dependency-check-report.xml and upload to the current report area`);
+    }
+}
+
+function openFileServerForBaseline() {
+    const pathInput = document.getElementById('owaspFileServerPath');
+    const defaultPath = '\\\\aut-tfs-file\\OWASP Dependency-Checks';
+    
+    // Set default path if empty
+    if (!pathInput.value.trim()) {
+        pathInput.value = defaultPath;
+    }
+    
+    const path = pathInput.value.trim();
+    console.log('Opening file server for baseline report:', path);
+    
+    // Enable delta mode if not already enabled
+    const deltaToggle = document.getElementById('delta-mode-toggle');
+    if (deltaToggle && !deltaToggle.checked) {
+        deltaToggle.click();
+    }
+    
+    // Highlight the baseline report upload area
+    const baselineDropzone = document.getElementById('baseline-report-drop');
+    if (baselineDropzone) {
+        baselineDropzone.style.border = '3px solid #FF9800';
+        baselineDropzone.style.backgroundColor = '#fff3e0';
+        setTimeout(() => {
+            baselineDropzone.style.border = '';
+            baselineDropzone.style.backgroundColor = '';
+        }, 3000);
+    }
+    
+    try {
+        // Try ActiveXObject first (IE/corporate environments)
+        if (window.ActiveXObject || "ActiveXObject" in window) {
+            const shell = new ActiveXObject("Shell.Application");
+            shell.Explore(path);
+            return;
+        }
+        
+        // Try to open Windows Explorer using explorer.exe
+        const explorerPath = path.replace(/\\\\/g, '\\').replace(/\//g, '\\');
+        window.open(`ms-appx-web:///shell:explorer.exe,${explorerPath}`, '_blank');
+        
+        // Fallback to file protocol
+        setTimeout(() => {
+            const fileUrl = `file:///${path.replace(/\\/g, '/')}`;
+            window.open(fileUrl, '_blank');
+        }, 100);
+        
+    } catch (error) {
+        console.log('Could not open file explorer automatically:', error);
+        alert(`Please open Windows Explorer and navigate to:\n\n${path}\n\n📂 Find dependency-check-report.xml and upload to the baseline report area`);
+    }
+}
+
 console.log('App loaded successfully');

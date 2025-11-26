@@ -1,4 +1,4 @@
-// Additional File Server Helper Functions for Manual Upload Areas
+// File Explorer Button Functions - Open directly without dialogs
 function openFileServerForCurrent() {
     const pathInput = document.getElementById('owaspFileServerPath');
     const defaultPath = '\\\\aut-tfs-file\\OWASP Dependency-Checks';
@@ -22,18 +22,23 @@ function openFileServerForCurrent() {
         }, 3000);
     }
     
+    // Simply open Windows Explorer to the path
     try {
-        // Try to open Windows Explorer to the path
-        const explorerPath = path.replace(/\\\\\\\\/g, '\\').replace(/\\/g, '/');
-        const fileUrl = `file:///${explorerPath.replace(/^\\/, '')}`;
+        // Method 1: Use Windows Shell if available (IE/Edge)
+        try {
+            const shell = new ActiveXObject("WScript.Shell");
+            shell.Run(`explorer.exe "${path}"`);
+            return;
+        } catch (activexError) {
+            console.log('ActiveX not available, using file protocol');
+        }
+        
+        // Method 2: Use file protocol as fallback
+        const fileUrl = `file:///${path.replace(/\\/g, '/')}`;
         window.open(fileUrl, '_blank');
         
-        setTimeout(() => {
-            alert(`📂 Opening file server for CURRENT report:\n\n${path}\n\n📋 Look for: dependency-check-report.xml\n✅ Drag the file to the GREEN highlighted area\n\n💡 If folder didn't open automatically:\n1. Press Windows+R\n2. Type: ${path}\n3. Press Enter`);
-        }, 500);
-        
     } catch (error) {
-        alert(`Please open Windows Explorer and navigate to:\n\n${path}\n\n📋 Find dependency-check-report.xml and upload to the current report area`);
+        console.log('Could not open file explorer automatically');
     }
 }
 
@@ -49,34 +54,28 @@ function openFileServerForBaseline() {
     const path = pathInput.value.trim();
     console.log('Opening file server for baseline report:', path);
     
-    // Show the baseline section if hidden
-    const deltaSection = document.getElementById('delta-uploads');
-    if (deltaSection && deltaSection.style.display === 'none') {
-        deltaSection.style.display = 'block';
+    // Enable delta mode if not already enabled
+    const deltaToggle = document.getElementById('delta-mode-toggle');
+    if (deltaToggle && !deltaToggle.checked) {
+        deltaToggle.click();
     }
     
-    // Highlight the baseline report upload area
-    const baselineDropzone = document.getElementById('baseline-report-drop');
-    if (baselineDropzone) {
-        baselineDropzone.style.border = '3px solid #FF9800';
-        baselineDropzone.style.backgroundColor = '#fff3e0';
-        setTimeout(() => {
-            baselineDropzone.style.border = '';
-            baselineDropzone.style.backgroundColor = '';
-        }, 3000);
-    }
-    
+    // Simply open Windows Explorer to the path
     try {
-        // Try to open Windows Explorer to the path
-        const explorerPath = path.replace(/\\\\\\\\/g, '\\').replace(/\\/g, '/');
-        const fileUrl = `file:///${explorerPath.replace(/^\\/, '')}`;
+        // Method 1: Use Windows Shell if available (IE/Edge)
+        try {
+            const shell = new ActiveXObject("WScript.Shell");
+            shell.Run(`explorer.exe "${path}"`);
+            return;
+        } catch (activexError) {
+            console.log('ActiveX not available, using file protocol');
+        }
+        
+        // Method 2: Use file protocol as fallback
+        const fileUrl = `file:///${path.replace(/\\/g, '/')}`;
         window.open(fileUrl, '_blank');
         
-        setTimeout(() => {
-            alert(`📂 Opening file server for BASELINE report:\n\n${path}\n\n📊 Look for: dependency-check-report.xml (from previous build)\n✅ Drag the file to the ORANGE highlighted area\n\n💡 If folder didn't open automatically:\n1. Press Windows+R\n2. Type: ${path}\n3. Press Enter`);
-        }, 500);
-        
     } catch (error) {
-        alert(`Please open Windows Explorer and navigate to:\n\n${path}\n\n📊 Find dependency-check-report.xml from previous build and upload to the baseline area`);
+        console.log('Could not open file explorer automatically');
     }
 }
