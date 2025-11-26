@@ -3,8 +3,9 @@
 A professional web-based tool that transforms OWASP dependency-check XML reports into beautiful, audit-ready security reports with powerful delta comparison capabilities.
 
 ## 🚀 **Live Demo**
-- **Try it now**: [annasalkovsky.github.io/OWASP](https://annasalkovsky.github.io/OWASP/)
-- **Interactive Demo**: [View Demo Presentation](https://annasalkovsky.github.io/OWASP/demo/)
+- **Try it now**: [iMD-soft Enterprise GitHub](https://anna.github.io/OWASP-Dependency-Audit-Tool/)
+- **Interactive Demo**: [View Demo Presentation](https://anna.github.io/OWASP-Dependency-Audit-Tool/demo/)
+- **Enterprise Repository**: [imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool)
 
 ## ✨ **Key Features**
 
@@ -67,12 +68,12 @@ Baseline Scan → Apply Fixes → New Scan → Delta Report
 ## 🚀 **Quick Start**
 
 ### Option 1: Use Online (Recommended)
-Visit [annasalkovsky.github.io/OWASP](https://annasalkovsky.github.io/OWASP/) - no setup required!
+Visit the enterprise GitHub Pages deployment - no setup required!
 
 ### Option 2: Local Development
 ```bash
-git clone https://github.com/annasalkovsky/OWASP.git
-cd OWASP
+git clone https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool.git
+cd OWASP-Dependency-Audit-Tool
 # Open web/index.html in your browser
 ```
 
@@ -93,8 +94,9 @@ cd OWASP
 
 ## 🎬 **Demo & Showcase**
 
-- **Interactive Demo**: [View the presentation](https://annasalkovsky.github.io/OWASP/demo/)
-- **Live Tool**: [Try with your own files](https://annasalkovsky.github.io/OWASP/)
+- **Interactive Demo**: [View the presentation](https://anna.github.io/OWASP-Dependency-Audit-Tool/demo/)
+- **Live Tool**: [Try with your own files](https://anna.github.io/OWASP-Dependency-Audit-Tool/)
+- **Enterprise Access**: Available at [imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool)
 
 ## 🤝 **Contributing**
 
@@ -112,4 +114,10 @@ This project is open source and available under the MIT License.
 
 ## 🙋‍♀️ **About**
 
-Created by Anna Salkovsky at iMD-soft for streamlined security vulnerability reporting and delta analysis. Perfect for development teams who need professional, audit-ready security reports with progress tracking capabilities.
+Created by Anna Salkovsky at iMD-soft for streamlined security vulnerability reporting and delta analysis. Perfect for enterprise development teams who need professional, audit-ready security reports with progress tracking capabilities.
+
+**Enterprise Features:**
+- 🏢 Internal deployment ready
+- 🔐 Enterprise security compliance
+- 🚀 Scalable for team collaboration
+- 📊 Comprehensive audit reporting

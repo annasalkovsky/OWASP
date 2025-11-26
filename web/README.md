@@ -4,7 +4,7 @@ A web-based tool for generating comprehensive security reports from OWASP securi
 
 ## 🚀 Live Demo
 
-Visit the live application: [https://annasalkovsky.github.io/OWASP/](https://annasalkovsky.github.io/OWASP/)
+Visit the live application: [Enterprise GitHub](https://anna.github.io/OWASP-Dependency-Audit-Tool/)
 
 ## ✨ Features
 
@@ -148,7 +148,7 @@ This repository is configured for automatic deployment to GitHub Pages:
 
 1. Push changes to the `main` branch
 2. GitHub Actions will automatically build and deploy
-3. Site will be available at `https://annasalkovsky.github.io/OWASP/`
+3. Site will be available at your enterprise GitHub Pages URL
 
 ### Manual Deployment
 
