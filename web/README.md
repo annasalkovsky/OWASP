@@ -4,7 +4,7 @@ A web-based tool for generating comprehensive security reports from OWASP securi
 
 ## 🚀 Live Demo
 
-Visit the live application: [Enterprise GitHub](https://anna.github.io/OWASP-Dependency-Audit-Tool/)
+**Quick Start**: Clone from [enterprise repository](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool) and open `web/index.html`
 
 ## ✨ Features
 

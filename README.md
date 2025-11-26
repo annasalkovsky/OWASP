@@ -3,9 +3,8 @@
 A professional web-based tool that transforms OWASP dependency-check XML reports into beautiful, audit-ready security reports with powerful delta comparison capabilities.
 
 ## 🚀 **Live Demo**
-- **Try it now**: [iMD-soft Enterprise GitHub](https://anna.github.io/OWASP-Dependency-Audit-Tool/)
-- **Interactive Demo**: [View Demo Presentation](https://anna.github.io/OWASP-Dependency-Audit-Tool/demo/)
 - **Enterprise Repository**: [imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool)
+- **Download & Run Locally**: Clone the repository and open `web/index.html` in your browser
 
 ## ✨ **Key Features**
 
@@ -67,15 +66,15 @@ Baseline Scan → Apply Fixes → New Scan → Delta Report
 
 ## 🚀 **Quick Start**
 
-### Option 1: Use Online (Recommended)
-Visit the enterprise GitHub Pages deployment - no setup required!
-
-### Option 2: Local Development
+### Option 1: Local Development (Recommended)
 ```bash
 git clone https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool.git
 cd OWASP-Dependency-Audit-Tool
-# Open web/index.html in your browser
+# Open web/index.html in your browser - works immediately!
 ```
+
+### Option 2: Enterprise Deployment
+Deploy to your internal web server or set up GitHub Pages on your enterprise GitHub.
 
 ### Option 3: Deploy Your Own
 - Fork this repository
@@ -94,9 +93,9 @@ cd OWASP-Dependency-Audit-Tool
 
 ## 🎬 **Demo & Showcase**
 
-- **Interactive Demo**: [View the presentation](https://anna.github.io/OWASP-Dependency-Audit-Tool/demo/)
-- **Live Tool**: [Try with your own files](https://anna.github.io/OWASP-Dependency-Audit-Tool/)
-- **Enterprise Access**: Available at [imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool)
+- **Enterprise Repository**: [View source code and documentation](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool)
+- **Local Demo**: Clone and open `web/index.html` - try with your own files instantly!
+- **Demo Presentation**: Located in `demo/index.html` after cloning
 
 ## 🤝 **Contributing**
 
