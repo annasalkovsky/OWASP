@@ -4,6 +4,7 @@ A professional web-based tool that transforms OWASP dependency-check XML reports
 
 ## 🚀 **Live Demo**
 - **Enterprise Repository**: [imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool)
+- **Interactive Demo**: [View Demo Presentation](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/blob/main/demo/index.html) (download and open locally)
 - **Download & Run Locally**: Clone the repository and open `web/index.html` in your browser
 
 ## ✨ **Key Features**
@@ -94,8 +95,9 @@ Deploy to your internal web server or set up GitHub Pages on your enterprise Git
 ## 🎬 **Demo & Showcase**
 
 - **Enterprise Repository**: [View source code and documentation](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool)
-- **Local Demo**: Clone and open `web/index.html` - try with your own files instantly!
-- **Demo Presentation**: Located in `demo/index.html` after cloning
+- **Interactive Demo**: [View Demo Presentation](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/blob/main/demo/index.html) - download and open `demo/index.html` locally
+- **Live Tool**: Clone and open `web/index.html` - try with your own files instantly!
+- **Demo Files**: Complete presentation and examples included in repository
 
 ## 🤝 **Contributing**
 
