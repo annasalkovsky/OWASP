@@ -3,10 +3,10 @@
 A professional web-based tool that transforms OWASP dependency-check XML reports into beautiful, audit-ready security reports with powerful delta comparison capabilities.
 
 ## 🚀 **Live Demo**
-- **🌐 Live OWASP Tool**: [https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/web/](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/web/) - **Direct browser access**
+- **🌐 Live OWASP Tool**: **[Open in Browser](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/blob/main/web/index.html)** - **Click "Raw" button → Copy URL → Open in new tab**
 - **Enterprise Repository**: [imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool)
-- **Interactive Demo**: [https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/demo/](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/demo/) - **Live demo presentation**
-- **Quick Start**: Clone the repository and open `web/index.html` in your browser for immediate use
+- **Interactive Demo**: **[View Demo](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/blob/main/demo/index.html)** - **Click "Raw" button → Copy URL → Open in new tab**
+- **Best Experience**: Clone repository and open `web/index.html` locally for full functionality
 
 ## ✨ **Key Features**
 
@@ -76,8 +76,10 @@ cd OWASP-Dependency-Audit-Tool/web
 ```
 
 ### Option 2: Direct Browser Access
-- **Main Tool**: [https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/web/](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/web/)
-- **Demo**: [https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/demo/](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/demo/)
+1. Go to **[web/index.html](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/blob/main/web/index.html)**
+2. Click the **"Raw"** button in GitHub
+3. Copy the raw URL from your browser
+4. Open that URL in a new browser tab
 
 ### Option 3: Enterprise Deployment
 Deploy to your internal web server or set up GitHub Pages on your enterprise GitHub.
@@ -99,10 +101,10 @@ Deploy to your internal web server or set up GitHub Pages on your enterprise Git
 
 ## 🎬 **Demo & Showcase**
 
-- **🌐 Live OWASP Tool**: **[https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/web/](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/web/)** - **Direct browser access to enhanced tool**
+- **🌐 Live OWASP Tool**: **[web/index.html](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/blob/main/web/index.html)** - **Click "Raw" button for direct browser access**
 - **Enterprise Repository**: [View source code and documentation](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool)
-- **Interactive Demo**: [https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/demo/](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/demo/) - **Live demo presentation in browser**
-- **Best Experience**: Clone the repository and open `web/index.html` - works immediately with all features!
+- **Interactive Demo**: **[demo/index.html](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/blob/main/demo/index.html)** - **Click "Raw" button for live presentation**
+- **Recommended**: Clone the repository and open `web/index.html` locally - works immediately with all features!
 - **Demo Files**: Complete presentation and examples included in repository
 
 ## 🤝 **Contributing**
