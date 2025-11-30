@@ -13,6 +13,7 @@ let isDeltaMode = false;
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM ready - setting up application');
     
+    setupTabs();
     setupDeltaToggle();
     setupFileUploads();
     setupButtons();
@@ -20,6 +21,47 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('Application setup complete');
 });
+
+// Tab switching functionality
+function switchTab(tabId) {
+    // Hide all tab contents
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // Remove active class from all buttons
+    const tabButtons = document.querySelectorAll('.tab-button');
+    tabButtons.forEach(button => {
+        button.classList.remove('active');
+    });
+    
+    // Show selected tab content
+    const selectedTab = document.getElementById(tabId);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+    }
+    
+    // Add active class to corresponding button
+    const buttonId = tabId + '-btn';
+    const selectedButton = document.getElementById(buttonId);
+    if (selectedButton) {
+        selectedButton.classList.add('active');
+    }
+    
+    console.log('Switched to tab:', tabId);
+}
+
+function setupTabs() {
+    // Initialize the first tab as active
+    const firstTab = document.getElementById('owasp-tab');
+    const firstButton = document.getElementById('owasp-tab-btn');
+    
+    if (firstTab && firstButton) {
+        firstTab.classList.add('active');
+        firstButton.classList.add('active');
+    }
+}
 
 function setupDeltaToggle() {
     const deltaToggle = document.getElementById('delta-mode-toggle');
@@ -271,7 +313,9 @@ function setUploadedState(type, isUploaded) {
 function setupButtons() {
     const generateBtn = document.getElementById('generate-btn');
     const exportBtn = document.getElementById('export-btn');
+    const csvExportBtn = document.getElementById('export-csv-btn');
     const emailBtn = document.getElementById('email-btn');
+    const compareSuppressions = document.getElementById('compare-suppressions-btn');
     
     if (generateBtn) {
         generateBtn.addEventListener('click', function() {
@@ -295,8 +339,23 @@ function setupButtons() {
         exportBtn.addEventListener('click', handleExportReport);
     }
     
+    if (csvExportBtn) {
+        csvExportBtn.addEventListener('click', handleExportCSV);
+    }
+    
     if (emailBtn) {
         emailBtn.addEventListener('click', handleEmailReport);
+    }
+    
+    if (compareSuppressions) {
+        compareSuppressions.addEventListener('click', function() {
+            if (!suppressionsXml && !baselineSuppressionsXml) {
+                alert('Please upload at least one suppressions file to compare');
+                return;
+            }
+            // This could open a modal or navigate to comparison page
+            window.open('suppressions-compare.html', '_blank');
+        });
     }
 }
 
@@ -314,8 +373,10 @@ function generateAuditReport() {
         
         // Enable export buttons
         const exportBtn = document.getElementById('export-btn');
+        const csvExportBtn = document.getElementById('export-csv-btn');
         const emailBtn = document.getElementById('email-btn');
         if (exportBtn) exportBtn.disabled = false;
+        if (csvExportBtn) csvExportBtn.disabled = false;
         if (emailBtn) emailBtn.disabled = false;
         
         console.log(`Audit report generated with ${vulnerabilities.length} vulnerabilities`);
@@ -731,6 +792,9 @@ function displayReport(vulnerabilities, type) {
     
     reportArea.innerHTML = html;
     reportArea.hidden = false;
+    
+    // Setup table event listeners for filtering and sorting
+    setupTableEventListeners();
 }
 
 // Display delta comparison report
@@ -877,6 +941,9 @@ function displayDeltaReport(newVulns, fixedVulns) {
     
     reportArea.innerHTML = html;
     reportArea.hidden = false;
+    
+    // Setup table event listeners for filtering and sorting
+    setupTableEventListeners();
 }
 
 // Calculate suppression changes between current and baseline
@@ -939,41 +1006,162 @@ function generateVulnerabilityTable(vulnerabilities, tableClass = '') {
         return '<p class="no-vulnerabilities">No vulnerabilities found.</p>';
     }
     
-    const tableRows = vulnerabilities.map(vuln => `
-        <tr>
-            <td>${escapeHtml(vuln.Package)}</td>
-            <td>${escapeHtml(vuln.Vulnerability)}</td>
+    const uniqueId = 'vuln-table-' + Math.random().toString(36).substr(2, 9);
+    
+    const tableRows = vulnerabilities.map((vuln, index) => `
+        <tr class="vuln-row" data-index="${index}">
+            <td>
+                <div class="package-info">
+                    <strong>${escapeHtml(vuln.Package)}</strong>
+                    ${vuln.Version ? `<div class="version-info">v${escapeHtml(vuln.Version)}</div>` : ''}
+                </div>
+            </td>
+            <td>
+                <div class="vulnerability-info">
+                    <strong>${escapeHtml(vuln.Vulnerability)}</strong>
+                    ${vuln.Link ? `<a href="${escapeHtml(vuln.Link)}" target="_blank" class="vuln-link" title="View details">🔗</a>` : ''}
+                </div>
+            </td>
             <td><span class="severity-${vuln.Severity.toLowerCase()}">${escapeHtml(vuln.Severity)}</span></td>
-            <td>${escapeHtml(vuln.CVSS)}</td>
-            <td>${escapeHtml(vuln.Description)}</td>
-            <td>${escapeHtml(vuln.File)}</td>
+            <td>
+                <div class="cvss-info">
+                    <span class="cvss-score">${escapeHtml(vuln.CVSS)}</span>
+                    ${vuln.CVSSv3 ? `<div class="cvss-version">v3: ${escapeHtml(vuln.CVSSv3)}</div>` : ''}
+                </div>
+            </td>
+            <td>
+                <div class="description-text" title="${escapeHtml(vuln.Description)}">
+                    ${truncateText(escapeHtml(vuln.Description), 120)}
+                </div>
+            </td>
+            <td>
+                <div class="file-path" title="${escapeHtml(vuln.File)}">
+                    ${truncateFilePath(escapeHtml(vuln.File))}
+                </div>
+            </td>
         </tr>
     `).join('');
     
     return `
-        <table id="vuln-table" class="${tableClass}">
-            <thead>
-                <tr>
-                    <th>Package</th>
-                    <th>Vulnerability</th>
-                    <th>Severity</th>
-                    <th>CVSS</th>
-                    <th>Description</th>
-                    <th>File</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${tableRows}
-            </tbody>
-        </table>
+        <div class="table-container">
+            <div class="table-controls">
+                <div class="filter-group">
+                    <input type="text" id="${uniqueId}-search" class="filter-input" placeholder="🔍 Search vulnerabilities..." />
+                    <select id="${uniqueId}-severity" class="filter-select">
+                        <option value="">All Severities</option>
+                        <option value="CRITICAL">Critical</option>
+                        <option value="HIGH">High</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="LOW">Low</option>
+                    </select>
+                    <button class="clear-filters" onclick="clearTableFilters('${uniqueId}')">Clear Filters</button>
+                </div>
+                <div class="results-count" id="${uniqueId}-count">${vulnerabilities.length} vulnerabilities</div>
+            </div>
+            <div class="table-wrapper">
+                <table id="${uniqueId}" class="table ${tableClass}" data-vulnerabilities='${JSON.stringify(vulnerabilities)}'>
+                    <thead>
+                        <tr>
+                            <th data-sort="Package">Package <span class="sort-indicator"></span></th>
+                            <th data-sort="Vulnerability">Vulnerability <span class="sort-indicator"></span></th>
+                            <th data-sort="Severity">Severity <span class="sort-indicator"></span></th>
+                            <th data-sort="CVSS">CVSS Score <span class="sort-indicator"></span></th>
+                            <th data-sort="Description">Description</th>
+                            <th data-sort="File">File Path</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRows}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     `;
 }
 
 // Escape HTML to prevent XSS
 function escapeHtml(text) {
+    if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Helper function to truncate text
+function truncateText(text, maxLength) {
+    if (!text || text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+}
+
+// Helper function to truncate file paths intelligently
+function truncateFilePath(path, maxLength = 50) {
+    if (!path || path.length <= maxLength) return path;
+    
+    const parts = path.split(/[\\/]/);
+    if (parts.length <= 2) return path;
+    
+    const fileName = parts[parts.length - 1];
+    const firstPart = parts[0];
+    
+    if ((firstPart + '/.../' + fileName).length <= maxLength) {
+        return firstPart + '/.../' + fileName;
+    }
+    
+    return '.../' + fileName;
+}
+
+// Clear table filters
+function clearTableFilters(tableId) {
+    const searchInput = document.getElementById(tableId + '-search');
+    const severitySelect = document.getElementById(tableId + '-severity');
+    
+    if (searchInput) searchInput.value = '';
+    if (severitySelect) severitySelect.value = '';
+    
+    filterTable(tableId);
+}
+
+// Enhanced table filtering
+function filterTable(tableId) {
+    const table = document.getElementById(tableId);
+    const searchInput = document.getElementById(tableId + '-search');
+    const severitySelect = document.getElementById(tableId + '-severity');
+    const countElement = document.getElementById(tableId + '-count');
+    
+    if (!table || !searchInput || !severitySelect) return;
+    
+    const searchTerm = searchInput.value.toLowerCase();
+    const severityFilter = severitySelect.value;
+    const rows = table.querySelectorAll('tbody tr');
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const packageName = cells[0]?.textContent.toLowerCase() || '';
+        const vulnerability = cells[1]?.textContent.toLowerCase() || '';
+        const severity = cells[2]?.textContent.trim() || '';
+        const description = cells[4]?.textContent.toLowerCase() || '';
+        const filePath = cells[5]?.textContent.toLowerCase() || '';
+        
+        const matchesSearch = !searchTerm || 
+            packageName.includes(searchTerm) ||
+            vulnerability.includes(searchTerm) ||
+            description.includes(searchTerm) ||
+            filePath.includes(searchTerm);
+            
+        const matchesSeverity = !severityFilter || severity === severityFilter;
+        
+        if (matchesSearch && matchesSeverity) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    if (countElement) {
+        countElement.textContent = `${visibleCount} vulnerabilities`;
+    }
 }
 
 // Handle export report
@@ -2437,4 +2625,273 @@ function openFileServerForBaseline() {
     }
 }
 
+// Setup table event listeners for filtering and search
+function setupTableEventListeners() {
+    // Find all tables with filter controls
+    const tables = document.querySelectorAll('table[data-vulnerabilities]');
+    
+    tables.forEach(table => {
+        const tableId = table.id;
+        const searchInput = document.getElementById(tableId + '-search');
+        const severitySelect = document.getElementById(tableId + '-severity');
+        
+        if (searchInput) {
+            searchInput.addEventListener('input', () => filterTable(tableId));
+        }
+        
+        if (severitySelect) {
+            severitySelect.addEventListener('change', () => filterTable(tableId));
+        }
+        
+        // Add sorting functionality to headers
+        const headers = table.querySelectorAll('th[data-sort]');
+        headers.forEach(header => {
+            header.addEventListener('click', () => {
+                const sortField = header.getAttribute('data-sort');
+                sortTable(tableId, sortField);
+            });
+        });
+    });
+}
+
+// Table sorting functionality
+function sortTable(tableId, sortField) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const vulnerabilities = JSON.parse(table.getAttribute('data-vulnerabilities'));
+    
+    // Determine sort direction
+    const header = table.querySelector(`th[data-sort="${sortField}"]`);
+    const isAsc = !header.classList.contains('sort-asc');
+    
+    // Clear all sort classes
+    table.querySelectorAll('th').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+    });
+    
+    // Add sort class to current header
+    header.classList.add(isAsc ? 'sort-asc' : 'sort-desc');
+    
+    // Sort the data
+    const sortedData = vulnerabilities.sort((a, b) => {
+        let valueA = a[sortField] || '';
+        let valueB = b[sortField] || '';
+        
+        // Handle numeric CVSS scores
+        if (sortField === 'CVSS') {
+            valueA = parseFloat(valueA) || 0;
+            valueB = parseFloat(valueB) || 0;
+        } else {
+            valueA = valueA.toString().toLowerCase();
+            valueB = valueB.toString().toLowerCase();
+        }
+        
+        if (valueA < valueB) return isAsc ? -1 : 1;
+        if (valueA > valueB) return isAsc ? 1 : -1;
+        return 0;
+    });
+    
+    // Re-render table with sorted data
+    const tableRows = sortedData.map((vuln, index) => `
+        <tr class="vuln-row" data-index="${index}">
+            <td>
+                <div class="package-info">
+                    <strong>${escapeHtml(vuln.Package)}</strong>
+                    ${vuln.Version ? `<div class="version-info">v${escapeHtml(vuln.Version)}</div>` : ''}
+                </div>
+            </td>
+            <td>
+                <div class="vulnerability-info">
+                    <strong>${escapeHtml(vuln.Vulnerability)}</strong>
+                    ${vuln.Link ? `<a href="${escapeHtml(vuln.Link)}" target="_blank" class="vuln-link" title="View details">🔗</a>` : ''}
+                </div>
+            </td>
+            <td><span class="severity-${vuln.Severity.toLowerCase()}">${escapeHtml(vuln.Severity)}</span></td>
+            <td>
+                <div class="cvss-info">
+                    <span class="cvss-score">${escapeHtml(vuln.CVSS)}</span>
+                    ${vuln.CVSSv3 ? `<div class="cvss-version">v3: ${escapeHtml(vuln.CVSSv3)}</div>` : ''}
+                </div>
+            </td>
+            <td>
+                <div class="description-text" title="${escapeHtml(vuln.Description)}">
+                    ${truncateText(escapeHtml(vuln.Description), 120)}
+                </div>
+            </td>
+            <td>
+                <div class="file-path" title="${escapeHtml(vuln.File)}">
+                    ${truncateFilePath(escapeHtml(vuln.File))}
+                </div>
+            </td>
+        </tr>
+    `).join('');
+    
+    tbody.innerHTML = tableRows;
+    
+    // Update the data attribute with sorted data
+    table.setAttribute('data-vulnerabilities', JSON.stringify(sortedData));
+    
+    // Re-apply current filters
+    filterTable(tableId);
+}
+
+// Handle CSV export
+function handleExportCSV() {
+    try {
+        const reportData = getCurrentReportData();
+        const csvContent = generateCSV(reportData);
+        
+        // Create and download file
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `OWASP-${reportData.type}-Report-${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+        
+        console.log('CSV report exported successfully');
+        
+    } catch (error) {
+        console.error('CSV export failed:', error);
+        alert('CSV export failed: ' + error.message);
+    }
+}
+
+// Generate CSV content from report data
+function generateCSV(reportData) {
+    const isDelta = reportData.type === 'delta';
+    let vulnerabilities = [];
+    
+    if (isDelta && reportData.data) {
+        vulnerabilities = [...(reportData.data.newVulnerabilities || []), ...(reportData.data.fixedVulnerabilities || [])];
+    } else {
+        vulnerabilities = reportData.vulnerabilities || [];
+    }
+    
+    if (vulnerabilities.length === 0) {
+        return 'No vulnerabilities found\\n';
+    }
+    
+    // CSV headers
+    const headers = ['Package', 'Vulnerability', 'Severity', 'CVSS Score', 'Description', 'File Path'];
+    
+    // Add status column for delta reports
+    if (isDelta) {
+        headers.push('Status');
+    }
+    
+    let csvContent = headers.join(',') + '\\n';
+    
+    // Add data rows
+    vulnerabilities.forEach(vuln => {
+        const row = [
+            `"${escapeCSV(vuln.Package)}"`,
+            `"${escapeCSV(vuln.Vulnerability)}"`,
+            `"${escapeCSV(vuln.Severity)}"`,
+            `"${escapeCSV(vuln.CVSS)}"`,
+            `"${escapeCSV(vuln.Description)}"`,
+            `"${escapeCSV(vuln.File)}"`
+        ];
+        
+        if (isDelta) {
+            const status = vuln.isFixed ? 'Fixed' : 'New';
+            row.push(`"${status}"`);
+        }
+        
+        csvContent += row.join(',') + '\\n';
+    });
+    
+    return csvContent;
+}
+
+// Escape CSV content
+function escapeCSV(text) {
+    if (!text) return '';
+    return text.toString().replace(/"/g, '""');
+}
+
 console.log('App loaded successfully');
+
+// Helper function to copy text to clipboard
+function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+    } else {
+        return fallbackCopyToClipboard(text);
+    }
+}
+
+// Fallback clipboard copy method
+function fallbackCopyToClipboard(text) {
+    return new Promise((resolve, reject) => {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.top = '0';
+        textArea.style.left = '0';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            if (successful) {
+                resolve();
+            } else {
+                reject(new Error('Copy command failed'));
+            }
+        } catch (err) {
+            document.body.removeChild(textArea);
+            reject(err);
+        }
+    });
+}
+
+// Override the openFileServerPath function with modern implementation
+function openFileServerPath() {
+    const defaultPath = "\\\\aut-tfs-file\\OWASP Dependency-Checks";
+    const pathInput = document.getElementById('owaspFileServerPath');
+
+    // Set the default path if empty
+    if (!pathInput.value.trim()) {
+        pathInput.value = defaultPath;
+    }
+
+    const path = pathInput.value.trim();
+
+    // Modern approach: Copy to clipboard and provide detailed instructions
+    copyToClipboard(path).then(() => {
+        // Create a more detailed instruction dialog
+        const instructions = `📋 File server path copied to clipboard!
+
+🗂️ Path: ${path}
+
+🚀 Quick access steps:
+1️⃣ Press Windows + E (open Explorer)
+2️⃣ Click address bar (or Ctrl + L)
+3️⃣ Paste (Ctrl + V) and press Enter
+
+Alternative: Press Windows + R, paste path, press Enter
+
+💡 Path is ready in your clipboard!`;
+
+        alert(instructions);
+    }).catch(() => {
+        const fallbackInstructions = `📂 Navigate to: ${path}
+
+🚀 Manual steps:
+1. Press Windows + R
+2. Copy and paste: ${path}
+3. Press Enter
+
+Or open Explorer and paste in address bar.`;
+
+        alert(fallbackInstructions);
+    });
+}

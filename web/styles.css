@@ -1,3 +1,84 @@
+/* Tab Navigation Styles */
+.tab-navigation {
+  display: flex;
+  gap: 0;
+  margin-bottom: 24px;
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 6px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.tab-button {
+  flex: 1;
+  padding: 16px 24px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.tab-button:hover {
+  color: #374151;
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.tab-button.active {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.tab-button.active:hover {
+  background: linear-gradient(135deg, #5b21b6, #7c3aed);
+  color: white;
+}
+
+/* Tab Content Styles */
+.tab-content {
+  display: none;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive tab navigation */
+@media (max-width: 768px) {
+  .tab-navigation {
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  .tab-button {
+    flex: none;
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+}
+
 :root{
   --bg:#f8fafc;
   --card:#fff;
@@ -419,8 +500,119 @@ body{
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
-.table{width:100%;border-collapse:collapse;margin-top:12px}
-.table th, .table td{padding:10px;border-bottom:1px solid #f1f5f9;text-align:left}
+/* Enhanced Table Styling */
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: 16px;
+  background: var(--card);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e7eb;
+}
+
+.table thead {
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+}
+
+.table th {
+  padding: 16px 20px;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: inherit;
+}
+
+.table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: top;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.table tbody tr {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.table tbody tr:hover {
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.03), rgba(255, 255, 255, 0.02));
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Enhanced severity styling */
+.severity-critical, .severity-high, .severity-medium, .severity-low {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid transparent;
+}
+
+.severity-critical {
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  color: #991b1b;
+  border-color: rgba(220, 38, 38, 0.2);
+}
+
+.severity-critical::before {
+  content: "🔴";
+  font-size: 0.7rem;
+}
+
+.severity-high {
+  background: linear-gradient(135deg, #fff7ed, #fed7aa);
+  color: #9a3412;
+  border-color: rgba(234, 88, 12, 0.2);
+}
+
+.severity-high::before {
+  content: "🟠";
+  font-size: 0.7rem;
+}
+
+.severity-medium {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+  color: #92400e;
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+.severity-medium::before {
+  content: "🟡";
+  font-size: 0.7rem;
+}
+
+.severity-low {
+  background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+  color: #065f46;
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.severity-low::before {
+  content: "🟢";
+  font-size: 0.7rem;
+}
+
 .small{font-size:0.9rem;color:var(--muted)}
 /* Enhanced Severity Badges */
 .badge {
@@ -529,9 +721,103 @@ body{
 .table a { color: #3b82f6; text-decoration: none; font-weight:600 }
 .table a:hover { text-decoration: underline }
 
-/* Lovable-like filter control styles */
-.report-controls select, .report-controls input{box-shadow:none;border:1px solid rgba(15,23,42,0.06);padding:10px 12px;border-radius:10px;background:#fff}
-.report-controls input{min-width:280px}
+/* Enhanced Filter Controls */
+.table-controls {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #f8fafc, #ffffff);
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.filter-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-input {
+  padding: 10px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  min-width: 200px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.filter-select {
+  padding: 10px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 0.875rem;
+  cursor: pointer;
+  min-width: 140px;
+  transition: all 0.2s ease;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.results-count {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Clear filters button */
+.clear-filters {
+  padding: 8px 16px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #374151;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clear-filters:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .table-controls {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .filter-group {
+    justify-content: stretch;
+  }
+  
+  .filter-input,
+  .filter-select {
+    min-width: auto;
+    flex: 1;
+  }
+}
 
 /* Table sorting */
 .table th{cursor:pointer;position:relative}
@@ -988,4 +1274,108 @@ body{
   margin-top: 12px;
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+/* Enhanced package and vulnerability info styling */
+.package-info strong {
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.version-info {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.vulnerability-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vulnerability-info strong {
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.vuln-link {
+  color: #3b82f6;
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: color 0.2s ease;
+}
+
+.vuln-link:hover {
+  color: #1d4ed8;
+  transform: scale(1.1);
+}
+
+.cvss-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cvss-score {
+  font-weight: 600;
+  color: #374151;
+}
+
+.cvss-version {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.description-text {
+  line-height: 1.4;
+  color: #4b5563;
+}
+
+.file-path {
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  color: #6b7280;
+  background: #f9fafb;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+}
+
+/* Table sorting styles */
+.table th.sort-asc::after,
+.table th.sort-desc::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+}
+
+.table th.sort-asc::after {
+  border-bottom-color: #374151;
+  border-top: none;
+}
+
+.table th.sort-desc::after {
+  border-top-color: #374151;
+  border-bottom: none;
+}
+
+.table th[data-sort] {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  padding-right: 35px;
+}
+
+.table th[data-sort]:hover {
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+}
+
+.sort-indicator {
+  margin-left: 8px;
+  color: #9ca3af;
+  font-size: 0.75rem;
 }
