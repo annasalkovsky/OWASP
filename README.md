@@ -3,10 +3,18 @@
 A professional web-based tool that transforms OWASP dependency-check XML reports into beautiful, audit-ready security reports with powerful delta comparison capabilities.
 
 ## 🚀 **Live Demo**
-- **🌐 Live OWASP Tool**: **[https://anna.ghe.com/OWASP-Dependency-Audit-Tool/](https://anna.ghe.com/OWASP-Dependency-Audit-Tool/)** - **Direct tool access (GitHub Pages)**
-- **Alternative URL**: **[https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/)** - **Repository with hosted tool**
-- **Enterprise Repository**: [imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool)
-- **Local Development**: Clone repository and open `web/index.html` for offline use
+
+### **🌐 Guaranteed Working Access:**
+**Local Server Method** (Works immediately):
+1. Clone: `git clone https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool.git`
+2. Navigate: `cd OWASP-Dependency-Audit-Tool/web`
+3. Run: `python -m http.server 8081`
+4. Open: **[http://localhost:8081/](http://localhost:8081/)**
+
+### **📋 GitHub Pages URLs** (May require admin setup):
+- **Enterprise Pages**: [https://imd-soft.ghe.com/pages/anna/OWASP-Dependency-Audit-Tool/](https://imd-soft.ghe.com/pages/anna/OWASP-Dependency-Audit-Tool/)
+- **User Pages**: [https://anna.imd-soft.ghe.com/OWASP-Dependency-Audit-Tool/](https://anna.imd-soft.ghe.com/OWASP-Dependency-Audit-Tool/)
+- **Repository**: [imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool)
 
 ## ✨ **Key Features**
 
