@@ -3,10 +3,10 @@
 A professional web-based tool that transforms OWASP dependency-check XML reports into beautiful, audit-ready security reports with powerful delta comparison capabilities.
 
 ## 🚀 **Live Demo**
-- **🌐 Live OWASP Tool**: **[https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/)** - **Direct browser access - works immediately!**
+- **🌐 Live OWASP Tool**: **[https://anna.ghe.com/OWASP-Dependency-Audit-Tool/](https://anna.ghe.com/OWASP-Dependency-Audit-Tool/)** - **Direct tool access (GitHub Pages)**
+- **Alternative URL**: **[https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/)** - **Repository with hosted tool**
 - **Enterprise Repository**: [imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool)
-- **Interactive Demo**: **[View Demo](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/demo/)** - **Live demo presentation**
-- **Alternative**: Clone repository and open `web/index.html` locally for offline use
+- **Local Development**: Clone repository and open `web/index.html` for offline use
 
 ## ✨ **Key Features**
 
