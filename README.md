@@ -4,17 +4,22 @@ A professional web-based tool that transforms OWASP dependency-check XML reports
 
 ## 🚀 **Live Demo**
 
-### **🌐 Guaranteed Working Access:**
-**Local Server Method** (Works immediately):
-1. Clone: `git clone https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool.git`
-2. Navigate: `cd OWASP-Dependency-Audit-Tool/web`
-3. Run: `python -m http.server 8081`
-4. Open: **[http://localhost:8081/](http://localhost:8081/)**
+### **🌐 Simple Access Method:**
 
-### **📋 GitHub Pages URLs** (May require admin setup):
-- **Enterprise Pages**: [https://imd-soft.ghe.com/pages/anna/OWASP-Dependency-Audit-Tool/](https://imd-soft.ghe.com/pages/anna/OWASP-Dependency-Audit-Tool/)
-- **User Pages**: [https://anna.imd-soft.ghe.com/OWASP-Dependency-Audit-Tool/](https://anna.imd-soft.ghe.com/OWASP-Dependency-Audit-Tool/)
-- **Repository**: [imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool)
+**Step 1:** Go to **[start.html](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/blob/main/start.html)** → Click "Raw" button
+
+**Step 2:** Click **"Download Enhanced Tool"** button → Save file → Open saved file
+
+### **🎯 Direct Download Link:**
+**[Download tool.html](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/raw/main/tool.html)** → Right-click → Save As → Open saved file in browser
+
+### **📋 Local Server Method (Guaranteed):**
+```bash
+git clone https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool.git
+cd OWASP-Dependency-Audit-Tool/web
+python -m http.server 8081
+# Open: http://localhost:8081/
+```
 
 ## ✨ **Key Features**
 
