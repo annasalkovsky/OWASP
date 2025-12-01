@@ -2631,6 +2631,53 @@ function openFileServerForBaseline() {
     }
 }
 
+function openFileServerForSuppressions() {
+    const pathInput = document.getElementById('owaspFileServerPath');
+    const defaultPath = '\\\\aut-tfs-file\\OWASP Dependency-Checks';
+    
+    // Set default path if empty
+    if (!pathInput.value.trim()) {
+        pathInput.value = defaultPath;
+    }
+    
+    const path = pathInput.value.trim();
+    console.log('Opening file server for suppressions file:', path);
+    
+    // Highlight the suppressions upload area
+    const suppressionsDropzone = document.getElementById('suppressions-drop');
+    if (suppressionsDropzone) {
+        suppressionsDropzone.style.border = '3px solid #9C27B0';
+        suppressionsDropzone.style.backgroundColor = '#f3e5f5';
+        setTimeout(() => {
+            suppressionsDropzone.style.border = '';
+            suppressionsDropzone.style.backgroundColor = '';
+        }, 3000);
+    }
+    
+    try {
+        // Try ActiveXObject first (IE/corporate environments)
+        if (window.ActiveXObject || "ActiveXObject" in window) {
+            const shell = new ActiveXObject("Shell.Application");
+            shell.Explore(path);
+            return;
+        }
+        
+        // Try to open Windows Explorer using explorer.exe
+        const explorerPath = path.replace(/\\\\/g, '\\').replace(/\//g, '\\');
+        window.open(`ms-appx-web:///shell:explorer.exe,${explorerPath}`, '_blank');
+        
+        // Fallback to file protocol
+        setTimeout(() => {
+            const fileUrl = `file:///${path.replace(/\\/g, '/')}`;
+            window.open(fileUrl, '_blank');
+        }, 100);
+        
+    } catch (error) {
+        console.log('Could not open file explorer automatically:', error);
+        alert(`Please open Windows Explorer and navigate to:\n\n${path}\n\n📂 Find suppressions.xml and upload to the suppressions file area`);
+    }
+}
+
 // Setup table event listeners for filtering and search
 function setupTableEventListeners() {
     // Find all tables with filter controls

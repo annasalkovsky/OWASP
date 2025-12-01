@@ -63,7 +63,10 @@
       </div>
 
       <div class="dropzone" id="suppressions-drop">
-        <input type="file" id="suppressions-file" accept=".xml" />
+        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+          <input type="file" id="suppressions-file" accept=".xml" style="flex: 1;" />
+          <button onclick="openFileServerForSuppressions()" style="background: #2196F3; color: white; padding: 8px 12px; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; flex-shrink: 0;" title="Open File Server">📂</button>
+        </div>
         <p class="drop-text">Suppressions File<br/><small>Upload suppressions.xml (optional)</small></p>
         <div class="uploaded-msg" id="suppressions-uploaded" aria-hidden="true" style="display:none">✓ Uploaded</div>
         <div class="progress-bar" id="suppressions-progress" style="display:none">
@@ -360,5 +363,6 @@
 
   <script src="app.js"></script>
 </body>
-</html>< ! - -   U p d a t e d   1 2 / 0 1 / 2 0 2 5   0 8 : 4 5 : 0 0   - - >  
+</html>< ! - -   U p d a t e d   1 2 / 0 1 / 2 0 2 5   0 8 : 4 5 : 0 0   - - > 
+ 
  
