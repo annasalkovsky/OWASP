@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>OWASP Dependency Audit Tool</title>
+  <!-- SheetJS XLSX Library for Excel export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+/* Inline all CSS for single file deployment */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    overflow-x: hidden;
+}
+
+.demo-container {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.position: relative {
+    
+}
+
+.demo-container .position\: relative {
+    
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    overflow-x: hidden;
+}
+
+.header {
+    background: #e8f2fd;
+    padding: 20px 0;
+    border-bottom: 1px solid #2196F3;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+h1 {
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.lead {
+    color: #666;
+    margin-top: 8px;
+    font-weight: normal;
+}
+
+/* Tab Navigation */
+.tab-navigation {
+    margin-bottom: 25px;
+}
+
+.tab-button {
+    background: #2196F3;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 6px 6px 0 0;
+    font-weight: 600;
+    cursor: pointer;
+    margin-right: 2px;
+    transition: background 0.3s;
+}
+
+.tab-button:hover {
+    background: #1976D2;
+}
+
+.tab-button.active {
+    background: #1976D2;
+}
+
+.tab-content {
+    background: white;
+    border-radius: 0 6px 6px 6px;
+    padding: 25px;
+    color: #333;
+}
+
+/* Comparison Mode */
+.comparison-mode {
+    margin-bottom: 16px;
+}
+
+.comparison-mode label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #333;
+}
+
+.comparison-mode input[type="checkbox"] {
+    margin: 0;
+}
+
+.comparison-mode small {
+    color: var(--muted);
+    font-weight: normal;
+}
+
+/* Auto-Load from File Server */
+.auto-load {
+    background: #e3f2fd;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    border: 1px solid #2196F3;
+}
+
+.auto-load h3 {
+    margin-bottom: 15px;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.file-server-section {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.file-server-section span {
+    font-size: 1.5rem;
+}
+
+.file-upload-section {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.file-upload-item {
+    background: white;
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 25px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.file-upload-item:hover {
+    border-color: #2196F3;
+    background: #f5f5f5;
+}
+
+.file-upload-item.dragover {
+    border-color: #2196F3;
+    background: #e3f2fd;
+}
+
+.file-upload-item input[type="file"] {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+.upload-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+}
+
+.upload-label strong {
+    font-size: 1.1em;
+    color: #333;
+}
+
+.upload-label span {
+    color: #666;
+    font-size: 0.9em;
+}
+
+.file-server-note {
+    color: #666;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.btn {
+    background: #2196F3;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn:hover {
+    background: #1976D2;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+}
+
+.btn-secondary {
+    background: #666;
+}
+
+.btn-secondary:hover {
+    background: #555;
+}
+
+/* Enhanced Table Styles */
+.table-container {
+    overflow-x: auto;
+    margin-top: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+th {
+    background: #f8f9fa;
+    padding: 12px;
+    text-align: left;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    color: #495057;
+    position: sticky;
+    top: 0;
+}
+
+td {
+    padding: 12px;
+    border-bottom: 1px solid #dee2e6;
+    vertical-align: top;
+}
+
+tr:hover {
+    background: #f8f9fa;
+}
+
+.severity-critical { 
+    background: #dc3545 !important; 
+    color: white; 
+    padding: 4px 8px; 
+    border-radius: 4px; 
+    font-weight: bold; 
+    font-size: 0.8em;
+}
+
+.severity-high { 
+    background: #fd7e14 !important; 
+    color: white; 
+    padding: 4px 8px; 
+    border-radius: 4px; 
+    font-weight: bold; 
+    font-size: 0.8em;
+}
+
+.severity-medium { 
+    background: #ffc107 !important; 
+    color: black; 
+    padding: 4px 8px; 
+    border-radius: 4px; 
+    font-weight: bold; 
+    font-size: 0.8em;
+}
+
+.severity-low { 
+    background: #28a745 !important; 
+    color: white; 
+    padding: 4px 8px; 
+    border-radius: 4px; 
+    font-weight: bold; 
+    font-size: 0.8em;
+}
+
+/* Filter and Search */
+.table-controls {
+    margin: 20px 0;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.search-input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    flex: 1;
+    min-width: 200px;
+}
+
+.filter-select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    background: white;
+}
+
+/* Hidden by default */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* SonarQube Tab Styling */
+#sonar-tab .auto-load {
+    background: #e8f5e8;
+    border-color: #4CAF50;
+}
+
+#sonar-tab .btn {
+    background: #4CAF50;
+}
+
+#sonar-tab .btn:hover {
+    background: #45a049;
+}
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="container">
+      <h1>🛡️ OWASP Dependency Audit Tool</h1>
+      <p class="lead">Generate audit-ready reports from dependency-check XML</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Tab Navigation -->
+    <div class="tab-navigation">
+      <button class="tab-button active" onclick="switchTab('owasp-tab')" id="owasp-tab-btn">
+        🛡️ OWASP Dependency Audit
+      </button>
+      <button class="tab-button" onclick="switchTab('sonar-tab')" id="sonar-tab-btn">
+        🔍 SonarQube Integration
+      </button>
+    </div>
+
+    <!-- OWASP Tab Content -->
+    <div id="owasp-tab" class="tab-content active">
+      <div class="comparison-mode" style="margin-bottom: 16px;">
+        <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #333;">
+          <input type="checkbox" id="delta-mode-toggle" style="margin: 0;">
+          Enable Delta Comparison Mode
+          <small style="color: #666; font-weight: normal;">(Shows additional upload fields for baseline files to compare changes)</small>
+        </label>
+      </div>
+
+      <!-- Auto-Load from File Server -->
+      <div style="background: #e3f2fd; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #2196F3;">
+        <h3 style="margin-bottom: 15px; color: #333; display: flex; align-items: center; gap: 8px;">
+          📁 Load OWASP Reports from File Server
+        </h3>
+        
+        <div style="display: grid; grid-template-columns: 1fr auto; gap: 15px; align-items: center; margin-bottom: 15px;">
+          <span style="font-size: 1.5rem;">📂</span>
+          <button onclick="openFileServerPath()" style="background: #2196F3; color: white; border: none; padding: 12px 25px; border-radius: 6px; font-weight: 600; cursor: pointer;">
+            📋 Copy File Server Path
+          </button>
+        </div>
+        
+        <p style="color: #666; margin-top: 10px; font-size: 14px;">Reports are automatically generated by TFS2018 builds and stored on the file server</p>
+      </div>
+      
+      <section class="upload-row">
+        <div style="display: grid; grid-template-columns: 1fr; gap: 15px; align-items: center; margin-bottom: 15px;">
+          <div style="background: white; border: 2px dashed #ccc; border-radius: 8px; padding: 25px; text-align: center; cursor: pointer; transition: all 0.3s; position: relative;" 
+               ondrop="handleDrop(event, 'Dependency-Check')" 
+               ondragover="handleDragOver(event)" 
+               onclick="document.getElementById('dependencyCheckFile').click()">
+            <input type="file" id="dependencyCheckFile" accept=".xml" style="position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none;">
+              <strong style="font-size: 1.1em; color: #333;">📄 Select OWASP Dependency-Check XML</strong>
+              <span style="color: #666; font-size: 0.9em;">Drag & drop or click to browse</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="action-buttons">
+        <button onclick="generateReport()" class="btn">📊 Generate Audit Report</button>
+        <button onclick="exportReport()" class="btn">📤 Export Report</button>
+        <button onclick="exportCSV()" class="btn">📋 Export CSV</button>
+        <button onclick="emailReport()" class="btn">📧 Email Report</button>
+        <button onclick="compareSuppressions()" class="btn btn-secondary">🔍 Compare Suspensions Only</button>
+      </div>
+    </div>
+
+    <!-- SonarQube Tab Content -->
+    <div id="sonar-tab" class="tab-content">
+      <div style="background: #e8f5e8; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #4CAF50;">
+        <h3 style="margin-bottom: 15px; color: #333;">🔍 SonarQube Integration</h3>
+        <p style="color: #666;">SonarQube integration features will be implemented here.</p>
+        <p style="color: #666; margin-top: 10px;">This tab is reserved for future SonarQube-related functionality.</p>
+      </div>
+      
+      <div class="action-buttons">
+        <button class="btn" style="background: #4CAF50;" disabled>🔍 Connect to SonarQube</button>
+        <button class="btn" style="background: #4CAF50;" disabled>📊 Generate SonarQube Report</button>
+      </div>
+    </div>
+
+    <div id="reportOutput" style="margin-top: 20px;"></div>
+  </main>
+
+  <script>
+// Inline all JavaScript for single file deployment
+function switchTab(tabId) {
+    // Hide all tab contents
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Remove active class from all tab buttons
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show selected tab content
+    document.getElementById(tabId).classList.add('active');
+    
+    // Add active class to selected tab button
+    document.getElementById(tabId + '-btn').classList.add('active');
+}
+
+function openFileServerPath() {
+    const path = "\\\\TFS2018\\BuildDrops\\OWASP_Reports";
+    
+    try {
+        // Modern clipboard API
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(path).then(() => {
+                alert('File server path copied to clipboard:\n' + path + '\n\nPaste into Windows Explorer address bar');
+            }).catch(err => {
+                console.error('Clipboard write failed:', err);
+                fallbackCopyMethod(path);
+            });
+        } else {
+            fallbackCopyMethod(path);
+        }
+    } catch (error) {
+        console.error('Copy failed:', error);
+        fallbackCopyMethod(path);
+    }
+}
+
+function fallbackCopyMethod(text) {
+    // Fallback method
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        document.execCommand('copy');
+        alert('File server path copied to clipboard:\n' + text + '\n\nPaste into Windows Explorer address bar');
+    } catch (err) {
+        alert('Copy failed. File server path:\n' + text + '\n\nPlease copy manually');
+    }
+    
+    document.body.removeChild(textArea);
+}
+
+function handleDrop(event, fileType) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+        const file = files[0];
+        console.log(`Dropped ${fileType} file:`, file.name);
+        
+        // Set the file to the appropriate input
+        if (fileType === 'Dependency-Check') {
+            document.getElementById('dependencyCheckFile').files = files;
+        }
+        
+        // Reset the visual state
+        event.target.style.borderColor = '#ccc';
+        event.target.style.background = 'white';
+    }
+}
+
+function handleDragOver(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.target.style.borderColor = '#2196F3';
+    event.target.style.background = '#e3f2fd';
+}
+
+function handleDragLeave(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.target.style.borderColor = '#ccc';
+    event.target.style.background = 'white';
+}
+
+// Add event listeners for drag and drop
+document.addEventListener('DOMContentLoaded', function() {
+    const dropZones = document.querySelectorAll('[ondrop]');
+    dropZones.forEach(zone => {
+        zone.addEventListener('dragleave', handleDragLeave);
+    });
+});
+
+function generateReport() {
+    alert('Generate Audit Report functionality - implementation pending');
+}
+
+function exportReport() {
+    alert('Export Report functionality - implementation pending');
+}
+
+function exportCSV() {
+    alert('Export CSV functionality - implementation pending');
+}
+
+function emailReport() {
+    alert('Email Report functionality - implementation pending');
+}
+
+function compareSuppressions() {
+    alert('Compare Suspensions Only functionality - implementation pending');
+}
+
+// Initialize the page
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('OWASP Dependency Audit Tool loaded successfully');
+});
+  </script>
+</body>
+</html>

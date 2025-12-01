@@ -3,8 +3,23 @@
 A professional web-based tool that transforms OWASP dependency-check XML reports into beautiful, audit-ready security reports with powerful delta comparison capabilities.
 
 ## 🚀 **Live Demo**
-- **Try it now**: [annasalkovsky.github.io/OWASP](https://annasalkovsky.github.io/OWASP/)
-- **Interactive Demo**: [View Demo Presentation](https://annasalkovsky.github.io/OWASP/demo/)
+
+### **🌐 Simple Access Method:**
+
+**Step 1:** Go to **[start.html](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/blob/main/start.html)** → Click "Raw" button
+
+**Step 2:** Click **"Download Enhanced Tool"** button → Save file → Open saved file
+
+### **🎯 Direct Download Link:**
+**[Download tool.html](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/raw/main/tool.html)** → Right-click → Save As → Open saved file in browser
+
+### **📋 Local Server Method (Guaranteed):**
+```bash
+git clone https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool.git
+cd OWASP-Dependency-Audit-Tool/web
+python -m http.server 8081
+# Open: http://localhost:8081/
+```
 
 ## ✨ **Key Features**
 
@@ -66,15 +81,21 @@ Baseline Scan → Apply Fixes → New Scan → Delta Report
 
 ## 🚀 **Quick Start**
 
-### Option 1: Use Online (Recommended)
-Visit [annasalkovsky.github.io/OWASP](https://annasalkovsky.github.io/OWASP/) - no setup required!
-
-### Option 2: Local Development
+### Option 1: Local Development (Recommended)
 ```bash
-git clone https://github.com/annasalkovsky/OWASP.git
-cd OWASP
-# Open web/index.html in your browser
+git clone https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool.git
+cd OWASP-Dependency-Audit-Tool/web
+# Open index.html in your browser - works immediately with full functionality!
 ```
+
+### Option 2: Direct Browser Access
+1. Go to **[web/index.html](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/blob/main/web/index.html)**
+2. Click the **"Raw"** button in GitHub
+3. Copy the raw URL from your browser
+4. Open that URL in a new browser tab
+
+### Option 3: Enterprise Deployment
+Deploy to your internal web server or set up GitHub Pages on your enterprise GitHub.
 
 ### Option 3: Deploy Your Own
 - Fork this repository
@@ -93,8 +114,11 @@ cd OWASP
 
 ## 🎬 **Demo & Showcase**
 
-- **Interactive Demo**: [View the presentation](https://annasalkovsky.github.io/OWASP/demo/)
-- **Live Tool**: [Try with your own files](https://annasalkovsky.github.io/OWASP/)
+- **🌐 Live OWASP Tool**: **[web/index.html](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/blob/main/web/index.html)** - **Click "Raw" button for direct browser access**
+- **Enterprise Repository**: [View source code and documentation](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool)
+- **Interactive Demo**: **[demo/index.html](https://imd-soft.ghe.com/anna/OWASP-Dependency-Audit-Tool/blob/main/demo/index.html)** - **Click "Raw" button for live presentation**
+- **Recommended**: Clone the repository and open `web/index.html` locally - works immediately with all features!
+- **Demo Files**: Complete presentation and examples included in repository
 
 ## 🤝 **Contributing**
 
@@ -112,4 +136,10 @@ This project is open source and available under the MIT License.
 
 ## 🙋‍♀️ **About**
 
-Created by Anna Salkovsky at iMD-soft for streamlined security vulnerability reporting and delta analysis. Perfect for development teams who need professional, audit-ready security reports with progress tracking capabilities.
+Created by Anna Salkovsky at iMD-soft for streamlined security vulnerability reporting and delta analysis. Perfect for enterprise development teams who need professional, audit-ready security reports with progress tracking capabilities.
+
+**Enterprise Features:**
+- 🏢 Internal deployment ready
+- 🔐 Enterprise security compliance
+- 🚀 Scalable for team collaboration
+- 📊 Comprehensive audit reporting

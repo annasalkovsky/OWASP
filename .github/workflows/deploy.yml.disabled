@@ -31,12 +31,20 @@ jobs:
     - name: Install dependencies
       run: |
         cd web
-        npm install --only=dev || echo "No package.json found, skipping npm install"
+        if [ -f package.json ]; then
+          npm install --only=dev
+        else
+          echo "No package.json found, skipping npm install"
+        fi
         
     - name: Build
       run: |
         cd web
-        npm run build || echo "No build script found, skipping build"
+        if [ -f package.json ] && npm run build --dry-run 2>/dev/null; then
+          npm run build
+        else
+          echo "No build script needed for static site"
+        fi
         
     - name: Setup Pages
       uses: actions/configure-pages@v4
@@ -44,7 +52,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: '.'
+        path: './web'
 
   deploy:
     environment:
