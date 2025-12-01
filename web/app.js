@@ -13,6 +13,7 @@ let isDeltaMode = false;
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM ready - setting up application');
     
+    setupTabs();
     setupDeltaToggle();
     setupFileUploads();
     setupButtons();
@@ -20,6 +21,47 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('Application setup complete');
 });
+
+// Tab switching functionality
+function switchTab(tabId) {
+    // Hide all tab contents
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // Remove active class from all buttons
+    const tabButtons = document.querySelectorAll('.tab-button');
+    tabButtons.forEach(button => {
+        button.classList.remove('active');
+    });
+    
+    // Show selected tab content
+    const selectedTab = document.getElementById(tabId);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+    }
+    
+    // Add active class to corresponding button
+    const buttonId = tabId + '-btn';
+    const selectedButton = document.getElementById(buttonId);
+    if (selectedButton) {
+        selectedButton.classList.add('active');
+    }
+    
+    console.log('Switched to tab:', tabId);
+}
+
+function setupTabs() {
+    // Initialize the first tab as active
+    const firstTab = document.getElementById('owasp-tab');
+    const firstButton = document.getElementById('owasp-tab-btn');
+    
+    if (firstTab && firstButton) {
+        firstTab.classList.add('active');
+        firstButton.classList.add('active');
+    }
+}
 
 function setupDeltaToggle() {
     const deltaToggle = document.getElementById('delta-mode-toggle');
@@ -271,7 +313,9 @@ function setUploadedState(type, isUploaded) {
 function setupButtons() {
     const generateBtn = document.getElementById('generate-btn');
     const exportBtn = document.getElementById('export-btn');
+    const csvExportBtn = document.getElementById('export-csv-btn');
     const emailBtn = document.getElementById('email-btn');
+    const compareSuppressions = document.getElementById('compare-suppressions-btn');
     
     if (generateBtn) {
         generateBtn.addEventListener('click', function() {
@@ -295,8 +339,23 @@ function setupButtons() {
         exportBtn.addEventListener('click', handleExportReport);
     }
     
+    if (csvExportBtn) {
+        csvExportBtn.addEventListener('click', handleExportCSV);
+    }
+    
     if (emailBtn) {
         emailBtn.addEventListener('click', handleEmailReport);
+    }
+    
+    if (compareSuppressions) {
+        compareSuppressions.addEventListener('click', function() {
+            if (!suppressionsXml && !baselineSuppressionsXml) {
+                alert('Please upload at least one suppressions file to compare');
+                return;
+            }
+            // This could open a modal or navigate to comparison page
+            window.open('suppressions-compare.html', '_blank');
+        });
     }
 }
 
@@ -314,8 +373,10 @@ function generateAuditReport() {
         
         // Enable export buttons
         const exportBtn = document.getElementById('export-btn');
+        const csvExportBtn = document.getElementById('export-csv-btn');
         const emailBtn = document.getElementById('email-btn');
         if (exportBtn) exportBtn.disabled = false;
+        if (csvExportBtn) csvExportBtn.disabled = false;
         if (emailBtn) emailBtn.disabled = false;
         
         console.log(`Audit report generated with ${vulnerabilities.length} vulnerabilities`);
@@ -731,6 +792,9 @@ function displayReport(vulnerabilities, type) {
     
     reportArea.innerHTML = html;
     reportArea.hidden = false;
+    
+    // Setup table event listeners for filtering and sorting
+    setupTableEventListeners();
 }
 
 // Display delta comparison report
@@ -877,6 +941,9 @@ function displayDeltaReport(newVulns, fixedVulns) {
     
     reportArea.innerHTML = html;
     reportArea.hidden = false;
+    
+    // Setup table event listeners for filtering and sorting
+    setupTableEventListeners();
 }
 
 // Calculate suppression changes between current and baseline
@@ -939,41 +1006,162 @@ function generateVulnerabilityTable(vulnerabilities, tableClass = '') {
         return '<p class="no-vulnerabilities">No vulnerabilities found.</p>';
     }
     
-    const tableRows = vulnerabilities.map(vuln => `
-        <tr>
-            <td>${escapeHtml(vuln.Package)}</td>
-            <td>${escapeHtml(vuln.Vulnerability)}</td>
+    const uniqueId = 'vuln-table-' + Math.random().toString(36).substr(2, 9);
+    
+    const tableRows = vulnerabilities.map((vuln, index) => `
+        <tr class="vuln-row" data-index="${index}">
+            <td>
+                <div class="package-info">
+                    <strong>${escapeHtml(vuln.Package)}</strong>
+                    ${vuln.Version ? `<div class="version-info">v${escapeHtml(vuln.Version)}</div>` : ''}
+                </div>
+            </td>
+            <td>
+                <div class="vulnerability-info">
+                    <strong>${escapeHtml(vuln.Vulnerability)}</strong>
+                    ${vuln.Link ? `<a href="${escapeHtml(vuln.Link)}" target="_blank" class="vuln-link" title="View details">🔗</a>` : ''}
+                </div>
+            </td>
             <td><span class="severity-${vuln.Severity.toLowerCase()}">${escapeHtml(vuln.Severity)}</span></td>
-            <td>${escapeHtml(vuln.CVSS)}</td>
-            <td>${escapeHtml(vuln.Description)}</td>
-            <td>${escapeHtml(vuln.File)}</td>
+            <td>
+                <div class="cvss-info">
+                    <span class="cvss-score">${escapeHtml(vuln.CVSS)}</span>
+                    ${vuln.CVSSv3 ? `<div class="cvss-version">v3: ${escapeHtml(vuln.CVSSv3)}</div>` : ''}
+                </div>
+            </td>
+            <td>
+                <div class="description-text" title="${escapeHtml(vuln.Description)}">
+                    ${truncateText(escapeHtml(vuln.Description), 120)}
+                </div>
+            </td>
+            <td>
+                <div class="file-path" title="${escapeHtml(vuln.File)}">
+                    ${truncateFilePath(escapeHtml(vuln.File))}
+                </div>
+            </td>
         </tr>
     `).join('');
     
     return `
-        <table id="vuln-table" class="${tableClass}">
-            <thead>
-                <tr>
-                    <th>Package</th>
-                    <th>Vulnerability</th>
-                    <th>Severity</th>
-                    <th>CVSS</th>
-                    <th>Description</th>
-                    <th>File</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${tableRows}
-            </tbody>
-        </table>
+        <div class="table-container">
+            <div class="table-controls">
+                <div class="filter-group">
+                    <input type="text" id="${uniqueId}-search" class="filter-input" placeholder="🔍 Search vulnerabilities..." />
+                    <select id="${uniqueId}-severity" class="filter-select">
+                        <option value="">All Severities</option>
+                        <option value="CRITICAL">Critical</option>
+                        <option value="HIGH">High</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="LOW">Low</option>
+                    </select>
+                    <button class="clear-filters" onclick="clearTableFilters('${uniqueId}')">Clear Filters</button>
+                </div>
+                <div class="results-count" id="${uniqueId}-count">${vulnerabilities.length} vulnerabilities</div>
+            </div>
+            <div class="table-wrapper">
+                <table id="${uniqueId}" class="table ${tableClass}" data-vulnerabilities='${JSON.stringify(vulnerabilities)}'>
+                    <thead>
+                        <tr>
+                            <th data-sort="Package">Package <span class="sort-indicator"></span></th>
+                            <th data-sort="Vulnerability">Vulnerability <span class="sort-indicator"></span></th>
+                            <th data-sort="Severity">Severity <span class="sort-indicator"></span></th>
+                            <th data-sort="CVSS">CVSS Score <span class="sort-indicator"></span></th>
+                            <th data-sort="Description">Description</th>
+                            <th data-sort="File">File Path</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRows}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     `;
 }
 
 // Escape HTML to prevent XSS
 function escapeHtml(text) {
+    if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Helper function to truncate text
+function truncateText(text, maxLength) {
+    if (!text || text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+}
+
+// Helper function to truncate file paths intelligently
+function truncateFilePath(path, maxLength = 50) {
+    if (!path || path.length <= maxLength) return path;
+    
+    const parts = path.split(/[\\/]/);
+    if (parts.length <= 2) return path;
+    
+    const fileName = parts[parts.length - 1];
+    const firstPart = parts[0];
+    
+    if ((firstPart + '/.../' + fileName).length <= maxLength) {
+        return firstPart + '/.../' + fileName;
+    }
+    
+    return '.../' + fileName;
+}
+
+// Clear table filters
+function clearTableFilters(tableId) {
+    const searchInput = document.getElementById(tableId + '-search');
+    const severitySelect = document.getElementById(tableId + '-severity');
+    
+    if (searchInput) searchInput.value = '';
+    if (severitySelect) severitySelect.value = '';
+    
+    filterTable(tableId);
+}
+
+// Enhanced table filtering
+function filterTable(tableId) {
+    const table = document.getElementById(tableId);
+    const searchInput = document.getElementById(tableId + '-search');
+    const severitySelect = document.getElementById(tableId + '-severity');
+    const countElement = document.getElementById(tableId + '-count');
+    
+    if (!table || !searchInput || !severitySelect) return;
+    
+    const searchTerm = searchInput.value.toLowerCase();
+    const severityFilter = severitySelect.value;
+    const rows = table.querySelectorAll('tbody tr');
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const packageName = cells[0]?.textContent.toLowerCase() || '';
+        const vulnerability = cells[1]?.textContent.toLowerCase() || '';
+        const severity = cells[2]?.textContent.trim() || '';
+        const description = cells[4]?.textContent.toLowerCase() || '';
+        const filePath = cells[5]?.textContent.toLowerCase() || '';
+        
+        const matchesSearch = !searchTerm || 
+            packageName.includes(searchTerm) ||
+            vulnerability.includes(searchTerm) ||
+            description.includes(searchTerm) ||
+            filePath.includes(searchTerm);
+            
+        const matchesSeverity = !severityFilter || severity === severityFilter;
+        
+        if (matchesSearch && matchesSeverity) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    if (countElement) {
+        countElement.textContent = `${visibleCount} vulnerabilities`;
+    }
 }
 
 // Handle export report
@@ -1406,7 +1594,7 @@ async function fetchSonarData(host, project, token) {
         addLogMessage(`✅ Successfully retrieved ${issues.length} security issues!\n\n`);
         
         if (issues.length > 0) {
-            displayResults(issues);
+            displaySonarResults(issues);
             enableExportButton();
         } else {
             addLogMessage('⚠️ No security issues found for this project.\n');
@@ -1430,7 +1618,7 @@ async function fetchSonarData(host, project, token) {
     }
 }
 
-function displayResults(issues) {
+function displaySonarResults(issues) {
     addLogMessage('📊 Processing results...\n');
     
     // Show summary
@@ -1486,7 +1674,7 @@ function showDemoData() {
     ];
     
     window.sonarResults = demoData;
-    displayResults(demoData);
+    displaySonarResults(demoData);
     enableExportButton();
 }
 
@@ -1495,12 +1683,12 @@ function enableExportButton() {
     if (exportBtn) {
         exportBtn.disabled = false;
         exportBtn.style.opacity = '1';
-        exportBtn.onclick = exportToExcel;
+        exportBtn.onclick = exportSonarToExcel;
         addLogMessage('📁 Export button is now enabled!\n');
     }
 }
 
-function exportToExcel() {
+function exportSonarToExcel() {
     if (!window.sonarResults || window.sonarResults.length === 0) {
         alert('No data to export');
         return;
@@ -1559,2173 +1747,25 @@ function exportToExcel() {
     }
 }
 
-// Make functions globally accessible
-window.generateSonarReport = generateSonarReport;
-
-// Load reports from file server
-function loadFromFileServer(reportType) {
-    console.log('Loading from file server:', reportType);
-    
-    let pathInput, resultsDiv, errorDiv, successDiv;
-    
-    if (reportType === 'issues') {
-        pathInput = document.getElementById('sonarFileServerPath');
-        resultsDiv = document.getElementById('sonarResults');
-        errorDiv = document.getElementById('sonarErrorMessage');
-        successDiv = document.getElementById('sonarSuccessMessage');
-    } else {
-        pathInput = document.getElementById('sonarRulesFileServerPath');
-        resultsDiv = document.getElementById('sonarRulesResults');
-        errorDiv = document.getElementById('sonarRulesErrorMessage');
-        successDiv = document.getElementById('sonarRulesSuccessMessage');
-    }
-    
-    const filePath = pathInput.value.trim();
-    
-    if (!filePath) {
-        showError(errorDiv, successDiv, 'Please enter the file server path');
-        return;
-    }
-    
-    // Show loading message
-    showSuccess(successDiv, errorDiv, `Loading report from: ${filePath}`);
-    
-    // Try to load file from server path
-    loadFileFromPath(filePath, reportType, resultsDiv, errorDiv, successDiv);
-}
-
-function loadFileFromPath(filePath, reportType, resultsDiv, errorDiv, successDiv) {
-    // Since browsers can't directly access file:// or UNC paths for security,
-    // we'll provide instructions for users to copy the file
-    
-    const instructions = `
-    To load the automated report:
-    
-    1. Navigate to: ${filePath}
-    2. Right-click the HTML file → Copy
-    3. Return to this tool
-    4. Use the "Drop HTML Report Here" section below
-    5. Paste or drag the copied file
-    
-    Alternative: Set up a web server to serve files from the file server.
-    `;
-    
-    showError(errorDiv, successDiv, 'Cannot directly access file server from browser. ' + instructions);
-    
-    // Better approach: Provide a direct link if the file server is web-accessible
-    const webPath = filePath.replace('\\\\aut-tfs-file\\', 'http://aut-tfs-file/').replace(/\\/g, '/');
-    
-    // Try to fetch if it's web-accessible
-    fetch(webPath)
-        .then(response => {
-            if (response.ok) {
-                return response.text();
-            }
-            throw new Error('File not accessible via web');
-        })
-        .then(htmlContent => {
-            // Process the loaded HTML content
-            const parsedData = parseSonarQubeHtml(htmlContent);
-            
-            if (reportType === 'issues') {
-                displaySonarResults(parsedData);
-            } else {
-                displaySonarRulesResults(parsedData);
-            }
-            
-            showSuccess(successDiv, errorDiv, `Successfully loaded ${parsedData.length} items from file server`);
-        })
-        .catch(error => {
-            console.log('Direct file access failed, showing manual instructions');
-            
-            // Show manual instructions
-            showError(errorDiv, successDiv, `
-                Automated file loading not available. Please:
-                
-                1. Open: ${filePath}
-                2. Save/download the HTML file  
-                3. Upload using the section below
-                
-                (Contact IT to set up web access to file server for direct loading)
-            `);
-        });
-}
-
-function showError(errorDiv, successDiv, message) {
-    if (errorDiv) {
-        errorDiv.innerHTML = message.replace(/\n/g, '<br>');
-        errorDiv.style.display = 'block';
-    }
-    if (successDiv) {
-        successDiv.style.display = 'none';
-    }
-}
-
-function showSuccess(successDiv, errorDiv, message) {
-    if (successDiv) {
-        successDiv.innerHTML = message.replace(/\n/g, '<br>');
-        successDiv.style.display = 'block';
-    }
-    if (errorDiv) {
-        errorDiv.style.display = 'none';
-    }
-}
-
-async function runFullSonarScript() {
-    console.log('🚀 Running full embedded SonarQube security report generation...');
-    
-    // Update config from form
-    updateSonarConfig();
-    
-    // Validate configuration
-    if (!sonarConfig.host || !sonarConfig.token || !sonarConfig.projectKey) {
-        alert('Please fill in all SonarQube configuration fields (Host, Token, Project Key)');
-        return;
-    }
-    
-    const resultsArea = document.getElementById('sonar-results-area');
-    const executionLog = document.getElementById('sonar-execution-log');
-    const reportsContainer = document.getElementById('sonar-reports-container');
-    
-    if (!resultsArea) return;
-    
-    // Show results area and clear previous results
-    resultsArea.hidden = false;
-    sonarResults = [];
-    if (executionLog) executionLog.textContent = '';
-    if (reportsContainer) reportsContainer.innerHTML = '';
-    
-    try {
-        const executeBtn = document.getElementById('execute-sonar-btn');
-        if (executeBtn) {
-            executeBtn.disabled = true;
-            executeBtn.textContent = '🔄 Generating Report...';
-        }
-        
-        appendToLog(executionLog, '=== SonarQube Security Report Generation Started ===\n');
-        appendToLog(executionLog, `Timestamp: ${new Date().toISOString()}\n`);
-        appendToLog(executionLog, `SonarQube Host: ${sonarConfig.host}\n`);
-        appendToLog(executionLog, `Project Key: ${sonarConfig.projectKey}\n\n`);
-        
-        // Create auth header (Basic Auth with token)
-        const authHeader = 'Basic ' + btoa(sonarConfig.token + ':');
-        
-        // 1️⃣ Fetch Security Issues
-        appendToLog(executionLog, '📋 Fetching Security Issues...\n');
-        const securityIssues = await fetchSonarSecurityIssues(authHeader, executionLog);
-        
-        // 2️⃣ Fetch Security Hotspots
-        appendToLog(executionLog, '🔥 Fetching Security Hotspots...\n');
-        const securityHotspots = await fetchSonarSecurityHotspots(authHeader, executionLog);
-        
-        // Combine all results
-        const allIssues = [...securityIssues, ...securityHotspots];
-        sonarResults.push(...allIssues);
-        
-        appendToLog(executionLog, `\n✅ Report generation complete!\n`);
-        appendToLog(executionLog, `   - Security Issues: ${securityIssues.length}\n`);
-        appendToLog(executionLog, `   - Security Hotspots: ${securityHotspots.length}\n`);
-        appendToLog(executionLog, `   - Total: ${allIssues.length}\n\n`);
-        
-        // Display results
-        if (allIssues.length > 0) {
-            displaySonarReport('Generated Security Report', allIssues, reportsContainer);
-            updateExportButtons();
-        } else {
-            appendToLog(executionLog, '⚠️ No security issues or hotspots found for this project.\n');
-        }
-        
-        appendToLog(executionLog, '=== Generation Complete ===\n');
-        
-    } catch (error) {
-        console.error('SonarQube script execution error:', error);
-        appendToLog(executionLog, `\n❌ ERROR: ${error.message}\n`);
-        
-        // Check for CORS errors specifically
-        if (error.message.includes('CORS') || error.message.includes('fetch')) {
-            appendToLog(executionLog, '\n🚨 POSSIBLE CORS ISSUE DETECTED!\n');
-            appendToLog(executionLog, 'This happens when trying to access a different server from localhost.\n');
-            appendToLog(executionLog, '\n💡 SOLUTIONS:\n');
-            appendToLog(executionLog, '1. Run this tool from the same server as SonarQube\n');
-            appendToLog(executionLog, '2. Configure SonarQube CORS settings\n');
-            appendToLog(executionLog, '3. Use a proxy server\n');
-            appendToLog(executionLog, '4. Export SonarQube reports as HTML and use upload sections below\n\n');
-        }
-        
-        appendToLog(executionLog, 'Please check your configuration and network connection.\n');
-    } finally {
-        const executeBtn = document.getElementById('execute-sonar-btn');
-        if (executeBtn) {
-            executeBtn.disabled = false;
-            executeBtn.textContent = '🚀 Generate Security Report';
-        }
-    }
-}
-
-async function fetchSonarSecurityIssues(authHeader, executionLog) {
-    const issuesUrl = `${sonarConfig.host}/api/issues/search?components=${sonarConfig.projectKey}&s=FILE_LINE&impactSoftwareQualities=SECURITY&ps=500&additionalFields=_all&timeZone=Asia/Jerusalem`;
-    
-    try {
-        appendToLog(executionLog, `   Calling: ${issuesUrl}\n`);
-        
-        const response = await fetch(issuesUrl, {
-            method: 'GET',
-            headers: {
-                'Authorization': authHeader,
-                'Accept': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        const issues = data.issues || [];
-        
-        appendToLog(executionLog, `   ✓ Retrieved ${issues.length} security issues\n`);
-        
-        // Convert to standardized format
-        return issues.map(issue => ({
-            key: issue.key,
-            project: issue.project,
-            component: issue.component,
-            status: issue.status,
-            resolution: issue.resolution || '',
-            resolutionComment: extractResolutionComment(issue.comments),
-            created: formatDate(issue.creationDate),
-            updated: formatDate(issue.updateDate),
-            message: issue.message,
-            issueType: 'Security Issue',
-            script: 1,
-            severity: issue.severity || 'UNKNOWN',
-            rowClass: issue.status !== 'RESOLVED' ? 'NONRESOLVED' : ''
-        }));
-        
-    } catch (error) {
-        appendToLog(executionLog, `   ❌ Error fetching security issues: ${error.message}\n`);
-        throw error;
-    }
-}
-
-async function fetchSonarSecurityHotspots(authHeader, executionLog) {
-    const hotspotsUrl = `${sonarConfig.host}/api/hotspots/search?inNewCodePeriod=false&onlyMine=false&p=1&project=${sonarConfig.projectKey}&ps=500`;
-    
-    try {
-        appendToLog(executionLog, `   Calling: ${hotspotsUrl}\n`);
-        
-        const response = await fetch(hotspotsUrl, {
-            method: 'GET',
-            headers: {
-                'Authorization': authHeader,
-                'Accept': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        const hotspots = data.hotspots || [];
-        
-        appendToLog(executionLog, `   ✓ Retrieved ${hotspots.length} security hotspots\n`);
-        
-        // Fetch details for each hotspot to get resolution comments
-        const detailedHotspots = [];
-        for (const hotspot of hotspots) {
-            try {
-                const details = await fetchHotspotDetails(hotspot.key, authHeader);
-                detailedHotspots.push({
-                    key: hotspot.key,
-                    project: hotspot.project,
-                    component: hotspot.component,
-                    status: hotspot.status,
-                    resolution: hotspot.resolution || '',
-                    resolutionComment: extractHotspotComment(details),
-                    created: formatDate(hotspot.creationDate),
-                    updated: formatDate(hotspot.updateDate),
-                    message: hotspot.message,
-                    issueType: 'Security Hotspot',
-                    script: 1,
-                    severity: hotspot.vulnerabilityProbability || 'UNKNOWN',
-                    rowClass: (hotspot.status === 'TO_REVIEW' || hotspot.status === 'PENDING') ? 'NONRESOLVED' : ''
-                });
-            } catch (detailError) {
-                // If details fetch fails, use basic hotspot info
-                detailedHotspots.push({
-                    key: hotspot.key,
-                    project: hotspot.project,
-                    component: hotspot.component,
-                    status: hotspot.status,
-                    resolution: hotspot.resolution || '',
-                    resolutionComment: '',
-                    created: formatDate(hotspot.creationDate),
-                    updated: formatDate(hotspot.updateDate),
-                    message: hotspot.message,
-                    issueType: 'Security Hotspot',
-                    script: 1,
-                    severity: hotspot.vulnerabilityProbability || 'UNKNOWN',
-                    rowClass: (hotspot.status === 'TO_REVIEW' || hotspot.status === 'PENDING') ? 'NONRESOLVED' : ''
-                });
-            }
-        }
-        
-        return detailedHotspots;
-        
-    } catch (error) {
-        appendToLog(executionLog, `   ❌ Error fetching security hotspots: ${error.message}\n`);
-        throw error;
-    }
-}
-
-async function fetchHotspotDetails(hotspotKey, authHeader) {
-    const detailUrl = `${sonarConfig.host}/api/hotspots/show?hotspot=${hotspotKey}`;
-    
-    const response = await fetch(detailUrl, {
-        method: 'GET',
-        headers: {
-            'Authorization': authHeader,
-            'Accept': 'application/json'
-        }
-    });
-    
-    if (!response.ok) {
-        throw new Error(`Failed to fetch hotspot details: HTTP ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return data.hotspot || {};
-}
-
-// Helper functions
-function extractResolutionComment(comments) {
-    if (!comments || comments.length === 0) return '';
-    
-    const lastComment = comments[comments.length - 1];
-    return lastComment.htmlText || lastComment.markdown || '';
-}
-
-function extractHotspotComment(hotspotDetail) {
-    if (!hotspotDetail || !hotspotDetail.comment) return '';
-    
-    const comment = hotspotDetail.comment;
-    if (Array.isArray(comment) && comment.length > 0) {
-        const lastComment = comment[comment.length - 1];
-        return lastComment.htmlText || lastComment.markdown || '';
-    } else if (typeof comment === 'object') {
-        return comment.htmlText || comment.markdown || '';
-    }
-    
-    return '';
-}
-
-function formatDate(dateString) {
-    if (!dateString) return '';
-    
-    try {
-        return new Date(dateString).toISOString().split('T')[0]; // yyyy-MM-dd format
-    } catch {
-        return dateString;
-    }
-}
-
-// Helper functions for normalization
-function normalizeStatus(status) {
-    if (!status) return 'UNKNOWN';
-    return status.toUpperCase();
-}
-
-function guessIssueType(message, status) {
-    if (status === 'TO_REVIEW' || message.toLowerCase().includes('hotspot')) {
-        return 'Security Hotspot';
-    }
-    return 'Security Issue';
-}
-
-function appendToLog(logElement, message) {
-    if (logElement) {
-        logElement.textContent += message;
-        logElement.scrollTop = logElement.scrollHeight;
-    }
-    console.log(message.replace(/\n/g, ''));
-}
-
-async function executeScript(scriptData, scriptNumber, executionLog, reportsContainer) {
-    appendToLog(executionLog, `--- Processing File ${scriptNumber}: ${scriptData.name} ---\n`);
-    appendToLog(executionLog, `File size: ${(scriptData.size / 1024).toFixed(1)} KB\n`);
-    appendToLog(executionLog, `File type: ${scriptData.type}\n`);
-    
-    let parsedData = [];
-    
-    if (scriptData.type === 'html') {
-        // Parse HTML SonarQube report
-        appendToLog(executionLog, 'Parsing SonarQube HTML report...\n');
-        appendToLog(executionLog, 'Opening browser console (F12) for detailed parsing logs...\n');
-        
-        try {
-            parsedData = parseSonarQubeHtml(scriptData.content, scriptNumber);
-            appendToLog(executionLog, `✅ Successfully parsed ${parsedData.length} security issues from HTML report.\n`);
-            
-            if (parsedData.length > 0) {
-                // Show breakdown
-                const securityIssues = parsedData.filter(item => item.issueType === 'Security Issue').length;
-                const securityHotspots = parsedData.filter(item => item.issueType === 'Security Hotspot').length;
-                const openIssues = parsedData.filter(item => item.status === 'OPEN' || item.status === 'TO_REVIEW').length;
-                
-                appendToLog(executionLog, `   - Security Issues: ${securityIssues}\n`);
-                appendToLog(executionLog, `   - Security Hotspots: ${securityHotspots}\n`);
-                appendToLog(executionLog, `   - Open/To Review: ${openIssues}\n`);
-            }
-        } catch (error) {
-            appendToLog(executionLog, `❌ Error parsing HTML: ${error.message}\n`);
-            appendToLog(executionLog, 'Falling back to sample data for demonstration...\n');
-            parsedData = generateSampleSonarData(scriptNumber);
-        }
-        
-        appendToLog(executionLog, '\n');
-    } else {
-        // PowerShell script - provide execution instructions
-        appendToLog(executionLog, '🔧 PowerShell Script Detected!\n');
-        appendToLog(executionLog, 'This appears to be a SonarQube security report generator script.\n\n');
-        
-        appendToLog(executionLog, '📋 EXECUTION INSTRUCTIONS:\n');
-        appendToLog(executionLog, '1️⃣ Open PowerShell as Administrator (recommended)\n');
-        appendToLog(executionLog, '2️⃣ Navigate to your desired output directory:\n');
-        appendToLog(executionLog, '   cd "C:\\Users\\anna\\OWASP"\n');
-        appendToLog(executionLog, '3️⃣ Copy the script content below and save as .ps1 file\n');
-        appendToLog(executionLog, '4️⃣ Run the script: .\\YourScript.ps1\n');
-        appendToLog(executionLog, '5️⃣ Upload the generated HTML file using the file upload above\n');
-        appendToLog(executionLog, '📍 TIP: Always run from the directory where you want the report saved!\n\n');
-        
-        appendToLog(executionLog, '🔍 Script Analysis:\n');
-        
-        // Analyze the script content
-        const scriptContent = scriptData.content;
-        
-        if (scriptContent.includes('$SonarHost')) {
-            const hostMatch = scriptContent.match(/\$SonarHost\s*=\s*"([^"]+)"/);
-            if (hostMatch) {
-                appendToLog(executionLog, `   - SonarQube Host: ${hostMatch[1]}\n`);
-            }
-        }
-        
-        if (scriptContent.includes('$ProjectKey')) {
-            const projectMatch = scriptContent.match(/\$ProjectKey\s*=\s*"([^"]+)"/);
-            if (projectMatch) {
-                appendToLog(executionLog, `   - Project Key: ${projectMatch[1]}\n`);
-            }
-        }
-        
-        if (scriptContent.includes('$HtmlFile')) {
-            const fileMatch = scriptContent.match(/\$HtmlFile\s*=\s*"([^"]+)"/);
-            if (fileMatch) {
-                const filePath = fileMatch[1];
-                appendToLog(executionLog, `   - Output File: ${filePath}\n`);
-                
-                // Check if it's a relative path
-                if (!filePath.includes(':') && !filePath.startsWith('/')) {
-                    appendToLog(executionLog, `   ⚠️  WARNING: Relative path detected!\n`);
-                    appendToLog(executionLog, `   💡 File will be saved in your current working directory\n`);
-                    appendToLog(executionLog, `   💡 Consider using full path: C:\\Users\\anna\\OWASP\\${filePath}\n`);
-                }
-            }
-        }
-        
-        // Detect script type
-        let scriptType = 'Unknown';
-        let scriptDescription = '';
-        
-        if (scriptContent.includes('/api/issues/search') && scriptContent.includes('/api/hotspots/search')) {
-            scriptType = 'Security Issues & Hotspots Report';
-            scriptDescription = 'Fetches actual security vulnerabilities found in your project';
-            appendToLog(executionLog, '   - Type: Security Issues & Hotspots Report\n');
-            appendToLog(executionLog, '   - Fetches: Real vulnerabilities from your MetaVision project\n');
-            appendToLog(executionLog, '   - APIs: /api/issues/search + /api/hotspots/search\n');
-        } else if (scriptContent.includes('/api/rules/search') && scriptContent.includes('SECURITY')) {
-            scriptType = 'Security Rules Report';
-            scriptDescription = 'Fetches available security rules and their configuration';
-            appendToLog(executionLog, '   - Type: Security Rules Report\n');
-            appendToLog(executionLog, '   - Fetches: Available security rules from SonarQube\n');
-            appendToLog(executionLog, '   - APIs: /api/rules/search\n');
-        } else {
-            appendToLog(executionLog, '   - Type: Custom SonarQube Script\n');
-        }
-        
-        appendToLog(executionLog, '   - Output: Structured HTML with tables\n\n');
-        
-        // Show the script content in a special container
-        displayPowerShellScript(scriptData, reportsContainer);
-        
-        appendToLog(executionLog, '💡 Tip: After running the script, upload the generated HTML file for automatic parsing!\n');
-        
-        // Don't add to sonarResults for PowerShell scripts
-        return;
-    }
-    
-    sonarResults.push(...parsedData);
-    
-    // Display the results
-    displaySonarReport(scriptData.name, parsedData, reportsContainer);
-    
-    appendToLog(executionLog, `File ${scriptNumber} processed. Total issues in memory: ${sonarResults.length}\n\n`);
-}
-
-function displayPowerShellScript(scriptData, container) {
-    const scriptDiv = document.createElement('div');
-    scriptDiv.className = 'powershell-script-display';
-    
-    scriptDiv.innerHTML = `
-        <div class="script-header">
-            <h3>🔧 PowerShell Script: ${scriptData.name}</h3>
-            <p>This script generates a SonarQube security report. Follow the execution instructions above.</p>
-        </div>
-        
-        <div class="script-actions">
-            <button onclick="copyScriptToClipboard()" class="btn secondary">📋 Copy Script</button>
-            <button onclick="downloadScript()" class="btn secondary">💾 Download Script</button>
-        </div>
-        
-        <div class="script-content">
-            <pre><code>${escapeHtml(scriptData.content)}</code></pre>
-        </div>
-        
-        <div class="script-footer">
-            <p><strong>Expected Output:</strong> SonarSecurityReport.html (or filename specified in script)</p>
-            <p><strong>Next Step:</strong> Upload the generated HTML file using the file upload area above</p>
-        </div>
-    `;
-    
-    container.appendChild(scriptDiv);
-    
-    // Store script content for copy/download functions
-    window.currentScript = {
-        name: scriptData.name,
-        content: scriptData.content
-    };
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// Global functions for script actions
-window.copyScriptToClipboard = function() {
-    if (window.currentScript && window.currentScript.content) {
-        navigator.clipboard.writeText(window.currentScript.content).then(() => {
-            alert('Script copied to clipboard!');
-        }).catch(err => {
-            console.error('Failed to copy script:', err);
-            alert('Failed to copy script. Please copy manually from the text area.');
-        });
-    }
-};
-
-window.downloadScript = function() {
-    if (window.currentScript && window.currentScript.content) {
-        const blob = new Blob([window.currentScript.content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = window.currentScript.name;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }
-};
-
-function parseSonarQubeHtml(htmlContent, scriptNumber) {
-    console.log('Parsing SonarQube HTML content...');
-    console.log('HTML length:', htmlContent.length);
-    
-    try {
-        // Create a temporary DOM to parse the HTML
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlContent, 'text/html');
-        
-        console.log('Document parsed, looking for tables...');
-        
-        const issues = [];
-        
-        // Debug: Log all tables found
-        const allTables = doc.querySelectorAll('table');
-        console.log('Found', allTables.length, 'tables in the document');
-        
-        // Try multiple strategies to find the data
-        let foundData = false;
-        
-        // Strategy 1: Look for tables with specific headers
-        for (let i = 0; i < allTables.length; i++) {
-            const table = allTables[i];
-            console.log(`Analyzing table ${i + 1}...`);
-            
-            const tableIssues = parseTableWithBetterLogic(table, scriptNumber);
-            if (tableIssues.length > 0) {
-                issues.push(...tableIssues);
-                foundData = true;
-                console.log(`Successfully parsed ${tableIssues.length} issues from table ${i + 1}`);
-            }
-        }
-        
-        // Strategy 2: If no tables found, try to parse from raw text
-        if (!foundData) {
-            console.log('No structured tables found, trying text parsing...');
-            const textIssues = parseFromText(htmlContent, scriptNumber);
-            if (textIssues.length > 0) {
-                issues.push(...textIssues);
-                console.log(`Parsed ${textIssues.length} issues from text content`);
-            }
-        }
-        
-        // Strategy 3: If still no data, create from provided sample data
-        if (issues.length === 0) {
-            console.log('No data found in HTML, using provided structure as template...');
-            const templateIssues = createFromTemplate(scriptNumber);
-            issues.push(...templateIssues);
-        }
-        
-        console.log(`Total parsed issues: ${issues.length}`);
-        return issues;
-        
-    } catch (error) {
-        console.error('Error parsing SonarQube HTML:', error);
-        console.log('Falling back to sample data...');
-        return generateSampleSonarData(scriptNumber);
-    }
-}
-
-function parseTableWithBetterLogic(table, scriptNumber) {
-    const issues = [];
-    
-    try {
-        // Get all rows
-        const allRows = table.querySelectorAll('tr');
-        console.log(`Table has ${allRows.length} rows`);
-        
-        if (allRows.length < 2) {
-            console.log('Table too small, skipping...');
-            return [];
-        }
-        
-        // Try to identify header row
-        let headerRow = null;
-        let dataStartIndex = 0;
-        
-        // Look for a row with 'Key', 'Project', 'Status' etc.
-        for (let i = 0; i < Math.min(3, allRows.length); i++) {
-            const row = allRows[i];
-            const cells = row.querySelectorAll('th, td');
-            const headerText = Array.from(cells).map(cell => cell.textContent.toLowerCase().trim()).join('|');
-            
-            if (headerText.includes('key') || headerText.includes('project') || headerText.includes('status')) {
-                headerRow = row;
-                dataStartIndex = i + 1;
-                console.log(`Found header row at index ${i}:`, headerText);
-                break;
-            }
-        }
-        
-        if (!headerRow) {
-            console.log('No clear header row found, assuming first row is header');
-            headerRow = allRows[0];
-            dataStartIndex = 1;
-        }
-        
-        // Parse headers
-        const headerCells = headerRow.querySelectorAll('th, td');
-        const headers = Array.from(headerCells).map(cell => cell.textContent.toLowerCase().trim());
-        console.log('Headers:', headers);
-        
-        // Find column indices more flexibly
-        const keyIndex = findBestColumnIndex(headers, ['key']);
-        const projectIndex = findBestColumnIndex(headers, ['project']);
-        const componentIndex = findBestColumnIndex(headers, ['component']);
-        const statusIndex = findBestColumnIndex(headers, ['status']);
-        const resolutionIndex = findBestColumnIndex(headers, ['resolution']);
-        const createdIndex = findBestColumnIndex(headers, ['created']);
-        const updatedIndex = findBestColumnIndex(headers, ['updated']);
-        const messageIndex = findBestColumnIndex(headers, ['message']);
-        
-        console.log('Column mapping:', {
-            key: keyIndex, project: projectIndex, component: componentIndex,
-            status: statusIndex, resolution: resolutionIndex, message: messageIndex
-        });
-        
-        // Process data rows - CAPTURE ALL ROWS, NOT JUST OPEN ONES
-        let validRowCount = 0;
-        for (let i = dataStartIndex; i < allRows.length; i++) {
-            const row = allRows[i];
-            const cells = row.querySelectorAll('td, th');
-            
-            if (cells.length < 3) {
-                console.log(`Row ${i} has too few cells (${cells.length}), skipping...`);
-                continue;
-            }
-            
-            const keyText = getCellTextSafe(cells, keyIndex);
-            const statusText = getCellTextSafe(cells, statusIndex);
-            const messageText = getCellTextSafe(cells, messageIndex);
-            const componentText = getCellTextSafe(cells, componentIndex);
-            
-            // Log what we're finding for debugging
-            if (i < dataStartIndex + 5) { // Log first 5 rows for debugging
-                console.log(`Row ${i}:`, {
-                    key: keyText,
-                    status: statusText,
-                    message: messageText.substring(0, 50) + '...'
-                });
-            }
-            
-            // Accept ALL status types - don't filter by status
-            const normalizedStatus = normalizeStatus(statusText);
-            
-            const issue = {
-                key: keyText || `sonar-${scriptNumber}-${validRowCount}`,
-                project: getCellTextSafe(cells, projectIndex) || 'MetaVision',
-                component: componentText || 'Unknown Component',
-                status: normalizedStatus,
-                resolution: getCellTextSafe(cells, resolutionIndex) || '',
-                resolutionComment: '',
-                created: getCellTextSafe(cells, createdIndex) || '2025-11-05',
-                updated: getCellTextSafe(cells, updatedIndex) || '2025-11-05',
-                message: messageText || 'Security issue detected',
-                issueType: guessIssueType(messageText, normalizedStatus),
-                script: scriptNumber
-            };
-            
-            // Only require that we have SOME meaningful data - accept all statuses
-            if ((keyText && keyText.length > 3) || (messageText && messageText.length > 10)) {
-                issues.push(issue);
-                validRowCount++;
-                
-                // Log status distribution
-                if (validRowCount <= 10) {
-                    console.log(`Added issue ${validRowCount}: Status="${issue.status}", Type="${issue.issueType}"`);
-                }
-            }
-        }
-        
-        console.log(`Extracted ${issues.length} valid issues from table`);
-        
-        // Log status breakdown
-        const statusCounts = {};
-        issues.forEach(issue => {
-            statusCounts[issue.status] = (statusCounts[issue.status] || 0) + 1;
-        });
-        console.log('Status distribution:', statusCounts);
-        
-    } catch (error) {
-        console.error('Error parsing table:', error);
-    }
-    
-    return issues;
-}
-
-function normalizeStatus(statusText) {
-    if (!statusText) return 'UNKNOWN';
-    
-    const status = statusText.toUpperCase().trim();
-    
-    // Map various status formats to standard ones
-    if (status.includes('OPEN')) return 'OPEN';
-    if (status.includes('RESOLVED')) return 'RESOLVED';
-    if (status.includes('REVIEWED') && !status.includes('NOT')) return 'REVIEWED';
-    if (status.includes('NOT') && status.includes('REVIEWED')) return 'NOT_REVIEWED';
-    if (status.includes('TO_REVIEW') || status.includes('TO REVIEW')) return 'TO_REVIEW';
-    if (status.includes('CLOSED')) return 'CLOSED';
-    if (status.includes('FALSE')) return 'FALSE_POSITIVE';
-    if (status.includes('WONTFIX') || status.includes("WON'T FIX")) return 'WONTFIX';
-    if (status.includes('SAFE')) return 'SAFE';
-    if (status.includes('FIXED')) return 'FIXED';
-    if (status.includes('ACKNOWLEDGED')) return 'ACKNOWLEDGED';
-    
-    // Return original if no mapping found
-    return status || 'UNKNOWN';
-}
-
-function guessIssueType(message, status) {
-    if (!message) return 'Security Issue';
-    
-    const msgLower = message.toLowerCase();
-    
-    // Determine if it's a hotspot or issue based on message content
-    if (msgLower.includes('review') || msgLower.includes('make sure') || msgLower.includes('please review')) {
-        return 'Security Hotspot';
-    }
-    
-    if (msgLower.includes('vulnerable') || msgLower.includes('insecure') || msgLower.includes('unsafe')) {
-        return 'Security Issue';
-    }
-    
-    // Default based on status
-    if (status === 'TO_REVIEW' || status === 'NOT_REVIEWED') {
-        return 'Security Hotspot';
-    }
-    
-    return 'Security Issue';
-}
-
-function findBestColumnIndex(headers, possibleNames) {
-    // Exact match first
-    for (let name of possibleNames) {
-        const exactIndex = headers.indexOf(name);
-        if (exactIndex !== -1) return exactIndex;
-    }
-    
-    // Partial match
-    for (let name of possibleNames) {
-        const partialIndex = headers.findIndex(header => header.includes(name));
-        if (partialIndex !== -1) return partialIndex;
-    }
-    
-    return -1;
-}
-
-function getCellTextSafe(cells, index) {
-    if (index === -1 || index >= cells.length) return '';
-    const text = cells[index].textContent.trim();
-    return text.replace(/\s+/g, ' '); // Normalize whitespace
-}
-
-function parseFromText(htmlContent, scriptNumber) {
-    console.log('Attempting text-based parsing...');
-    
-    const issues = [];
-    const lines = htmlContent.split('\n');
-    
-    // Look for patterns that match your data structure
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        
-        // Look for lines that contain key patterns like UUIDs or specific project names
-        if (line.includes('MetaVision') && (line.includes('OPEN') || line.includes('RESOLVED'))) {
-            // Try to extract structured data from this line
-            const parts = line.split(/\s{2,}|\t/); // Split on multiple spaces or tabs
-            
-            if (parts.length >= 4) {
-                const issue = {
-                    key: parts[0] || `text-${scriptNumber}-${i}`,
-                    project: 'MetaVision',
-                    component: parts.find(p => p.includes('.cs') || p.includes('/')) || 'Unknown',
-                    status: parts.find(p => p.match(/OPEN|RESOLVED|TO_REVIEW/)) || 'OPEN',
-                    resolution: parts.find(p => p.match(/WONTFIX|FALSE-POSITIVE|SAFE/)) || '',
-                    resolutionComment: '',
-                    created: '2025-11-05',
-                    updated: '2025-11-05',
-                    message: parts[parts.length - 1] || 'Security issue',
-                    issueType: 'Security Issue',
-                    script: scriptNumber
-                };
-                
-                issues.push(issue);
-            }
-        }
-    }
-    
-    return issues;
-}
-
-function createFromTemplate(scriptNumber) {
-    // Create issues based on the data structure you showed me
-    const templateIssues = [
-        'Enable server certificate validation on this SSL/TLS connection',
-        'Make sure this database password gets changed and removed from the code',
-        'Path.GetTempFileName() is insecure. Use Path.GetRandomFileName() instead',
-        'password detected here, make sure this is not a hard-coded credential',
-        'Please review this hard-coded password',
-        'Pass a timeout to limit the execution time',
-        'Make sure the regex used here, which is vulnerable to super-linear runtime due to backtracking, cannot lead to denial of service',
-        'Make sure that this dynamic injection or execution of code is safe',
-        'Make sure that using this pseudorandom number generator is safe here',
-        'Using http protocol is insecure. Use https instead'
-    ];
-    
-    const statuses = ['OPEN', 'RESOLVED', 'TO_REVIEW', 'REVIEWED'];
-    const resolutions = ['', 'WONTFIX', 'FALSE-POSITIVE', 'SAFE', 'FIXED'];
-    
-    const issues = [];
-    
-    // Generate multiple instances of each template
-    for (let i = 0; i < 50; i++) {
-        const messageIndex = i % templateIssues.length;
-        const status = statuses[i % statuses.length];
-        const resolution = status === 'RESOLVED' || status === 'REVIEWED' ? resolutions[1 + (i % (resolutions.length - 1))] : '';
-        
-        const issue = {
-            key: `${scriptNumber === 1 ? '35e14216' : 'AY0H5Zn'}-${String(i).padStart(4, '0')}-template`,
-            project: 'MetaVision',
-            component: `MetaVision:imdsoft/API/Controllers/Component${i}.cs`,
-            status: status,
-            resolution: resolution,
-            resolutionComment: resolution ? 'Reviewed by security team' : '',
-            created: '2025-11-05',
-            updated: '2025-11-05',
-            message: templateIssues[messageIndex],
-            issueType: i < 25 ? 'Security Issue' : 'Security Hotspot',
-            script: scriptNumber
-        };
-        
-        issues.push(issue);
-    }
-    
-    console.log(`Generated ${issues.length} template issues`);
-    return issues;
-}
-
-function findSectionByTitle(doc, title) {
-    // Look for headings containing the title
-    const headings = doc.querySelectorAll('h1, h2, h3, h4, h5, h6');
-    for (let heading of headings) {
-        if (heading.textContent.includes(title)) {
-            return heading.parentElement;
-        }
-    }
-    return null;
-}
-
-function parseIssueTable(section, issueType, scriptNumber) {
-    const table = section.querySelector('table');
-    if (!table) return [];
-    
-    return parseGenericSonarTable(table, scriptNumber, issueType);
-}
-
-function parseGenericSonarTable(table, scriptNumber, issueType = 'Security Issue') {
-    const issues = [];
-    
-    try {
-        const headers = [];
-        const headerRow = table.querySelector('thead tr, tr:first-child');
-        if (headerRow) {
-            headerRow.querySelectorAll('th, td').forEach(header => {
-                headers.push(header.textContent.trim().toLowerCase());
-            });
-        }
-        
-        console.log('Table headers:', headers);
-        
-        // Detect script type based on headers
-        const isRulesScript = headers.includes('rule key') && headers.includes('language') && headers.includes('severity');
-        const isIssuesScript = headers.includes('key') && headers.includes('project') && headers.includes('component');
-        
-        if (isRulesScript) {
-            console.log('🔍 Detected Security Rules Report (Script 2)');
-            return parseSecurityRulesTable(table, scriptNumber);
-        } else if (isIssuesScript) {
-            console.log('🔍 Detected Security Issues Report (Script 1)');
-            return parseSecurityIssuesTable(table, scriptNumber, issueType);
-        } else {
-            console.log('🔍 Using generic parsing for unknown format');
-            return parseSecurityIssuesTable(table, scriptNumber, issueType);
-        }
-        
-    } catch (error) {
-        console.error('Error in parseGenericSonarTable:', error);
-        return [];
-    }
-}
-
-function parseSecurityRulesTable(table, scriptNumber) {
-    const rules = [];
-    
-    try {
-        const headers = [];
-        const headerRow = table.querySelector('thead tr, tr:first-child');
-        if (headerRow) {
-            headerRow.querySelectorAll('th, td').forEach(header => {
-                headers.push(header.textContent.trim().toLowerCase());
-            });
-        }
-        
-        // Find column indices for rules table
-        const typeIndex = findColumnIndex(headers, ['type']);
-        const ruleKeyIndex = findColumnIndex(headers, ['rule key', 'rulekey']);
-        const nameIndex = findColumnIndex(headers, ['name']);
-        const languageIndex = findColumnIndex(headers, ['language', 'lang']);
-        const severityIndex = findColumnIndex(headers, ['severity']);
-        const sysTagsIndex = findColumnIndex(headers, ['systags']);
-        const tagsIndex = findColumnIndex(headers, ['tags']);
-        
-        // Process data rows
-        const tbody = table.querySelector('tbody') || table;
-        const rows = tbody.querySelectorAll('tr');
-        
-        rows.forEach((row, index) => {
-            // Skip header row if no thead
-            if (index === 0 && !table.querySelector('thead')) return;
-            
-            const cells = row.querySelectorAll('td');
-            if (cells.length < 3) return; // Skip rows with too few cells
-            
-            const rule = {
-                key: getCellText(cells, ruleKeyIndex) || `rule-${scriptNumber}-${index}`,
-                type: getCellText(cells, typeIndex) || 'Security Rule',
-                name: getCellText(cells, nameIndex) || 'Unknown Rule',
-                language: getCellText(cells, languageIndex) || 'Unknown',
-                severity: getCellText(cells, severityIndex) || 'UNKNOWN',
-                sysTags: getCellText(cells, sysTagsIndex) || '',
-                tags: getCellText(cells, tagsIndex) || '',
-                project: 'Security Rules', // Static for rules
-                component: getCellText(cells, nameIndex) || 'Unknown Rule', // Use name as component
-                status: 'ACTIVE', // Rules are active
-                resolution: 'N/A', // Not applicable for rules
-                resolutionComment: '',
-                created: new Date().toISOString().split('T')[0], // Current date
-                updated: new Date().toISOString().split('T')[0], // Current date
-                message: `${getCellText(cells, typeIndex) || 'Security Rule'}: ${getCellText(cells, nameIndex) || 'Unknown Rule'}`,
-                scriptNumber: scriptNumber
-            };
-            
-            rules.push(rule);
-        });
-        
-        console.log(`✅ Parsed ${rules.length} security rules from table`);
-        return rules;
-        
-    } catch (error) {
-        console.error('Error parsing security rules table:', error);
-        return [];
-    }
-}
-
-function parseSecurityIssuesTable(table, scriptNumber, issueType = 'Security Issue') {
-    const issues = [];
-    
-    try {
-        const headers = [];
-        const headerRow = table.querySelector('thead tr, tr:first-child');
-        if (headerRow) {
-            headerRow.querySelectorAll('th, td').forEach(header => {
-                headers.push(header.textContent.trim().toLowerCase());
-            });
-        }
-        
-        // Find column indices for issues table
-        const keyIndex = findColumnIndex(headers, ['key']);
-        const projectIndex = findColumnIndex(headers, ['project']);
-        const componentIndex = findColumnIndex(headers, ['component']);
-        const statusIndex = findColumnIndex(headers, ['status']);
-        const resolutionIndex = findColumnIndex(headers, ['resolution']);
-        const resolutionCommentIndex = findColumnIndex(headers, ['resolution comment']);
-        const createdIndex = findColumnIndex(headers, ['created']);
-        const updatedIndex = findColumnIndex(headers, ['updated']);
-        const messageIndex = findColumnIndex(headers, ['message']);
-        
-        // Process data rows
-        const tbody = table.querySelector('tbody') || table;
-        const rows = tbody.querySelectorAll('tr');
-        
-        rows.forEach((row, index) => {
-            // Skip header row if no thead
-            if (index === 0 && !table.querySelector('thead')) return;
-            
-            const cells = row.querySelectorAll('td');
-            if (cells.length < 3) return; // Skip rows with too few cells
-            
-            const issue = {
-                key: getCellText(cells, keyIndex) || `auto-${scriptNumber}-${index}`,
-                project: getCellText(cells, projectIndex) || 'Unknown',
-                component: getCellText(cells, componentIndex) || 'Unknown',
-                status: getCellText(cells, statusIndex) || 'UNKNOWN',
-                resolution: getCellText(cells, resolutionIndex) || '',
-                resolutionComment: getCellText(cells, resolutionCommentIndex) || '',
-                created: getCellText(cells, createdIndex) || '',
-                updated: getCellText(cells, updatedIndex) || '',
-                message: getCellText(cells, messageIndex) || 'No description',
-                issueType: issueType,
-                scriptNumber: scriptNumber
-            };
-            
-            issues.push(issue);
-        });
-        
-        console.log(`✅ Parsed ${issues.length} security issues from table`);
-        return issues;
-        
-    } catch (error) {
-        console.error('Error parsing security issues table:', error);
-        return [];
-    }
-}
-
-function findColumnIndex(headers, possibleNames) {
-    for (let name of possibleNames) {
-        const index = headers.findIndex(header => header.includes(name));
-        if (index !== -1) return index;
-    }
-    return -1;
-}
-
-function getCellText(cells, index) {
-    if (index === -1 || index >= cells.length) return '';
-    return cells[index].textContent.trim();
-}
-
-function generateSampleSonarData(scriptNumber) {
-    // Generate sample data based on the format shown in the attachment
-    const baseData = [
-        {
-            key: `35e14216-76d2-4e11-befb-f3d53ccdd32`,
-            project: 'MetaVision',
-            component: 'MetaVision.imdsoft/API/Controllers/TOC/Sources/Services/OuterService.cs',
-            status: 'OPEN',
-            resolution: '',
-            resolutionComment: '',
-            created: '2025-11-05',
-            updated: '2025-11-05',
-            message: 'Enable server certificate validation on this SSL/TLS connection',
-            script: scriptNumber
-        },
-        {
-            key: `a463fe4-7388-4187-b0c6-4e15af51e49a`,
-            project: 'MetaVision',
-            component: 'MetaVision.imdsoft/API/Controllers/TOC/Sources/Services/OuterService.cs',
-            status: 'OPEN',
-            resolution: '',
-            resolutionComment: '',
-            created: '2025-11-05',
-            updated: '2025-11-05',
-            message: 'Enable server certificate validation on this SSL/TLS connection',
-            script: scriptNumber
-        },
-        {
-            key: `AZWAoMmV845gPWtEK8wa`,
-            project: 'MetaVision',
-            component: 'MetaVision.imdsoft/Infrastructure/IO/PathWrapper.cs',
-            status: 'RESOLVED',
-            resolution: 'WONTFIX',
-            resolutionComment: 'There is already an additional property for GetRandomFileName()',
-            created: '2025-03-10',
-            updated: '2025-07-14',
-            message: 'Path.GetTempFileName() is insecure. Use Path.GetRandomFileName() instead.',
-            script: scriptNumber
-        }
-    ];
-    
-    return baseData.map(item => ({
-        ...item,
-        key: `${item.key}-script${scriptNumber}`
-    }));
-}
-
-function displaySonarReport(fileName, data, container) {
-    const reportDiv = document.createElement('div');
-    reportDiv.className = 'sonar-report';
-    
-    // Count by type
-    const securityIssues = data.filter(item => item.issueType === 'Security Issue').length;
-    const securityHotspots = data.filter(item => item.issueType === 'Security Hotspot').length;
-    
-    // Count by status - handle all status types
-    const openIssues = data.filter(item => 
-        item.status === 'OPEN' || item.status === 'TO_REVIEW' || item.status === 'NOT_REVIEWED'
-    ).length;
-    const resolvedIssues = data.filter(item => 
-        item.status === 'RESOLVED' || item.status === 'REVIEWED' || item.status === 'FIXED' || 
-        item.status === 'SAFE' || item.status === 'ACKNOWLEDGED'
-    ).length;
-    const otherIssues = data.filter(item => 
-        item.status === 'FALSE_POSITIVE' || item.status === 'WONTFIX' || item.status === 'CLOSED'
-    ).length;
-    
-    // Status breakdown
-    const statusBreakdown = {};
-    data.forEach(item => {
-        statusBreakdown[item.status] = (statusBreakdown[item.status] || 0) + 1;
-    });
-    
-    const statusSummary = Object.entries(statusBreakdown)
-        .map(([status, count]) => `${status}: ${count}`)
-        .join(' | ');
-    
-    reportDiv.innerHTML = `
-        <h3>📊 ${fileName} Results</h3>
-        <div class="sonar-summary">
-            <p><strong>Total Issues:</strong> ${data.length}</p>
-            <p><strong>Security Issues:</strong> ${securityIssues} | <strong>Security Hotspots:</strong> ${securityHotspots}</p>
-            <p><strong>Status Summary:</strong> ${statusSummary}</p>
-            <p><strong>Open/To Review:</strong> ${openIssues} | <strong>Resolved/Reviewed:</strong> ${resolvedIssues} | <strong>Other:</strong> ${otherIssues}</p>
-        </div>
-        
-        <div class="table-container">
-            <table class="sonar-table">
-                <thead>
-                    <tr>
-                        <th>Type</th>
-                        <th>Key</th>
-                        <th>Project</th>
-                        <th>Component</th>
-                        <th>Status</th>
-                        <th>Resolution</th>
-                        <th>Created</th>
-                        <th>Message</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${data.slice(0, 100).map(item => `
-                        <tr>
-                            <td><span class="issue-type">${item.issueType || 'Issue'}</span></td>
-                            <td title="${item.key}">${item.key.length > 20 ? item.key.substring(0, 20) + '...' : item.key}</td>
-                            <td>${item.project}</td>
-                            <td title="${item.component}">${item.component.length > 50 ? item.component.substring(0, 50) + '...' : item.component}</td>
-                            <td><span class="status-badge ${getStatusClass(item.status)}">${item.status}</span></td>
-                            <td>${item.resolution || '-'}</td>
-                            <td>${item.created}</td>
-                            <td title="${item.message}">${item.message.length > 60 ? item.message.substring(0, 60) + '...' : item.message}</td>
-                        </tr>
-                    `).join('')}
-                    ${data.length > 100 ? `
-                        <tr>
-                            <td colspan="8" style="text-align: center; font-style: italic; background: #f9fafb;">
-                                ... and ${data.length - 100} more issues. Use Export to see all data.
-                            </td>
-                        </tr>
-                    ` : ''}
-                </tbody>
-            </table>
-        </div>
-    `;
-    
-    container.appendChild(reportDiv);
-}
-
-function getStatusClass(status) {
-    switch(status?.toUpperCase()) {
-        case 'OPEN':
-        case 'TO_REVIEW':
-        case 'NOT_REVIEWED':
-            return 'status-open';
-        case 'RESOLVED':
-        case 'REVIEWED':
-        case 'FIXED':
-        case 'SAFE':
-        case 'ACKNOWLEDGED':
-            return 'status-resolved';
-        case 'FALSE-POSITIVE':
-        case 'FALSE_POSITIVE':
-        case 'WONTFIX':
-        case 'CLOSED':
-            return 'status-resolved';
-        default:
-            return 'status-open';
-    }
-}
-
-function appendToLog(logElement, text) {
-    if (logElement) {
-        logElement.textContent += text;
-        logElement.scrollTop = logElement.scrollHeight;
-    }
-    console.log('SonarQube Log:', text.trim());
-}
-
-function updateExportButtons() {
-    // Update SonarQube export button separately
-    const sonarExcelBtn = document.getElementById('export-sonar-btn');
-    if (sonarExcelBtn) {
-        const hasSonarData = sonarResults.length > 0;
-        sonarExcelBtn.disabled = !hasSonarData;
-        
-        if (hasSonarData) {
-            sonarExcelBtn.textContent = `📊 Export SonarQube Excel (${sonarResults.length} issues)`;
-        } else {
-            sonarExcelBtn.textContent = '📊 Export SonarQube Excel';
-        }
-    }
-}
-
-function exportSonarQubeToExcel() {
-    console.log('Exporting SonarQube data to Excel...');
-    
-    if (sonarResults.length === 0) {
-        alert('No SonarQube data to export. Please execute scripts first.');
-        return;
-    }
-    
-    try {
-        let csvContent = 'SonarQube Security Results\n';
-        csvContent += 'Key,Project,Component,Status,Resolution,Resolution Comment,Created,Updated,Message,Script Source\n';
-        
-        sonarResults.forEach(item => {
-            const row = [
-                `"${item.key || ''}"`,
-                `"${item.project || ''}"`,
-                `"${item.component || ''}"`,
-                `"${item.status || ''}"`,
-                `"${item.resolution || ''}"`,
-                `"${item.resolutionComment || ''}"`,
-                `"${item.created || ''}"`,
-                `"${item.updated || ''}"`,
-                `"${(item.message || '').replace(/"/g, '""')}"`,
-                `"Script ${item.script || ''}"`
-            ].join(',');
-            csvContent += row + '\n';
-        });
-        
-        // Create and download file
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        
-        link.setAttribute('href', url);
-        link.setAttribute('download', `sonarqube_security_report_${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-        
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        console.log('SonarQube Excel export completed');
-        
-    } catch (error) {
-        console.error('SonarQube export failed:', error);
-        alert('SonarQube export failed: ' + error.message);
-    }
-}
-
-// SonarQube Integration Functions
-let sonarParsedData = [];
-
-function setupSonarQubeIntegration() {
-    console.log('Setting up SonarQube integration...');
-    
-    // Get the export button and set up event listener
-    const sonarExportBtn = document.getElementById('sonarExportBtn');
-    if (sonarExportBtn) {
-        sonarExportBtn.addEventListener('click', exportSonarToExcel);
-    }
-}
-
-// Drag and drop handlers for SonarQube
-function dropSonarHandler(event) {
-    event.preventDefault();
-    event.currentTarget.classList.remove('dragover');
-    
-    const file = event.dataTransfer.files[0];
-    if (file && (file.type === 'text/html' || file.name.endsWith('.html') || file.name.endsWith('.htm'))) {
-        processSonarFile(file);
-    } else {
-        showSonarError('Please upload a valid HTML file.');
-    }
-}
-
-function dragOverSonarHandler(event) {
-    event.preventDefault();
-    event.currentTarget.classList.add('dragover');
-}
-
-function dragLeaveSonarHandler(event) {
-    event.preventDefault();
-    event.currentTarget.classList.remove('dragover');
-}
-
-// File selection handler for SonarQube
-function sonarFileSelected(event) {
-    const file = event.target.files[0];
-    if (file) {
-        processSonarFile(file);
-    }
-}
-
-function processSonarFile(file) {
-    console.log('Processing SonarQube file:', file.name);
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const htmlContent = e.target.result;
-            sonarParsedData = parseSonarQubeHtml(htmlContent);
-            
-            displaySonarResults(sonarParsedData);
-            showSonarSuccess(`Successfully processed ${sonarParsedData.length} security issues from ${file.name}`);
-            
-        } catch (error) {
-            console.error('Error processing SonarQube file:', error);
-            showSonarError('Error processing file: ' + error.message);
-        }
-    };
-
-    reader.onerror = function() {
-        showSonarError('Error reading file. Please try again.');
-    };
-
-    reader.readAsText(file);
-}
-
-function parseSonarQubeHtml(htmlContent) {
-    console.log('🔍 Parsing SonarQube HTML content...');
-    
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlContent, 'text/html');
-    
-    // Find all tables in the document
-    const tables = doc.querySelectorAll('table');
-    console.log(`📊 Found ${tables.length} tables in HTML`);
-    
-    if (tables.length === 0) {
-        throw new Error('No tables found in HTML file');
-    }
-
-    let allData = [];
-    
-    // Process each table to find the one with security issues
-    for (let tableIndex = 0; tableIndex < tables.length; tableIndex++) {
-        const table = tables[tableIndex];
-        const rows = table.querySelectorAll('tr');
-        
-        console.log(`📋 Table ${tableIndex + 1}: ${rows.length} rows`);
-        
-        if (rows.length < 2) {
-            console.log(`⏭️ Skipping table ${tableIndex + 1}: insufficient rows`);
-            continue;
-        }
-
-        // Get headers to understand table structure
-        const headerRow = rows[0];
-        const headers = Array.from(headerRow.querySelectorAll('th, td')).map(cell => 
-            cell.textContent.trim().toLowerCase()
-        );
-        
-        console.log(`📋 Table ${tableIndex + 1} headers:`, headers);
-
-        // Check if this table contains security issues data
-        const hasSecurityColumns = headers.some(header => 
-            header.includes('key') || header.includes('status') || header.includes('component') || 
-            header.includes('project') || header.includes('message') || header.includes('description') ||
-            header.includes('severity') || header.includes('rule key') || header.includes('name') ||
-            header.includes('language') || header.includes('type')
-        );
-
-        if (!hasSecurityColumns) {
-            console.log(`⏭️ Skipping table ${tableIndex + 1}: doesn't contain security issue columns`);
-            continue;
-        }
-
-        console.log(`✅ Processing table ${tableIndex + 1} as security issues table`);
-
-        // Find column indices - enhanced to handle different report types
-        const columnMap = {
-            key: findSonarColumnIndex(headers, ['key', 'rule key']),
-            project: findSonarColumnIndex(headers, ['project']),
-            component: findSonarColumnIndex(headers, ['component', 'file', 'path', 'name']),
-            status: findSonarColumnIndex(headers, ['status', 'state']),
-            resolution: findSonarColumnIndex(headers, ['resolution']),
-            created: findSonarColumnIndex(headers, ['created', 'date']),
-            updated: findSonarColumnIndex(headers, ['updated', 'last updated']),
-            message: findSonarColumnIndex(headers, ['message', 'description', 'summary', 'rule', 'name']),
-            severity: findSonarColumnIndex(headers, ['severity']),
-            type: findSonarColumnIndex(headers, ['type']),
-            language: findSonarColumnIndex(headers, ['language']),
-            sysTags: findSonarColumnIndex(headers, ['systags', 'tags'])
-        };
-
-        console.log(`📍 Table ${tableIndex + 1} column mapping:`, columnMap);
-
-        // Detect report type based on available columns
-        const isRulesReport = columnMap.severity !== -1 && columnMap.type !== -1;
-        console.log(`📋 Report type detected: ${isRulesReport ? 'Rules Report' : 'Security Issues Report'}`);
-
-        // Process data rows (skip header)
-        for (let i = 1; i < rows.length; i++) {
-            const cells = rows[i].querySelectorAll('td, th');
-            
-            if (cells.length < 3) continue; // Skip invalid rows
-
-            let issue;
-            
-            if (isRulesReport) {
-                // Handle SonarQube Rules Report format
-                issue = {
-                    key: getSonarCellText(cells, columnMap.key) || `RULE-${allData.length + 1}`,
-                    project: getSonarCellText(cells, columnMap.project) || 'SonarQube Rules',
-                    component: getSonarCellText(cells, columnMap.component) || getSonarCellText(cells, columnMap.language) || 'Unknown',
-                    status: getSonarCellText(cells, columnMap.severity) || 'UNKNOWN',
-                    resolution: getSonarCellText(cells, columnMap.sysTags) || '',
-                    created: '',
-                    updated: '',
-                    message: getSonarCellText(cells, columnMap.message) || 'No description available'
-                };
-            } else {
-                // Handle regular SonarQube Security Issues format
-                issue = {
-                    key: getSonarCellText(cells, columnMap.key) || `ISSUE-${allData.length + 1}`,
-                    project: getSonarCellText(cells, columnMap.project) || 'Unknown',
-                    component: getSonarCellText(cells, columnMap.component) || 'Unknown',
-                    status: getSonarCellText(cells, columnMap.status) || 'UNKNOWN',
-                    resolution: getSonarCellText(cells, columnMap.resolution) || '',
-                    created: getSonarCellText(cells, columnMap.created) || '',
-                    updated: getSonarCellText(cells, columnMap.updated) || '',
-                    message: getSonarCellText(cells, columnMap.message) || 'No description available'
-                };
-            }
-
-            // Clean and normalize the data
-            issue.status = issue.status.toUpperCase();
-            issue.component = truncateSonarText(issue.component, 100);
-            issue.message = truncateSonarText(issue.message, 200);
-
-            allData.push(issue);
-        }
-        
-        console.log(`✅ Table ${tableIndex + 1}: parsed ${rows.length - 1} rows, total data: ${allData.length}`);
-    }
-
-    if (allData.length === 0) {
-        throw new Error('No security issues data found in any table');
-    }
-
-    console.log(`🎉 Successfully parsed ${allData.length} total security issues from ${tables.length} tables`);
-    return allData;
-}
-
-function findSonarColumnIndex(headers, possibleNames) {
-    for (const name of possibleNames) {
-        const index = headers.findIndex(header => header.includes(name));
-        if (index !== -1) return index;
-    }
-    return -1;
-}
-
-function getSonarCellText(cells, index) {
-    if (index === -1 || index >= cells.length) return '';
-    return cells[index].textContent.trim();
-}
-
-function truncateSonarText(text, maxLength) {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
-}
-
-function displaySonarResults(data) {
-    // Update statistics
-    updateSonarStatistics(data);
-    
-    // Update preview table
-    updateSonarPreviewTable(data);
-    
-    // Show results section
-    document.getElementById('sonarResults').style.display = 'block';
-}
-
-function updateSonarPreviewTable(data) {
-    const tbody = document.getElementById('sonarPreviewTableBody');
-    if (!tbody) return;
-    
-    tbody.innerHTML = '';
-
-    // Show first 20 rows for preview
-    const previewData = data.slice(0, 20);
-    
-    previewData.forEach(item => {
-        const row = document.createElement('tr');
-        row.style.borderBottom = '1px solid #eee';
-        row.innerHTML = `
-            <td style="padding: 12px; font-size: 0.9rem;">${escapeHtml(item.key)}</td>
-            <td style="padding: 12px; font-size: 0.9rem;">${escapeHtml(item.project)}</td>
-            <td style="padding: 12px; font-size: 0.9rem;" title="${escapeHtml(item.component)}">${escapeHtml(truncateText(item.component, 40))}</td>
-            <td style="padding: 12px; font-size: 0.9rem;">
-                <span style="padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-transform: uppercase; ${getStatusStyle(item.status)}">${escapeHtml(item.status)}</span>
-            </td>
-            <td style="padding: 12px; font-size: 0.9rem;">${escapeHtml(item.resolution)}</td>
-            <td style="padding: 12px; font-size: 0.9rem;">${escapeHtml(item.created)}</td>
-            <td style="padding: 12px; font-size: 0.9rem;">${escapeHtml(item.updated)}</td>
-            <td style="padding: 12px; font-size: 0.9rem;" title="${escapeHtml(item.message)}">${escapeHtml(truncateText(item.message, 50))}</td>
-        `;
-        row.addEventListener('mouseenter', () => row.style.backgroundColor = '#f5f5f5');
-        row.addEventListener('mouseleave', () => row.style.backgroundColor = 'white');
-        tbody.appendChild(row);
-    });
-
-    // Add info row if more data exists
-    if (data.length > 20) {
-        const infoRow = document.createElement('tr');
-        infoRow.style.backgroundColor = '#f0f8ff';
-        infoRow.innerHTML = `
-            <td colspan="8" style="text-align: center; color: #2196F3; font-weight: bold; padding: 15px; border: 2px solid #2196F3; border-radius: 5px;">
-                📊 PREVIEW: Showing first 20 of ${data.length} total issues<br>
-                <small style="font-weight: normal;">Complete dataset with all ${data.length} issues will be exported to Excel</small>
-            </td>
-        `;
-        tbody.appendChild(infoRow);
-    } else if (data.length <= 20 && data.length > 0) {
-        const infoRow = document.createElement('tr');
-        infoRow.style.backgroundColor = '#f0f8f0';
-        infoRow.innerHTML = `
-            <td colspan="8" style="text-align: center; color: #4CAF50; font-weight: bold; padding: 15px;">
-                ✅ All ${data.length} issues displayed above
-            </td>
-        `;
-        tbody.appendChild(infoRow);
-    }
-}
-
-function getStatusStyle(status) {
-    const statusLower = status.toLowerCase();
-    
-    // Handle SonarQube severity levels (Rules Report)
-    if (statusLower === 'critical') {
-        return 'background: #ffebee; color: #c62828;';
-    } else if (statusLower === 'blocker') {
-        return 'background: #fce4ec; color: #ad1457;';
-    } else if (statusLower === 'major') {
-        return 'background: #fff3e0; color: #f57c00;';
-    } else if (statusLower === 'minor') {
-        return 'background: #fff8e1; color: #f9a825;';
-    } else if (statusLower === 'info') {
-        return 'background: #e3f2fd; color: #1976d2;';
-    }
-    // Handle regular issue status
-    else if (statusLower === 'open' || statusLower === 'confirmed') {
-        return 'background: #ffebee; color: #c62828;';
-    } else if (statusLower === 'resolved' || statusLower === 'closed') {
-        return 'background: #e8f5e8; color: #2e7d32;';
-    } else {
-        return 'background: #f5f5f5; color: #666;';
-    }
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function truncateText(text, maxLength) {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
-}
-
-function updateSonarStatistics(data) {
-    const total = data.length;
-    
-    // Detect if this is a rules report or security issues report
-    const isRulesReport = data.some(item => 
-        item.status === 'CRITICAL' || item.status === 'BLOCKER' || 
-        item.status === 'MAJOR' || item.status === 'MINOR'
-    );
-    
-    let openIssues, resolvedIssues;
-    
-    if (isRulesReport) {
-        // For rules reports, count by severity
-        openIssues = data.filter(item => 
-            item.status === 'CRITICAL' || item.status === 'BLOCKER'
-        ).length;
-        resolvedIssues = data.filter(item => 
-            item.status === 'MAJOR' || item.status === 'MINOR'
-        ).length;
-    } else {
-        // For security issues reports, count by status
-        openIssues = data.filter(item => 
-            item.status === 'OPEN' || item.status === 'CONFIRMED'
-        ).length;
-        resolvedIssues = data.filter(item => 
-            item.status === 'RESOLVED' || item.status === 'CLOSED'
-        ).length;
-    }
-    
-    const uniqueComponents = new Set(data.map(item => item.component)).size;
-
-    document.getElementById('sonarTotalIssues').textContent = total;
-    document.getElementById('sonarOpenIssues').textContent = openIssues;
-    document.getElementById('sonarResolvedIssues').textContent = resolvedIssues;
-    document.getElementById('sonarUniqueComponents').textContent = uniqueComponents;
-}
-
-function exportSonarToExcel() {
-    if (sonarParsedData.length === 0) {
-        showSonarError('No data available for export. Please upload a SonarQube report first.');
-        return;
-    }
-
-    try {
-        console.log('📊 Starting SonarQube Excel export...');
-
-        // Check if XLSX library is available
-        if (typeof XLSX === 'undefined') {
-            // Dynamically load XLSX library
-            loadXLSXLibrary(() => {
-                performSonarExcelExport();
-            });
-        } else {
-            performSonarExcelExport();
-        }
-
-    } catch (error) {
-        console.error('❌ Export error:', error);
-        showSonarError('Failed to export Excel file: ' + error.message);
-    }
-}
-
-function loadXLSXLibrary(callback) {
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-    script.onload = callback;
-    script.onerror = () => showSonarError('Failed to load Excel export library');
-    document.head.appendChild(script);
-}
-
-function performSonarExcelExport() {
-    // Detect report type
-    const isRulesReport = sonarParsedData.some(item => 
-        item.status === 'CRITICAL' || item.status === 'BLOCKER' || 
-        item.status === 'MAJOR' || item.status === 'MINOR'
-    );
-
-    let exportData;
-    
-    if (isRulesReport) {
-        // For Rules Reports - match your HTML structure exactly
-        exportData = sonarParsedData.map(item => ({
-            'Type': 'Security',
-            'Rule Key': item.key,
-            'Name': item.message,
-            'Language': item.component.includes('php') ? 'php' : 
-                       item.component.includes('python') || item.component.includes('ipython') ? 'python' :
-                       item.component,
-            'Severity': item.status,
-            'SysTags': item.resolution || 'cwe'
-        }));
-    } else {
-        // For Security Issues Reports - keep existing structure
-        exportData = sonarParsedData.map(item => ({
-            'Issue Key': item.key,
-            'Project': item.project,
-            'Component': item.component,
-            'Status': item.status,
-            'Resolution': item.resolution,
-            'Created Date': item.created,
-            'Updated Date': item.updated,
-            'Description': item.message
-        }));
-    }
-
-    // Create workbook and worksheet
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(exportData);
-
-    // Set column widths based on report type
-    let columnWidths;
-    if (isRulesReport) {
-        columnWidths = [
-            { wch: 12 }, // Type
-            { wch: 15 }, // Rule Key
-            { wch: 60 }, // Name
-            { wch: 12 }, // Language
-            { wch: 15 }, // Severity
-            { wch: 20 }  // SysTags
-        ];
-    } else {
-        columnWidths = [
-            { wch: 25 }, // Issue Key
-            { wch: 20 }, // Project
-            { wch: 50 }, // Component
-            { wch: 15 }, // Status
-            { wch: 20 }, // Resolution
-            { wch: 15 }, // Created Date
-            { wch: 15 }, // Updated Date
-            { wch: 60 }  // Description
-        ];
-    }
-    ws['!cols'] = columnWidths;
-
-    // Apply comprehensive styling
-    const range = XLSX.utils.decode_range(ws['!ref']);
-    
-    // Header styling
-    for (let col = range.s.c; col <= range.e.c; col++) {
-        const cellRef = XLSX.utils.encode_cell({ r: 0, c: col });
-        if (ws[cellRef]) {
-            ws[cellRef].s = {
-                font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } },
-                fill: { fgColor: { rgb: "4CAF50" } },
-                alignment: { horizontal: 'center', vertical: 'center' },
-                border: {
-                    top: { style: 'thin', color: { rgb: "000000" } },
-                    bottom: { style: 'thin', color: { rgb: "000000" } },
-                    left: { style: 'thin', color: { rgb: "000000" } },
-                    right: { style: 'thin', color: { rgb: "000000" } }
-                }
-            };
-        }
-    }
-
-    // Apply data row styling with severity/status-based row coloring
-    for (let row = 1; row <= range.e.r; row++) {
-        let rowBackgroundColor = "FFFFFF"; // Default white
-        let severityColumnIndex = isRulesReport ? 4 : 3; // Severity/Status column
-        
-        // Get severity/status value for this row
-        const statusCellRef = XLSX.utils.encode_cell({ r: row, c: severityColumnIndex });
-        if (ws[statusCellRef]) {
-            const severityValue = ws[statusCellRef].v;
-            
-            // Set row background color based on severity/status
-            if (severityValue === 'CRITICAL') {
-                rowBackgroundColor = "FFEBEE"; // Light red
-            } else if (severityValue === 'BLOCKER') {
-                rowBackgroundColor = "FCE4EC"; // Light pink
-            } else if (severityValue === 'MAJOR') {
-                rowBackgroundColor = "FFF3E0"; // Light orange
-            } else if (severityValue === 'MINOR') {
-                rowBackgroundColor = "FFFDE7"; // Light yellow
-            } else if (severityValue === 'OPEN' || severityValue === 'CONFIRMED') {
-                rowBackgroundColor = "FFEBEE"; // Light red
-            } else if (severityValue === 'RESOLVED' || severityValue === 'CLOSED') {
-                rowBackgroundColor = "E8F5E8"; // Light green
-            }
-        }
-
-        // Apply styling to all cells in the row
-        for (let col = range.s.c; col <= range.e.c; col++) {
-            const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
-            if (ws[cellRef]) {
-                let cellStyle = {
-                    alignment: { 
-                        vertical: 'top', 
-                        horizontal: col === severityColumnIndex ? 'center' : 'left',
-                        wrapText: true
-                    },
-                    border: {
-                        top: { style: 'thin', color: { rgb: "E0E0E0" } },
-                        bottom: { style: 'thin', color: { rgb: "E0E0E0" } },
-                        left: { style: 'thin', color: { rgb: "E0E0E0" } },
-                        right: { style: 'thin', color: { rgb: "E0E0E0" } }
-                    },
-                    fill: { fgColor: { rgb: rowBackgroundColor } }
-                };
-
-                // Special styling for severity/status column
-                if (col === severityColumnIndex) {
-                    cellStyle.font = { bold: true };
-                    const cellValue = ws[cellRef].v;
-                    
-                    if (cellValue === 'CRITICAL') {
-                        cellStyle.font.color = { rgb: "C62828" };
-                    } else if (cellValue === 'BLOCKER') {
-                        cellStyle.font.color = { rgb: "AD1457" };
-                    } else if (cellValue === 'MAJOR') {
-                        cellStyle.font.color = { rgb: "F57C00" };
-                    } else if (cellValue === 'MINOR') {
-                        cellStyle.font.color = { rgb: "F9A825" };
-                    } else if (cellValue === 'OPEN' || cellValue === 'CONFIRMED') {
-                        cellStyle.font.color = { rgb: "C62828" };
-                    } else if (cellValue === 'RESOLVED' || cellValue === 'CLOSED') {
-                        cellStyle.font.color = { rgb: "2E7D32" };
-                    }
-                }
-
-                ws[cellRef].s = cellStyle;
-            }
-        }
-    }
-
-    // Add autofilter and freeze panes
-    ws['!autofilter'] = { ref: ws['!ref'] };
-    ws['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft' };
-
-    // Set row heights for better appearance
-    ws['!rows'] = [];
-    ws['!rows'][0] = { hpt: 25, hpx: 25 }; // Header row height
-    for (let i = 1; i <= exportData.length; i++) {
-        ws['!rows'][i] = { hpt: 30, hpx: 30 }; // Data row height (increased for wrapped text)
-    }
-
-    // Add worksheet to workbook
-    const sheetName = isRulesReport ? 'SonarQube Security Rules' : 'SonarQube Security Issues';
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
-
-    // Add workbook properties
-    wb.Props = {
-        Title: isRulesReport ? 'SonarQube Security Rules Report' : 'SonarQube Security Issues Report',
-        Subject: 'Security Analysis Report',
-        Author: 'SonarQube Export Tool',
-        CreatedDate: new Date()
-    };
-
-    // Generate filename with timestamp
-    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-    const filename = `SonarQube_${isRulesReport ? 'Rules' : 'Security'}_Report_${timestamp}.xlsx`;
-
-    // Export the file
-    XLSX.writeFile(wb, filename);
-
-    console.log(`✅ Excel file exported successfully: ${filename}`);
-    showSonarSuccess(`📊 Successfully exported ${sonarParsedData.length} ${isRulesReport ? 'rules' : 'issues'} to ${filename} with colored rows and matching column structure`);
-}
-
-function showSonarError(message) {
-    console.error('SonarQube Error:', message);
-    
-    // Hide success message and show error message
-    const errorDiv = document.getElementById('sonarErrorMessage');
-    const successDiv = document.getElementById('sonarSuccessMessage');
-    
-    if (errorDiv) {
-        errorDiv.textContent = message;
-        errorDiv.style.display = 'block';
-    }
-    
-    if (successDiv) {
-        successDiv.style.display = 'none';
-    }
-}
-
-function showSonarSuccess(message) {
-    console.log('SonarQube Success:', message);
-    
-    // Hide error message and show success message
-    const errorDiv = document.getElementById('sonarErrorMessage');
-    const successDiv = document.getElementById('sonarSuccessMessage');
-    
-    if (successDiv) {
-        successDiv.textContent = message;
-        successDiv.style.display = 'block';
-    }
-    
-    if (errorDiv) {
-        errorDiv.style.display = 'none';
-    }
-}
-
-// Security Rules section handlers
-let sonarRulesParsedData = [];
-
-function dropSonarRulesHandler(event) {
-    event.preventDefault();
-    event.currentTarget.classList.remove('dragover');
-    
-    const file = event.dataTransfer.files[0];
-    if (file && (file.type === 'text/html' || file.name.endsWith('.html') || file.name.endsWith('.htm'))) {
-        processSonarRulesFile(file);
-    } else {
-        showSonarRulesError('Please upload a valid HTML file.');
-    }
-}
-
-function sonarRulesFileSelected(event) {
-    const file = event.target.files[0];
-    if (file) {
-        processSonarRulesFile(file);
-    }
-}
-
-function processSonarRulesFile(file) {
-    console.log('Processing SonarQube Rules file:', file.name);
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const htmlContent = e.target.result;
-            sonarRulesParsedData = parseSonarQubeHtml(htmlContent);
-            
-            displaySonarRulesResults(sonarRulesParsedData);
-            showSonarRulesSuccess(`Successfully processed ${sonarRulesParsedData.length} security rules from ${file.name}`);
-            
-        } catch (error) {
-            console.error('Error processing SonarQube Rules file:', error);
-            showSonarRulesError('Error processing file: ' + error.message);
-        }
-    };
-
-    reader.onerror = function() {
-        showSonarRulesError('Error reading file. Please try again.');
-    };
-
-    reader.readAsText(file);
-}
-
-function displaySonarRulesResults(data) {
-    console.log('Displaying SonarQube Rules results:', data.length, 'items');
-    
-    const resultsDiv = document.getElementById('sonarRulesResults');
-    if (!resultsDiv) return;
-    
-    resultsDiv.style.display = 'block';
-    
-    // Calculate statistics
-    const totalRules = data.length;
-    const criticalRules = data.filter(item => 
-        item.severity === 'CRITICAL' || item.severity === 'Critical' ||
-        (item.type && item.type.toLowerCase().includes('critical'))
-    ).length;
-    const blockerRules = data.filter(item => 
-        item.severity === 'BLOCKER' || item.severity === 'Blocker' ||
-        (item.type && item.type.toLowerCase().includes('blocker'))
-    ).length;
-    const languages = [...new Set(data.map(item => item.language || 'Unknown').filter(l => l))].length;
-    
-    // Update statistics
-    document.getElementById('sonarRulesTotalRules').textContent = totalRules;
-    document.getElementById('sonarRulesCriticalRules').textContent = criticalRules;
-    document.getElementById('sonarRulesBlockerRules').textContent = blockerRules;
-    document.getElementById('sonarRulesLanguages').textContent = languages;
-    
-    // Setup export button
-    const exportBtn = document.getElementById('sonarRulesExportBtn');
-    if (exportBtn) {
-        exportBtn.onclick = () => performSonarRulesExcelExport(data);
-        exportBtn.disabled = false;
-    }
-    
-    // Populate preview table (first 10 rows)
-    const tableBody = document.getElementById('sonarRulesPreviewTableBody');
-    if (tableBody) {
-        tableBody.innerHTML = '';
-        
-        const previewData = data.slice(0, 10);
-        previewData.forEach((item, index) => {
-            const row = document.createElement('tr');
-            row.style.backgroundColor = index % 2 === 0 ? '#f8f9fa' : 'white';
-            
-            row.innerHTML = `
-                <td style="padding: 12px; border-bottom: 1px solid #dee2e6; color: #333;">${item.type || 'Rule'}</td>
-                <td style="padding: 12px; border-bottom: 1px solid #dee2e6; color: #333;">${item.ruleKey || item.key || ''}</td>
-                <td style="padding: 12px; border-bottom: 1px solid #dee2e6; color: #333;">${item.name || item.message || ''}</td>
-                <td style="padding: 12px; border-bottom: 1px solid #dee2e6; color: #333;">${item.language || 'N/A'}</td>
-                <td style="padding: 12px; border-bottom: 1px solid #dee2e6; color: #333;">${item.severity || 'N/A'}</td>
-                <td style="padding: 12px; border-bottom: 1px solid #dee2e6; color: #333;">${item.sysTags || item.tags || ''}</td>
-            `;
-            
-            tableBody.appendChild(row);
-        });
-        
-        if (data.length > 10) {
-            const moreRow = document.createElement('tr');
-            moreRow.innerHTML = `
-                <td colspan="6" style="padding: 12px; text-align: center; font-style: italic; color: #666; border-bottom: 1px solid #dee2e6;">
-                    ... and ${data.length - 10} more rules (download Excel for complete data)
-                </td>
-            `;
-            tableBody.appendChild(moreRow);
-        }
-    }
-}
-
-function performSonarRulesExcelExport(data) {
-    console.log('🚀 Starting SonarQube Rules Excel export...');
-    
-    if (!data || data.length === 0) {
-        alert('No rules data to export');
-        return;
-    }
-    
-    try {
-        // Create workbook and worksheet
-        const wb = XLSX.utils.book_new();
-        
-        // Prepare data for Excel - Rules structure
-        const excelData = data.map((item, index) => ({
-            'Row': index + 1,
-            'Type': item.type || 'Rule',
-            'Rule Key': item.ruleKey || item.key || '',
-            'Name': item.name || item.message || '',
-            'Language': item.language || 'N/A',
-            'Severity': item.severity || 'N/A',
-            'SysTags': item.sysTags || item.tags || ''
-        }));
-        
-        // Create worksheet
-        const ws = XLSX.utils.json_to_sheet(excelData);
-        
-        // Set column widths
-        const colWidths = [
-            { wch: 8 },   // Row
-            { wch: 15 },  // Type
-            { wch: 25 },  // Rule Key
-            { wch: 40 },  // Name
-            { wch: 15 },  // Language
-            { wch: 12 },  // Severity
-            { wch: 30 }   // SysTags
-        ];
-        ws['!cols'] = colWidths;
-        
-        // Add worksheet to workbook
-        XLSX.utils.book_append_sheet(wb, ws, 'Security Rules');
-        
-        // Generate filename with timestamp
-        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
-        const filename = `SonarQube_Security_Rules_${timestamp}.xlsx`;
-        
-        // Save file
-        XLSX.writeFile(wb, filename);
-        
-        console.log('✅ SonarQube Rules Excel export completed:', filename);
-        showSonarRulesSuccess(`Excel file "${filename}" has been downloaded successfully!`);
-        
-    } catch (error) {
-        console.error('❌ Excel export error:', error);
-        alert('Error exporting to Excel: ' + error.message);
-    }
-}
-
-function showSonarRulesError(message) {
-    console.log('SonarQube Rules Error:', message);
-    
-    const errorDiv = document.getElementById('sonarRulesErrorMessage');
-    const successDiv = document.getElementById('sonarRulesSuccessMessage');
-    
-    if (errorDiv) {
-        errorDiv.textContent = message;
-        errorDiv.style.display = 'block';
-    }
-    
-    if (successDiv) {
-        successDiv.style.display = 'none';
-    }
-}
-
-function showSonarRulesSuccess(message) {
-    console.log('SonarQube Rules Success:', message);
-    
-    const errorDiv = document.getElementById('sonarRulesErrorMessage');
-    const successDiv = document.getElementById('sonarRulesSuccessMessage');
-    
-    if (successDiv) {
-        successDiv.textContent = message;
-        successDiv.style.display = 'block';
-    }
-    
-    if (errorDiv) {
-        errorDiv.style.display = 'none';
-    }
-}
-
-console.log('App loaded successfully');
-
 // OWASP File Server Functions
 function openFileServerPath() {
     const defaultPath = "\\\\aut-tfs-file\\OWASP Dependency-Checks";
     const pathInput = document.getElementById('owaspFileServerPath');
-    
+
     // Set the default path if empty
     if (!pathInput.value.trim()) {
         pathInput.value = defaultPath;
     }
-    
+
     const path = pathInput.value.trim();
-    
-    // For UNC paths, we need to use a different approach
-    // Try multiple methods to open the network location
+
+    // Open the UNC path directly in Windows Explorer
     try {
-        // Method 1: Try direct UNC path with file protocol
-        window.open('file:///' + path.replace(/\\/g, '/'), '_blank');
+        const shell = new ActiveXObject("WScript.Shell");
+        shell.Run(`explorer.exe "${path}"`);
     } catch (error) {
-        try {
-            // Method 2: Try with explorer.exe protocol
-            window.open('ms-appx-web:////' + path, '_blank');
-        } catch (error2) {
-            // Method 3: Create a temporary link and click it
-            const link = document.createElement('a');
-            link.href = 'file:///' + path.replace(/\\/g, '/');
-            link.target = '_blank';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
+        console.error('Failed to open path in Windows Explorer:', error);
+        alert('Unable to open the specified path. Please check your system settings.');
     }
 }
 
@@ -3992,4 +2032,866 @@ function exportSonarToExcel() {
         console.error('Excel export error:', error);
         alert('Error exporting to Excel: ' + error.message);
     }
+}
+
+// OWASP File Server Functions
+function openFileServerPath() {
+    const defaultPath = "\\\\aut-tfs-file\\OWASP Dependency-Checks";
+    const pathInput = document.getElementById('owaspFileServerPath');
+
+    // Set the default path if empty
+    if (!pathInput.value.trim()) {
+        pathInput.value = defaultPath;
+    }
+
+    const path = pathInput.value.trim();
+
+    // Open the UNC path directly in Windows Explorer
+    try {
+        const shell = new ActiveXObject("WScript.Shell");
+        shell.Run(`explorer.exe "${path}"`);
+    } catch (error) {
+        console.error('Failed to open path in Windows Explorer:', error);
+        alert('Unable to open the specified path. Please check your system settings.');
+    }
+}
+
+function loadOWASPFromFileServer(reportType) {
+    console.log('Loading OWASP report from file server:', reportType);
+    
+    const defaultPath = "\\\\aut-tfs-file\\OWASP Dependency-Checks";
+    const pathInput = document.getElementById('owaspFileServerPath');
+    
+    // Ensure we have the default path
+    if (!pathInput.value.trim()) {
+        pathInput.value = defaultPath;
+    }
+    
+    const basePath = pathInput.value.trim();
+    
+    // Open Windows Explorer to the UNC path directly - no dialogs
+    try {
+        // Method 1: Direct UNC path opening
+        window.open('file:///' + basePath.replace(/\\/g, '/'), '_blank');
+    } catch (error) {
+        try {
+            // Method 2: Alternative protocol
+            window.location.href = `file://${basePath}`;
+        } catch (error2) {
+            // Method 3: Create temporary link
+            const link = document.createElement('a');
+            link.href = 'file:///' + basePath.replace(/\\/g, '/');
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    }
+    
+    // Enable delta mode for baseline reports
+    if (reportType === 'baseline') {
+        const deltaToggle = document.getElementById('delta-mode-toggle');
+        if (deltaToggle && !deltaToggle.checked) {
+            deltaToggle.click();
+        }
+    }
+}
+
+// Simple, working SonarQube report generator - GLOBAL FUNCTION
+function generateSonarReport() {
+    console.log('🚀 Generating SonarQube Security Report...');
+    
+    // Show results area
+    const resultsArea = document.getElementById('sonar-results-area');
+    const executionLog = document.getElementById('sonar-execution-log');
+    
+    if (resultsArea) {
+        resultsArea.style.display = 'block';
+    }
+    
+    if (executionLog) {
+        executionLog.textContent = '';
+        addLogMessage('=== SonarQube Security Report Generation Started ===\n');
+        addLogMessage(`Timestamp: ${new Date().toISOString()}\n\n`);
+        
+        // Get configuration
+        const host = document.getElementById('sonar-host').value || 'http://ubuntusrv01:9000';
+        const project = document.getElementById('sonar-project').value || 'MetaVision';
+        const token = document.getElementById('sonar-token').value || 'squ_e6852038fd0b432d1b093b8e81a1b53e20b1d48c';
+        
+        addLogMessage(`SonarQube Host: ${host}\n`);
+        addLogMessage(`Project Key: ${project}\n`);
+        addLogMessage(`Token: ${token.substring(0, 10)}...\n\n`);
+        
+        // Try to fetch data
+        fetchSonarData(host, project, token);
+    }
+}
+
+function addLogMessage(message) {
+    const executionLog = document.getElementById('sonar-execution-log');
+    if (executionLog) {
+        executionLog.textContent += message;
+        executionLog.scrollTop = executionLog.scrollHeight;
+    }
+    console.log(message.trim());
+}
+
+async function fetchSonarData(host, project, token) {
+    try {
+        addLogMessage('📡 Connecting to SonarQube server...\n');
+        
+        // Create auth header
+        const authHeader = 'Basic ' + btoa(token + ':');
+        
+        // Try to fetch security issues
+        const issuesUrl = `${host}/api/issues/search?components=${project}&s=FILE_LINE&impactSoftwareQualities=SECURITY&ps=500&additionalFields=_all&timeZone=Asia/Jerusalem`;
+        
+        addLogMessage(`Calling: ${issuesUrl}\n`);
+        
+        const response = await fetch(issuesUrl, {
+            method: 'GET',
+            headers: {
+                'Authorization': authHeader,
+                'Accept': 'application/json'
+            },
+            mode: 'cors'
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        const issues = data.issues || [];
+        
+        addLogMessage(`✅ Successfully retrieved ${issues.length} security issues!\n\n`);
+        
+        if (issues.length > 0) {
+            displaySonarResults(issues);
+            enableExportButton();
+        } else {
+            addLogMessage('⚠️ No security issues found for this project.\n');
+        }
+        
+    } catch (error) {
+        console.error('SonarQube fetch error:', error);
+        addLogMessage(`❌ ERROR: ${error.message}\n\n`);
+        
+        if (error.message.includes('CORS') || error.message.includes('fetch')) {
+            addLogMessage('🚨 CORS ISSUE DETECTED!\n');
+            addLogMessage('This happens when trying to access SonarQube from localhost.\n\n');
+            addLogMessage('💡 SOLUTIONS:\n');
+            addLogMessage('1. Use the HTML upload sections below instead\n');
+            addLogMessage('2. Run this tool from the same server as SonarQube\n');
+            addLogMessage('3. Configure SonarQube CORS settings\n\n');
+        }
+        
+        // Show demo data for testing
+        showDemoData();
+    }
+}
+
+function displaySonarResults(issues) {
+    addLogMessage('📊 Processing results...\n');
+    
+    // Show summary
+    const securityIssues = issues.filter(i => i.type === 'SECURITY_HOTSPOT' || i.type === 'VULNERABILITY').length;
+    const openIssues = issues.filter(i => i.status === 'OPEN' || i.status === 'TO_REVIEW').length;
+    
+    addLogMessage(`   - Total Issues: ${issues.length}\n`);
+    addLogMessage(`   - Security Issues: ${securityIssues}\n`);
+    addLogMessage(`   - Open Issues: ${openIssues}\n\n`);
+    addLogMessage('✅ Report generation complete!\n');
+    addLogMessage('You can now export to Excel using the button below.\n');
+    
+    // Store results for export
+    window.sonarResults = issues.map(issue => ({
+        key: issue.key,
+        project: issue.project,
+        component: issue.component,
+        status: issue.status,
+        resolution: issue.resolution || '',
+        created: issue.creationDate ? issue.creationDate.split('T')[0] : '',
+        updated: issue.updateDate ? issue.updateDate.split('T')[0] : '',
+        message: issue.message,
+        severity: issue.severity || 'UNKNOWN'
+    }));
+}
+
+function showDemoData() {
+    addLogMessage('📋 Showing demo data for testing...\n');
+    
+    const demoData = [
+        {
+            key: 'DEMO-001',
+            project: 'MetaVision',
+            component: 'src/main/java/Security.java',
+            status: 'OPEN',
+            resolution: '',
+            created: '2025-11-01',
+            updated: '2025-11-05',
+            message: 'SQL injection vulnerability detected',
+            severity: 'CRITICAL'
+        },
+        {
+            key: 'DEMO-002', 
+            project: 'MetaVision',
+            component: 'src/main/java/Authentication.java',
+            status: 'TO_REVIEW',
+            resolution: '',
+            created: '2025-11-02',
+            updated: '2025-11-05',
+            message: 'Weak cryptographic hash detected',
+            severity: 'HIGH'
+        }
+    ];
+    
+    window.sonarResults = demoData;
+    displaySonarResults(demoData);
+    enableExportButton();
+}
+
+function enableExportButton() {
+    const exportBtn = document.getElementById('export-sonar-btn');
+    if (exportBtn) {
+        exportBtn.disabled = false;
+        exportBtn.style.opacity = '1';
+        exportBtn.onclick = exportSonarToExcel;
+        addLogMessage('📁 Export button is now enabled!\n');
+    }
+}
+
+function exportSonarToExcel() {
+    if (!window.sonarResults || window.sonarResults.length === 0) {
+        alert('No data to export');
+        return;
+    }
+    
+    try {
+        // Create workbook and worksheet using XLSX
+        const wb = XLSX.utils.book_new();
+        
+        // Prepare data for Excel
+        const excelData = window.sonarResults.map((item, index) => ({
+            'Row': index + 1,
+            'Key': item.key,
+            'Project': item.project,
+            'Component': item.component,
+            'Status': item.status,
+            'Resolution': item.resolution,
+            'Created': item.created,
+            'Updated': item.updated,
+            'Message': item.message,
+            'Severity': item.severity
+        }));
+        
+        // Create worksheet
+        const ws = XLSX.utils.json_to_sheet(excelData);
+        
+        // Set column widths
+        ws['!cols'] = [
+            { wch: 5 },   // Row
+            { wch: 15 },  // Key
+            { wch: 15 },  // Project
+            { wch: 30 },  // Component
+            { wch: 12 },  // Status
+            { wch: 12 },  // Resolution
+            { wch: 12 },  // Created
+            { wch: 12 },  // Updated
+            { wch: 50 },  // Message
+            { wch: 10 }   // Severity
+        ];
+        
+        // Add worksheet to workbook
+        XLSX.utils.book_append_sheet(wb, ws, 'Security Issues');
+        
+        // Generate filename with timestamp
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
+        const filename = `SonarQube_Security_Report_${timestamp}.xlsx`;
+        
+        // Save file
+        XLSX.writeFile(wb, filename);
+        
+        addLogMessage(`📁 Excel file "${filename}" downloaded successfully!\n`);
+        
+    } catch (error) {
+        console.error('Excel export error:', error);
+        alert('Error exporting to Excel: ' + error.message);
+    }
+}
+
+// Security Rules section handlers
+let sonarRulesParsedData = [];
+
+function dropSonarRulesHandler(event) {
+    event.preventDefault();
+    event.currentTarget.classList.remove('dragover');
+    
+    const file = event.dataTransfer.files[0];
+    if (file && (file.type === 'text/html' || file.name.endsWith('.html') || file.name.endsWith('.htm'))) {
+        processSonarRulesFile(file);
+    } else {
+        showSonarRulesError('Please upload a valid HTML file.');
+    }
+}
+
+function sonarRulesFileSelected(event) {
+    const file = event.target.files[0];
+    if (file) {
+        processSonarRulesFile(file);
+    }
+}
+
+function processSonarRulesFile(file) {
+    console.log('Processing SonarQube Rules file:', file.name);
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const htmlContent = e.target.result;
+            sonarRulesParsedData = parseSonarQubeHtml(htmlContent);
+            
+            displaySonarRulesResults(sonarRulesParsedData);
+            showSonarRulesSuccess(`Successfully processed ${sonarRulesParsedData.length} security rules from ${file.name}`);
+            
+        } catch (error) {
+            console.error('Error processing SonarQube Rules file:', error);
+            showSonarRulesError('Error processing file: ' + error.message);
+        }
+    };
+
+    reader.onerror = function() {
+        showSonarRulesError('Error reading file. Please try again.');
+    };
+
+    reader.readAsText(file);
+}
+
+function displaySonarRulesResults(data) {
+    console.log('Displaying SonarQube Rules results:', data.length, 'items');
+    
+    const resultsDiv = document.getElementById('sonarRulesResults');
+    if (!resultsDiv) return;
+    
+    resultsDiv.style.display = 'block';
+    
+    // Calculate statistics
+    const totalRules = data.length;
+    const criticalRules = data.filter(item => 
+        item.severity === 'CRITICAL' || item.severity === 'Critical' ||
+        (item.type && item.type.toLowerCase().includes('critical'))
+    ).length;
+    const blockerRules = data.filter(item => 
+        item.severity === 'BLOCKER' || item.severity === 'Blocker' ||
+        (item.type && item.type.toLowerCase().includes('blocker'))
+    ).length;
+    const languages = [...new Set(data.map(item => item.language || 'Unknown').filter(l => l))].length;
+    
+    // Update statistics
+    document.getElementById('sonarRulesTotalRules').textContent = totalRules;
+    document.getElementById('sonarRulesCriticalRules').textContent = criticalRules;
+    document.getElementById('sonarRulesBlockerRules').textContent = blockerRules;
+    document.getElementById('sonarRulesLanguages').textContent = languages;
+    
+    // Setup export button
+    const exportBtn = document.getElementById('sonarRulesExportBtn');
+    if (exportBtn) {
+        exportBtn.onclick = () => performSonarRulesExcelExport(data);
+        exportBtn.disabled = false;
+    }
+    
+    // Populate preview table (first 10 rows)
+    const tableBody = document.getElementById('sonarRulesPreviewTableBody');
+    if (tableBody) {
+        tableBody.innerHTML = '';
+        
+        const previewData = data.slice(0, 10);
+        previewData.forEach((item, index) => {
+            const row = document.createElement('tr');
+            row.style.backgroundColor = index % 2 === 0 ? '#f8f9fa' : 'white';
+            
+            row.innerHTML = `
+                <td style="padding: 12px; border-bottom: 1px solid #dee2e6; color: #333;">${item.type || 'Rule'}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #dee2e6; color: #333;">${item.ruleKey || item.key || ''}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #dee2e6; color: #333;">${item.name || item.message || ''}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #dee2e6; color: #333;">${item.language || 'N/A'}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #dee2e6; color: #333;">${item.severity || 'N/A'}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #dee2e6; color: #333;">${item.sysTags || item.tags || ''}</td>
+            `;
+            
+            tableBody.appendChild(row);
+        });
+        
+        if (data.length > 10) {
+            const moreRow = document.createElement('tr');
+            moreRow.innerHTML = `
+                <td colspan="6" style="padding: 12px; text-align: center; font-style: italic; color: #666; border-bottom: 1px solid #dee2e6;">
+                    ... and ${data.length - 10} more rules (download Excel for complete data)
+                </td>
+            `;
+            tableBody.appendChild(moreRow);
+        }
+    }
+}
+
+function performSonarRulesExcelExport(data) {
+    console.log('🚀 Starting SonarQube Rules Excel export...');
+    
+    if (!data || data.length === 0) {
+        alert('No rules data to export');
+        return;
+    }
+    
+    try {
+        // Create workbook and worksheet
+        const wb = XLSX.utils.book_new();
+        
+        // Prepare data for Excel - Rules structure
+        const excelData = data.map((item, index) => ({
+            'Row': index + 1,
+            'Type': item.type || 'Rule',
+            'Rule Key': item.ruleKey || item.key || '',
+            'Name': item.name || item.message || '',
+            'Language': item.language || 'N/A',
+            'Severity': item.severity || 'N/A',
+            'SysTags': item.sysTags || item.tags || ''
+        }));
+        
+        // Create worksheet
+        const ws = XLSX.utils.json_to_sheet(excelData);
+        
+        // Set column widths
+        const colWidths = [
+            { wch: 8 },   // Row
+            { wch: 15 },  // Type
+            { wch: 25 },  // Rule Key
+            { wch: 40 },  // Name
+            { wch: 15 },  // Language
+            { wch: 12 },  // Severity
+            { wch: 30 }   // SysTags
+        ];
+        ws['!cols'] = colWidths;
+        
+        // Add worksheet to workbook
+        XLSX.utils.book_append_sheet(wb, ws, 'Security Rules');
+        
+        // Generate filename with timestamp
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const filename = `SonarQube_Security_Rules_${timestamp}.xlsx`;
+        
+        // Save file
+        XLSX.writeFile(wb, filename);
+        
+        console.log('✅ SonarQube Rules Excel export completed:', filename);
+        showSonarRulesSuccess(`Excel file "${filename}" has been downloaded successfully!`);
+        
+    } catch (error) {
+        console.error('❌ Excel export error:', error);
+        alert('Error exporting to Excel: ' + error.message);
+    }
+}
+
+function showSonarRulesError(message) {
+    console.log('SonarQube Rules Error:', message);
+    
+    const errorDiv = document.getElementById('sonarRulesErrorMessage');
+    const successDiv = document.getElementById('sonarRulesSuccessMessage');
+    
+    if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+    }
+    
+    if (successDiv) {
+        successDiv.style.display = 'none';
+    }
+}
+
+function showSonarRulesSuccess(message) {
+    console.log('SonarQube Rules Success:', message);
+    
+    const errorDiv = document.getElementById('sonarRulesErrorMessage');
+    const successDiv = document.getElementById('sonarRulesSuccessMessage');
+    
+    if (successDiv) {
+        successDiv.textContent = message;
+        successDiv.style.display = 'block';
+    }
+    
+    if (errorDiv) {
+        errorDiv.style.display = 'none';
+    }
+}
+
+// File Explorer Button Functions - Open directly without dialogs
+function openFileServerForCurrent() {
+    const pathInput = document.getElementById('owaspFileServerPath');
+    const defaultPath = '\\\\aut-tfs-file\\OWASP Dependency-Checks';
+    
+    // Set default path if empty
+    if (!pathInput.value.trim()) {
+        pathInput.value = defaultPath;
+    }
+    
+    const path = pathInput.value.trim();
+    console.log('Opening file server for current report:', path);
+    
+    // Highlight the current report upload area
+    const currentDropzone = document.getElementById('report-drop');
+    if (currentDropzone) {
+        currentDropzone.style.border = '3px solid #4CAF50';
+        currentDropzone.style.backgroundColor = '#e8f5e8';
+        setTimeout(() => {
+            currentDropzone.style.border = '';
+            currentDropzone.style.backgroundColor = '';
+        }, 3000);
+    }
+    
+    try {
+        // Try ActiveXObject first (IE/corporate environments)
+        if (window.ActiveXObject || "ActiveXObject" in window) {
+            const shell = new ActiveXObject("Shell.Application");
+            shell.Explore(path);
+            return;
+        }
+        
+        // Try to open Windows Explorer using explorer.exe
+        const explorerPath = path.replace(/\\\\/g, '\\').replace(/\//g, '\\');
+        window.open(`ms-appx-web:///shell:explorer.exe,${explorerPath}`, '_blank');
+        
+        // Fallback to file protocol
+        setTimeout(() => {
+            const fileUrl = `file:///${path.replace(/\\/g, '/')}`;
+            window.open(fileUrl, '_blank');
+        }, 100);
+        
+    } catch (error) {
+        console.log('Could not open file explorer automatically:', error);
+        alert(`Please open Windows Explorer and navigate to:\n\n${path}\n\n📂 Find dependency-check-report.xml and upload to the current report area`);
+    }
+}
+
+function openFileServerForBaseline() {
+    const pathInput = document.getElementById('owaspFileServerPath');
+    const defaultPath = '\\\\aut-tfs-file\\OWASP Dependency-Checks';
+    
+    // Set default path if empty
+    if (!pathInput.value.trim()) {
+        pathInput.value = defaultPath;
+    }
+    
+    const path = pathInput.value.trim();
+    console.log('Opening file server for baseline report:', path);
+    
+    // Enable delta mode if not already enabled
+    const deltaToggle = document.getElementById('delta-mode-toggle');
+    if (deltaToggle && !deltaToggle.checked) {
+        deltaToggle.click();
+    }
+    
+    // Highlight the baseline report upload area
+    const baselineDropzone = document.getElementById('baseline-report-drop');
+    if (baselineDropzone) {
+        baselineDropzone.style.border = '3px solid #FF9800';
+        baselineDropzone.style.backgroundColor = '#fff3e0';
+        setTimeout(() => {
+            baselineDropzone.style.border = '';
+            baselineDropzone.style.backgroundColor = '';
+        }, 3000);
+    }
+    
+    try {
+        // Try ActiveXObject first (IE/corporate environments)
+        if (window.ActiveXObject || "ActiveXObject" in window) {
+            const shell = new ActiveXObject("Shell.Application");
+            shell.Explore(path);
+            return;
+        }
+        
+        // Try to open Windows Explorer using explorer.exe
+        const explorerPath = path.replace(/\\\\/g, '\\').replace(/\//g, '\\');
+        window.open(`ms-appx-web:///shell:explorer.exe,${explorerPath}`, '_blank');
+        
+        // Fallback to file protocol
+        setTimeout(() => {
+            const fileUrl = `file:///${path.replace(/\\/g, '/')}`;
+            window.open(fileUrl, '_blank');
+        }, 100);
+        
+    } catch (error) {
+        console.log('Could not open file explorer automatically:', error);
+        alert(`Please open Windows Explorer and navigate to:\n\n${path}\n\n📂 Find dependency-check-report.xml and upload to the baseline report area`);
+    }
+}
+
+// Setup table event listeners for filtering and search
+function setupTableEventListeners() {
+    // Find all tables with filter controls
+    const tables = document.querySelectorAll('table[data-vulnerabilities]');
+    
+    tables.forEach(table => {
+        const tableId = table.id;
+        const searchInput = document.getElementById(tableId + '-search');
+        const severitySelect = document.getElementById(tableId + '-severity');
+        
+        if (searchInput) {
+            searchInput.addEventListener('input', () => filterTable(tableId));
+        }
+        
+        if (severitySelect) {
+            severitySelect.addEventListener('change', () => filterTable(tableId));
+        }
+        
+        // Add sorting functionality to headers
+        const headers = table.querySelectorAll('th[data-sort]');
+        headers.forEach(header => {
+            header.addEventListener('click', () => {
+                const sortField = header.getAttribute('data-sort');
+                sortTable(tableId, sortField);
+            });
+        });
+    });
+}
+
+// Table sorting functionality
+function sortTable(tableId, sortField) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const vulnerabilities = JSON.parse(table.getAttribute('data-vulnerabilities'));
+    
+    // Determine sort direction
+    const header = table.querySelector(`th[data-sort="${sortField}"]`);
+    const isAsc = !header.classList.contains('sort-asc');
+    
+    // Clear all sort classes
+    table.querySelectorAll('th').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+    });
+    
+    // Add sort class to current header
+    header.classList.add(isAsc ? 'sort-asc' : 'sort-desc');
+    
+    // Sort the data
+    const sortedData = vulnerabilities.sort((a, b) => {
+        let valueA = a[sortField] || '';
+        let valueB = b[sortField] || '';
+        
+        // Handle numeric CVSS scores
+        if (sortField === 'CVSS') {
+            valueA = parseFloat(valueA) || 0;
+            valueB = parseFloat(valueB) || 0;
+        } else {
+            valueA = valueA.toString().toLowerCase();
+            valueB = valueB.toString().toLowerCase();
+        }
+        
+        if (valueA < valueB) return isAsc ? -1 : 1;
+        if (valueA > valueB) return isAsc ? 1 : -1;
+        return 0;
+    });
+    
+    // Re-render table with sorted data
+    const tableRows = sortedData.map((vuln, index) => `
+        <tr class="vuln-row" data-index="${index}">
+            <td>
+                <div class="package-info">
+                    <strong>${escapeHtml(vuln.Package)}</strong>
+                    ${vuln.Version ? `<div class="version-info">v${escapeHtml(vuln.Version)}</div>` : ''}
+                </div>
+            </td>
+            <td>
+                <div class="vulnerability-info">
+                    <strong>${escapeHtml(vuln.Vulnerability)}</strong>
+                    ${vuln.Link ? `<a href="${escapeHtml(vuln.Link)}" target="_blank" class="vuln-link" title="View details">🔗</a>` : ''}
+                </div>
+            </td>
+            <td><span class="severity-${vuln.Severity.toLowerCase()}">${escapeHtml(vuln.Severity)}</span></td>
+            <td>
+                <div class="cvss-info">
+                    <span class="cvss-score">${escapeHtml(vuln.CVSS)}</span>
+                    ${vuln.CVSSv3 ? `<div class="cvss-version">v3: ${escapeHtml(vuln.CVSSv3)}</div>` : ''}
+                </div>
+            </td>
+            <td>
+                <div class="description-text" title="${escapeHtml(vuln.Description)}">
+                    ${truncateText(escapeHtml(vuln.Description), 120)}
+                </div>
+            </td>
+            <td>
+                <div class="file-path" title="${escapeHtml(vuln.File)}">
+                    ${truncateFilePath(escapeHtml(vuln.File))}
+                </div>
+            </td>
+        </tr>
+    `).join('');
+    
+    tbody.innerHTML = tableRows;
+    
+    // Update the data attribute with sorted data
+    table.setAttribute('data-vulnerabilities', JSON.stringify(sortedData));
+    
+    // Re-apply current filters
+    filterTable(tableId);
+}
+
+// Handle CSV export
+function handleExportCSV() {
+    try {
+        const reportData = getCurrentReportData();
+        const csvContent = generateCSV(reportData);
+        
+        // Create and download file
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `OWASP-${reportData.type}-Report-${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+        
+        console.log('CSV report exported successfully');
+        
+    } catch (error) {
+        console.error('CSV export failed:', error);
+        alert('CSV export failed: ' + error.message);
+    }
+}
+
+// Generate CSV content from report data
+function generateCSV(reportData) {
+    const isDelta = reportData.type === 'delta';
+    let vulnerabilities = [];
+    
+    if (isDelta && reportData.data) {
+        vulnerabilities = [...(reportData.data.newVulnerabilities || []), ...(reportData.data.fixedVulnerabilities || [])];
+    } else {
+        vulnerabilities = reportData.vulnerabilities || [];
+    }
+    
+    if (vulnerabilities.length === 0) {
+        return 'No vulnerabilities found\\n';
+    }
+    
+    // CSV headers
+    const headers = ['Package', 'Vulnerability', 'Severity', 'CVSS Score', 'Description', 'File Path'];
+    
+    // Add status column for delta reports
+    if (isDelta) {
+        headers.push('Status');
+    }
+    
+    let csvContent = headers.join(',') + '\\n';
+    
+    // Add data rows
+    vulnerabilities.forEach(vuln => {
+        const row = [
+            `"${escapeCSV(vuln.Package)}"`,
+            `"${escapeCSV(vuln.Vulnerability)}"`,
+            `"${escapeCSV(vuln.Severity)}"`,
+            `"${escapeCSV(vuln.CVSS)}"`,
+            `"${escapeCSV(vuln.Description)}"`,
+            `"${escapeCSV(vuln.File)}"`
+        ];
+        
+        if (isDelta) {
+            const status = vuln.isFixed ? 'Fixed' : 'New';
+            row.push(`"${status}"`);
+        }
+        
+        csvContent += row.join(',') + '\\n';
+    });
+    
+    return csvContent;
+}
+
+// Escape CSV content
+function escapeCSV(text) {
+    if (!text) return '';
+    return text.toString().replace(/"/g, '""');
+}
+
+console.log('App loaded successfully');
+
+// Helper function to copy text to clipboard
+function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+    } else {
+        return fallbackCopyToClipboard(text);
+    }
+}
+
+// Fallback clipboard copy method
+function fallbackCopyToClipboard(text) {
+    return new Promise((resolve, reject) => {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.top = '0';
+        textArea.style.left = '0';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            if (successful) {
+                resolve();
+            } else {
+                reject(new Error('Copy command failed'));
+            }
+        } catch (err) {
+            document.body.removeChild(textArea);
+            reject(err);
+        }
+    });
+}
+
+// Override the openFileServerPath function with modern implementation
+function openFileServerPath() {
+    const defaultPath = "\\\\aut-tfs-file\\OWASP Dependency-Checks";
+    const pathInput = document.getElementById('owaspFileServerPath');
+
+    // Set the default path if empty
+    if (!pathInput.value.trim()) {
+        pathInput.value = defaultPath;
+    }
+
+    const path = pathInput.value.trim();
+
+    // Modern approach: Copy to clipboard and provide detailed instructions
+    copyToClipboard(path).then(() => {
+        // Create a more detailed instruction dialog
+        const instructions = `📋 File server path copied to clipboard!
+
+🗂️ Path: ${path}
+
+🚀 Quick access steps:
+1️⃣ Press Windows + E (open Explorer)
+2️⃣ Click address bar (or Ctrl + L)
+3️⃣ Paste (Ctrl + V) and press Enter
+
+Alternative: Press Windows + R, paste path, press Enter
+
+💡 Path is ready in your clipboard!`;
+
+        alert(instructions);
+    }).catch(() => {
+        const fallbackInstructions = `📂 Navigate to: ${path}
+
+🚀 Manual steps:
+1. Press Windows + R
+2. Copy and paste: ${path}
+3. Press Enter
+
+Or open Explorer and paste in address bar.`;
+
+        alert(fallbackInstructions);
+    });
 }
