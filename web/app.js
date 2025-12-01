@@ -290,6 +290,11 @@ function storeXMLData(xml, type) {
             window.sonarQubeHtmlData = xml;
             processSonarQubeHtml(xml);
             break;
+        case 'sonar-rules-html':
+            // Store SonarQube Rules HTML data
+            window.sonarQubeRulesData = xml;
+            processSonarQubeRules(xml);
+            break;
         default:
             console.warn('Unknown file type:', type);
     }
@@ -301,7 +306,8 @@ function setUploadedState(type, isUploaded) {
         'suppressions': { zone: 'suppressions-drop', message: 'suppressions-uploaded' },
         'baseline-report': { zone: 'baseline-report-drop', message: 'baseline-uploaded' },
         'baseline-suppressions': { zone: 'baseline-suppressions-drop', message: 'baseline-suppressions-uploaded' },
-        'sonar-html': { zone: 'sonar-drop', message: 'sonar-uploaded' }
+        'sonar-html': { zone: 'sonar-drop', message: 'sonar-uploaded' },
+        'sonar-rules-html': { zone: 'sonar-rules-drop', message: 'sonar-rules-uploaded' }
     };
     
     const config = configs[type];
@@ -1465,6 +1471,10 @@ function setupSonarQubeIntegration() {
     // Setup file upload for SonarQube HTML files
     setupFileInput('sonar-file', 'sonar-html', 'sonar-progress');
     setupDropZone('sonar-drop', 'sonar-file', 'sonar-html', 'sonar-progress');
+    
+    // Setup file upload for SonarQube Rules HTML files
+    setupFileInput('sonar-rules-file', 'sonar-rules-html', 'sonar-rules-progress');
+    setupDropZone('sonar-rules-drop', 'sonar-rules-file', 'sonar-rules-html', 'sonar-rules-progress');
     
     // Wait a moment to ensure DOM is fully loaded
     setTimeout(() => {
@@ -2806,6 +2816,53 @@ function openFileServerForSonar() {
     }
 }
 
+function openFileServerForSonarRules() {
+    const pathInput = document.getElementById('sonarRulesFileServerPath');
+    const defaultPath = '\\\\aut-tfs-file\\SonarReports\\Rules';
+    
+    // Set default path if empty
+    if (!pathInput.value.trim()) {
+        pathInput.value = defaultPath;
+    }
+    
+    const path = pathInput.value.trim();
+    console.log('Opening file server for SonarQube rules:', path);
+    
+    // Highlight the SonarQube Rules upload area
+    const sonarRulesDropzone = document.getElementById('sonar-rules-drop');
+    if (sonarRulesDropzone) {
+        sonarRulesDropzone.style.border = '3px solid #4CAF50';
+        sonarRulesDropzone.style.backgroundColor = '#e8f5e8';
+        setTimeout(() => {
+            sonarRulesDropzone.style.border = '';
+            sonarRulesDropzone.style.backgroundColor = '';
+        }, 3000);
+    }
+    
+    try {
+        // Try ActiveXObject first (IE/corporate environments)
+        if (window.ActiveXObject || "ActiveXObject" in window) {
+            const shell = new ActiveXObject("Shell.Application");
+            shell.Explore(path);
+            return;
+        }
+        
+        // Try to open Windows Explorer using explorer.exe
+        const explorerPath = path.replace(/\\\\/g, '\\').replace(/\//g, '\\');
+        window.open(`ms-appx-web:///shell:explorer.exe,${explorerPath}`, '_blank');
+        
+        // Fallback to file protocol
+        setTimeout(() => {
+            const fileUrl = `file:///${path.replace(/\\/g, '/')}`;
+            window.open(fileUrl, '_blank');
+        }, 100);
+        
+    } catch (error) {
+        console.log('Could not open file explorer automatically:', error);
+        alert(`Please open Windows Explorer and navigate to:\n\n${path}\n\n📂 Find SonarQube Security Rules HTML files and upload to the Rules area`);
+    }
+}
+
 function processSonarQubeHtml(htmlDoc) {
     console.log('Processing SonarQube HTML report...');
     
@@ -2855,6 +2912,82 @@ function processSonarQubeHtml(htmlDoc) {
         
         return [];
     }
+}
+
+function processSonarQubeRules(htmlDoc) {
+    console.log('Processing SonarQube Security Rules report...');
+    
+    try {
+        // Show success message
+        const successMsg = document.getElementById('sonarRulesSuccessMessage');
+        const errorMsg = document.getElementById('sonarRulesErrorMessage');
+        
+        if (successMsg) {
+            successMsg.textContent = '✅ SonarQube rules report uploaded successfully! Processing data...';
+            successMsg.style.display = 'block';
+        }
+        if (errorMsg) {
+            errorMsg.style.display = 'none';
+        }
+        
+        // Extract rules from the HTML
+        const rules = extractSonarQubeRules(htmlDoc);
+        
+        console.log('Extracted SonarQube rules:', rules.length);
+        
+        // Update success message with results
+        if (successMsg) {
+            successMsg.textContent = `✅ Successfully processed SonarQube rules with ${rules.length} security rules`;
+        }
+        
+        // Store for potential export
+        window.sonarQubeRules = rules;
+        
+        return rules;
+        
+    } catch (error) {
+        console.error('Error processing SonarQube Rules HTML:', error);
+        
+        const errorMsg = document.getElementById('sonarRulesErrorMessage');
+        if (errorMsg) {
+            errorMsg.textContent = '❌ Error processing SonarQube rules: ' + error.message;
+            errorMsg.style.display = 'block';
+        }
+        
+        return [];
+    }
+}
+
+function extractSonarQubeRules(htmlDoc) {
+    console.log('Extracting security rules from SonarQube HTML...');
+    
+    // This is a placeholder function - customize based on actual SonarQube rules HTML structure
+    const rules = [];
+    
+    // Look for common SonarQube rules HTML patterns
+    const tables = htmlDoc.querySelectorAll('table');
+    const rows = htmlDoc.querySelectorAll('tr');
+    
+    // Parse the HTML structure to extract rule information
+    rows.forEach((row, index) => {
+        const cells = row.querySelectorAll('td, th');
+        if (cells.length >= 2) {
+            // Attempt to extract rule data
+            const ruleData = {
+                id: index + 1,
+                name: cells[0]?.textContent?.trim() || 'Unknown Rule',
+                severity: cells[1]?.textContent?.trim() || 'Unknown',
+                description: cells[2]?.textContent?.trim() || '',
+                category: 'Security Rule'
+            };
+            
+            if (ruleData.name !== 'Unknown Rule' && ruleData.name.length > 0) {
+                rules.push(ruleData);
+            }
+        }
+    });
+    
+    return rules;
 }
 
 function extractSonarQubeSecurityIssues(htmlDoc) {
