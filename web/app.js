@@ -2,6 +2,25 @@
 
 console.log('App loading...');
 
+// Tab switching functionality
+function switchTab(tabId) {
+    // Hide all tab contents
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Remove active class from all tab buttons
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show selected tab content
+    document.getElementById(tabId).classList.add('active');
+    
+    // Add active class to selected tab button
+    document.getElementById(tabId + '-btn').classList.add('active');
+}
+
 // Global variables for storing XML data
 let dependencyXml = null;
 let suppressionsXml = null;
