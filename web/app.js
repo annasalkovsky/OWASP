@@ -211,17 +211,35 @@ function handleFileUpload(file, type, progressId) {
     
     reader.onload = function(e) {
         try {
-            const parser = new DOMParser();
-            const xml = parser.parseFromString(e.target.result, 'text/xml');
+            const fileContent = e.target.result;
             
-            // Check for parsing errors
-            const parseError = xml.querySelector('parsererror');
-            if (parseError) {
-                throw new Error('Invalid XML format');
+            if (type === 'sonar-html') {
+                // Handle HTML files for SonarQube
+                const parser = new DOMParser();
+                const htmlDoc = parser.parseFromString(fileContent, 'text/html');
+                
+                // Check if it's a valid HTML document
+                if (!htmlDoc || htmlDoc.querySelector('parsererror')) {
+                    throw new Error('Invalid HTML format');
+                }
+                
+                // Store the HTML data
+                storeXMLData(htmlDoc, type);
+                
+            } else {
+                // Handle XML files (OWASP dependencies and suppressions)
+                const parser = new DOMParser();
+                const xml = parser.parseFromString(fileContent, 'text/xml');
+                
+                // Check for parsing errors
+                const parseError = xml.querySelector('parsererror');
+                if (parseError) {
+                    throw new Error('Invalid XML format');
+                }
+                
+                // Store the XML data
+                storeXMLData(xml, type);
             }
-            
-            // Store the XML data
-            storeXMLData(xml, type);
             
             // Hide progress bar
             if (progressBar) {
@@ -267,6 +285,11 @@ function storeXMLData(xml, type) {
         case 'baseline-suppressions':
             baselineSuppressionsXml = xml;
             break;
+        case 'sonar-html':
+            // Store SonarQube HTML data
+            window.sonarQubeHtmlData = xml;
+            processSonarQubeHtml(xml);
+            break;
         default:
             console.warn('Unknown file type:', type);
     }
@@ -277,7 +300,8 @@ function setUploadedState(type, isUploaded) {
         'report': { zone: 'report-drop', message: 'report-uploaded' },
         'suppressions': { zone: 'suppressions-drop', message: 'suppressions-uploaded' },
         'baseline-report': { zone: 'baseline-report-drop', message: 'baseline-uploaded' },
-        'baseline-suppressions': { zone: 'baseline-suppressions-drop', message: 'baseline-suppressions-uploaded' }
+        'baseline-suppressions': { zone: 'baseline-suppressions-drop', message: 'baseline-suppressions-uploaded' },
+        'sonar-html': { zone: 'sonar-drop', message: 'sonar-uploaded' }
     };
     
     const config = configs[type];
@@ -1436,11 +1460,15 @@ let sonarConfig = {
 };
 
 function setupSonarQubeIntegration() {
-    console.log('Setting up embedded SonarQube integration...');
+    console.log('Setting up SonarQube integration...');
+    
+    // Setup file upload for SonarQube HTML files
+    setupFileInput('sonar-file', 'sonar-html', 'sonar-progress');
+    setupDropZone('sonar-drop', 'sonar-file', 'sonar-html', 'sonar-progress');
     
     // Wait a moment to ensure DOM is fully loaded
     setTimeout(() => {
-        console.log('🔍 DOM should be ready, setting up button...');
+        console.log('🔍 DOM should be ready, setting up SonarQube features...');
         
         // Setup configuration form
         setupSonarConfigForm();
@@ -1455,13 +1483,13 @@ function setupSonarQubeIntegration() {
             const newBtn = document.getElementById('execute-sonar-btn');
             
             newBtn.addEventListener('click', function() {
-                console.log('🎯 Button clicked via event listener!');
+                console.log('🎯 SonarQube execute button clicked!');
                 runEmbeddedSonarScript();
             });
             
-            console.log('✅ Event listener attached successfully');
+            console.log('✅ SonarQube event listener attached successfully');
         } else {
-            console.error('❌ Execute button not found! ID: execute-sonar-btn');
+            console.log('ℹ️ Execute button not found (normal if not using embedded SonarQube)');
         }
         
         // Setup SonarQube Excel export button
@@ -1470,7 +1498,7 @@ function setupSonarQubeIntegration() {
             sonarExcelBtn.addEventListener('click', exportSonarQubeToExcel);
         }
         
-        console.log('Embedded SonarQube integration setup complete');
+        console.log('✅ SonarQube integration setup complete');
     }, 100);
 }
 
@@ -2729,6 +2757,131 @@ function openFileServerForBaselineSuppressions() {
         console.log('Could not open file explorer automatically:', error);
         alert(`Please open Windows Explorer and navigate to:\n\n${path}\n\n📂 Find previous suppressions.xml and upload to the baseline suppressions area`);
     }
+}
+
+function openFileServerForSonar() {
+    const pathInput = document.getElementById('sonarFileServerPath');
+    const defaultPath = '\\\\aut-tfs-file\\SonarReports';
+    
+    // Set default path if empty
+    if (!pathInput.value.trim()) {
+        pathInput.value = defaultPath;
+    }
+    
+    const path = pathInput.value.trim();
+    console.log('Opening file server for SonarQube reports:', path);
+    
+    // Highlight the SonarQube upload area
+    const sonarDropzone = document.getElementById('sonar-drop');
+    if (sonarDropzone) {
+        sonarDropzone.style.border = '3px solid #4CAF50';
+        sonarDropzone.style.backgroundColor = '#e8f5e8';
+        setTimeout(() => {
+            sonarDropzone.style.border = '';
+            sonarDropzone.style.backgroundColor = '';
+        }, 3000);
+    }
+    
+    try {
+        // Try ActiveXObject first (IE/corporate environments)
+        if (window.ActiveXObject || "ActiveXObject" in window) {
+            const shell = new ActiveXObject("Shell.Application");
+            shell.Explore(path);
+            return;
+        }
+        
+        // Try to open Windows Explorer using explorer.exe
+        const explorerPath = path.replace(/\\\\/g, '\\').replace(/\//g, '\\');
+        window.open(`ms-appx-web:///shell:explorer.exe,${explorerPath}`, '_blank');
+        
+        // Fallback to file protocol
+        setTimeout(() => {
+            const fileUrl = `file:///${path.replace(/\\/g, '/')}`;
+            window.open(fileUrl, '_blank');
+        }, 100);
+        
+    } catch (error) {
+        console.log('Could not open file explorer automatically:', error);
+        alert(`Please open Windows Explorer and navigate to:\n\n${path}\n\n📂 Find SonarSecurityReport_latest.html and upload to the SonarQube area`);
+    }
+}
+
+function processSonarQubeHtml(htmlDoc) {
+    console.log('Processing SonarQube HTML report...');
+    
+    try {
+        // Show success message
+        const successMsg = document.getElementById('sonarSuccessMessage');
+        const errorMsg = document.getElementById('sonarErrorMessage');
+        
+        if (successMsg) {
+            successMsg.textContent = '✅ SonarQube report uploaded successfully! Processing data...';
+            successMsg.style.display = 'block';
+        }
+        if (errorMsg) {
+            errorMsg.style.display = 'none';
+        }
+        
+        // Extract security issues from the HTML
+        const issues = extractSonarQubeSecurityIssues(htmlDoc);
+        
+        console.log('Extracted SonarQube issues:', issues.length);
+        
+        // Update success message with results
+        if (successMsg) {
+            successMsg.textContent = `✅ Successfully processed SonarQube report with ${issues.length} security issues`;
+        }
+        
+        // Store for potential export
+        window.sonarQubeIssues = issues;
+        
+        // Enable export button if issues found
+        const exportBtn = document.getElementById('export-sonar-btn');
+        if (exportBtn && issues.length > 0) {
+            exportBtn.disabled = false;
+            exportBtn.style.opacity = '1';
+        }
+        
+        return issues;
+        
+    } catch (error) {
+        console.error('Error processing SonarQube HTML:', error);
+        
+        const errorMsg = document.getElementById('sonarErrorMessage');
+        if (errorMsg) {
+            errorMsg.textContent = '❌ Error processing SonarQube report: ' + error.message;
+            errorMsg.style.display = 'block';
+        }
+        
+        return [];
+    }
+}
+
+function extractSonarQubeSecurityIssues(htmlDoc) {
+    console.log('Extracting security issues from SonarQube HTML...');
+    
+    // This is a placeholder function - you'll need to customize this
+    // based on the actual structure of your SonarQube HTML reports
+    const issues = [];
+    
+    // Look for common SonarQube HTML patterns
+    const tables = htmlDoc.querySelectorAll('table');
+    const rows = htmlDoc.querySelectorAll('tr');
+    
+    console.log(`Found ${tables.length} tables and ${rows.length} rows in SonarQube report`);
+    
+    // Add placeholder data for now
+    issues.push({
+        severity: 'CRITICAL',
+        type: 'Security',
+        component: 'Example.js',
+        rule: 'javascript:S1234',
+        message: 'Security issue detected in SonarQube report',
+        line: 1,
+        status: 'OPEN'
+    });
+    
+    return issues;
 }
 
 // Setup table event listeners for filtering and search

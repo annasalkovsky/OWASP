@@ -182,39 +182,42 @@
       <p class="section-description">Load SonarQube security reports from file server or upload HTML files manually</p>
     </div>
 
-    <section class="sonar-section">
+    <section class="upload-row">
       <!-- Auto-Load from File Server -->
       <div style="background: #e8f5e8; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #4caf50;">
         <h3 style="margin-bottom: 15px; color: #333; display: flex; align-items: center; gap: 8px;">
           <span style="font-size: 1.5rem;">🗄️</span>
-          Load from File Server (Automated Reports)
+          Load SonarQube Reports from File Server
         </h3>
-        <div style="display: grid; grid-template-columns: 1fr auto; gap: 15px; align-items: center;">
-          <input type="text" id="sonarFileServerPath" placeholder="\\aut-tfs-file\SonarReports\SonarSecurityReport_latest.html" style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace; font-size: 14px;">
-          <button onclick="loadFromFileServer('issues')" style="background: #4CAF50; color: white; padding: 12px 25px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
-            📂 Load Latest Report
+        <div style="display: grid; grid-template-columns: 1fr auto; gap: 15px; align-items: center; margin-bottom: 15px;">
+          <input type="text" id="sonarFileServerPath" placeholder="\\aut-tfs-file\SonarReports\SonarSecurityReport_latest.html" value="\\aut-tfs-file\SonarReports" style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace; font-size: 14px;">
+          <button onclick="openFileServerForSonar()" style="background: #2196F3; color: white; padding: 12px 25px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+            📂 Copy File Server Path
           </button>
         </div>
         <p style="color: #666; margin-top: 10px; font-size: 14px;">Reports are automatically generated daily and stored on the file server</p>
       </div>
 
       <!-- Manual Upload Section -->
-      <div class="sonar-upload-area" id="sonarUploadArea" ondrop="dropSonarHandler(event);" ondragover="dragOverSonarHandler(event);" ondragleave="dragLeaveSonarHandler(event);" onclick="document.getElementById('sonarFileInput').click();">
-        <div style="font-size: 4rem; margin-bottom: 20px; color: #4CAF50;">📁</div>
-        <div style="font-size: 1.4rem; font-weight: 600; margin-bottom: 15px; color: #333; line-height: 1.2; text-align: center;">
-          Or Drop SonarQube HTML Report Here
+      <div class="dropzone" id="sonar-drop">
+        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+          <input type="file" id="sonar-file" accept=".html,.htm" style="flex: 1;" />
+          <button onclick="openFileServerForSonar()" style="background: #2196F3; color: white; padding: 8px 12px; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; flex-shrink: 0;" title="Open File Server">📂</button>
         </div>
-        <div style="color: #666; font-size: 1rem; line-height: 1.2; text-align: center;">
-          or click to browse files
+        <p class="drop-text">SonarQube Security Report<br/><small>Upload SonarQube HTML report file</small></p>
+        <div class="uploaded-msg" id="sonar-uploaded" aria-hidden="true" style="display:none">✓ Uploaded</div>
+        <div class="progress-bar" id="sonar-progress" style="display:none">
+          <div class="progress-fill"></div>
+          <span class="progress-text">Uploading...</span>
         </div>
-        <input type="file" id="sonarFileInput" accept=".html,.htm" style="display: none;" onchange="sonarFileSelected(event)">
       </div>
+    </section>
       
-      <!-- Error Message -->
-      <div id="sonarErrorMessage" style="background: #ffebee; color: #c62828; padding: 15px 20px; border-radius: 8px; margin: 20px 0; border-left: 5px solid #f44336; display: none;"></div>
-      
-      <!-- Success Message -->
-      <div id="sonarSuccessMessage" style="background: #e8f5e8; color: #2e7d32; padding: 15px 20px; border-radius: 8px; margin: 20px 0; border-left: 5px solid #4caf50; display: none;"></div>
+    <!-- Error Message -->
+    <div id="sonarErrorMessage" style="background: #ffebee; color: #c62828; padding: 15px 20px; border-radius: 8px; margin: 20px 0; border-left: 5px solid #f44336; display: none;"></div>
+    
+    <!-- Success Message -->
+    <div id="sonarSuccessMessage" style="background: #e8f5e8; color: #2e7d32; padding: 15px 20px; border-radius: 8px; margin: 20px 0; border-left: 5px solid #4caf50; display: none;"></div>
       
       <!-- SonarQube Results -->
       <div id="sonarResults" class="sonar-results" style="display: none;">
