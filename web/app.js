@@ -1200,9 +1200,19 @@ function getCurrentReportData() {
         };
     }
     
-    // Extract vulnerabilities from current DOM
+    // Use stored vulnerabilities data instead of trying to parse DOM
+    if (window.lastGeneratedVulnerabilities) {
+        console.log('Using stored vulnerability data for export:', window.lastGeneratedVulnerabilities.length, 'vulnerabilities');
+        return {
+            type: 'regular',
+            vulnerabilities: window.lastGeneratedVulnerabilities,
+            timestamp: timestamp
+        };
+    }
+    
+    // Fallback: Extract vulnerabilities from current DOM if stored data not available
     const vulnerabilities = [];
-    const rows = document.querySelectorAll('#vuln-table tbody tr');
+    const rows = document.querySelectorAll('#vuln-table tbody tr, .vulnerability-item');
     
     rows.forEach(row => {
         const cells = row.querySelectorAll('td');
@@ -1218,11 +1228,7 @@ function getCurrentReportData() {
         }
     });
     
-    // Try to get scan statistics from the last generated report
-    // This will preserve the comprehensive statistics for export
-    if (window.lastGeneratedVulnerabilities && window.lastGeneratedVulnerabilities.scanStats) {
-        vulnerabilities.scanStats = window.lastGeneratedVulnerabilities.scanStats;
-    }
+    console.log('Using DOM-extracted vulnerability data for export:', vulnerabilities.length, 'vulnerabilities');
     
     return {
         type: 'regular',
