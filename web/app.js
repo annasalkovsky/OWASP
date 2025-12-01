@@ -2678,6 +2678,59 @@ function openFileServerForSuppressions() {
     }
 }
 
+function openFileServerForBaselineSuppressions() {
+    const pathInput = document.getElementById('owaspFileServerPath');
+    const defaultPath = '\\\\aut-tfs-file\\OWASP Dependency-Checks';
+    
+    // Set default path if empty
+    if (!pathInput.value.trim()) {
+        pathInput.value = defaultPath;
+    }
+    
+    const path = pathInput.value.trim();
+    console.log('Opening file server for baseline suppressions file:', path);
+    
+    // Enable delta mode if not already enabled
+    const deltaToggle = document.getElementById('delta-mode-toggle');
+    if (deltaToggle && !deltaToggle.checked) {
+        deltaToggle.click();
+    }
+    
+    // Highlight the baseline suppressions upload area
+    const baselineSuppressionDropzone = document.getElementById('baseline-suppressions-drop');
+    if (baselineSuppressionDropzone) {
+        baselineSuppressionDropzone.style.border = '3px solid #E91E63';
+        baselineSuppressionDropzone.style.backgroundColor = '#fce4ec';
+        setTimeout(() => {
+            baselineSuppressionDropzone.style.border = '';
+            baselineSuppressionDropzone.style.backgroundColor = '';
+        }, 3000);
+    }
+    
+    try {
+        // Try ActiveXObject first (IE/corporate environments)
+        if (window.ActiveXObject || "ActiveXObject" in window) {
+            const shell = new ActiveXObject("Shell.Application");
+            shell.Explore(path);
+            return;
+        }
+        
+        // Try to open Windows Explorer using explorer.exe
+        const explorerPath = path.replace(/\\\\/g, '\\').replace(/\//g, '\\');
+        window.open(`ms-appx-web:///shell:explorer.exe,${explorerPath}`, '_blank');
+        
+        // Fallback to file protocol
+        setTimeout(() => {
+            const fileUrl = `file:///${path.replace(/\\/g, '/')}`;
+            window.open(fileUrl, '_blank');
+        }, 100);
+        
+    } catch (error) {
+        console.log('Could not open file explorer automatically:', error);
+        alert(`Please open Windows Explorer and navigate to:\n\n${path}\n\n📂 Find previous suppressions.xml and upload to the baseline suppressions area`);
+    }
+}
+
 // Setup table event listeners for filtering and search
 function setupTableEventListeners() {
     // Find all tables with filter controls
