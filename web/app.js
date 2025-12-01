@@ -2778,8 +2778,10 @@ function generateCSV(reportData) {
         vulnerabilities = reportData.vulnerabilities || [];
     }
     
+    console.log('CSV Export: Processing', vulnerabilities.length, 'vulnerabilities');
+    
     if (vulnerabilities.length === 0) {
-        return 'No vulnerabilities found\\n';
+        return 'No vulnerabilities found\n';
     }
     
     // CSV headers
@@ -2790,17 +2792,23 @@ function generateCSV(reportData) {
         headers.push('Status');
     }
     
-    let csvContent = headers.join(',') + '\\n';
+    let csvContent = headers.join(',') + '\n';
     
     // Add data rows
-    vulnerabilities.forEach(vuln => {
+    vulnerabilities.forEach((vuln, index) => {
+        console.log(`CSV Export: Processing vulnerability ${index + 1}:`, {
+            Package: vuln.Package,
+            Vulnerability: vuln.Vulnerability,
+            Severity: vuln.Severity
+        });
+        
         const row = [
-            `"${escapeCSV(vuln.Package)}"`,
-            `"${escapeCSV(vuln.Vulnerability)}"`,
-            `"${escapeCSV(vuln.Severity)}"`,
-            `"${escapeCSV(vuln.CVSS)}"`,
-            `"${escapeCSV(vuln.Description)}"`,
-            `"${escapeCSV(vuln.File)}"`
+            `"${escapeCSV(vuln.Package || '')}"`,
+            `"${escapeCSV(vuln.Vulnerability || '')}"`,
+            `"${escapeCSV(vuln.Severity || '')}"`,
+            `"${escapeCSV(vuln.CVSS || '')}"`,
+            `"${escapeCSV(vuln.Description || '')}"`,
+            `"${escapeCSV(vuln.File || '')}"`
         ];
         
         if (isDelta) {
@@ -2808,9 +2816,10 @@ function generateCSV(reportData) {
             row.push(`"${status}"`);
         }
         
-        csvContent += row.join(',') + '\\n';
+        csvContent += row.join(',') + '\n';
     });
     
+    console.log('CSV Export: Generated content length:', csvContent.length);
     return csvContent;
 }
 
