@@ -429,12 +429,12 @@ function setUploadedState(type, isUploaded, file = null) {
     console.log('setUploadedState called with:', type, isUploaded, file ? file.name : 'no file');
     
     const configs = {
-        'report': { zone: 'report-drop', message: 'report-uploaded' },
-        'suppressions': { zone: 'suppressions-drop', message: 'suppressions-uploaded' },
-        'baseline-report': { zone: 'baseline-report-drop', message: 'baseline-uploaded' },
-        'baseline-suppressions': { zone: 'baseline-suppressions-drop', message: 'baseline-suppressions-uploaded' },
-        'sonar-html': { zone: 'sonar-drop', message: 'sonar-uploaded' },
-        'sonar-rules-html': { zone: 'sonar-rules-drop', message: 'sonar-rules-uploaded' }
+        'report': { zone: 'report-drop' },
+        'suppressions': { zone: 'suppressions-drop' },
+        'baseline-report': { zone: 'baseline-report-drop' },
+        'baseline-suppressions': { zone: 'baseline-suppressions-drop' },
+        'sonar-html': { zone: 'sonar-drop' },
+        'sonar-rules-html': { zone: 'sonar-rules-drop' }
     };
     
     const config = configs[type];
@@ -442,13 +442,10 @@ function setUploadedState(type, isUploaded, file = null) {
         console.warn('Unknown upload type:', type);
         return;
     }
-    
+
     const zone = document.getElementById(config.zone);
-    const message = document.getElementById(config.message);
     
-    console.log('Found elements - zone:', !!zone, 'message:', !!message);
-    
-    if (isUploaded) {
+    console.log('Found zone element:', !!zone);    if (isUploaded) {
         if (zone) {
             zone.classList.add('uploaded');
             
