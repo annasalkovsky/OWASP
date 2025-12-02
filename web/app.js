@@ -358,6 +358,8 @@ function extractFileInfo(file) {
 }
 
 function setUploadedState(type, isUploaded, file = null) {
+    console.log('setUploadedState called with:', type, isUploaded, file ? file.name : 'no file');
+    
     const configs = {
         'report': { zone: 'report-drop', message: 'report-uploaded' },
         'suppressions': { zone: 'suppressions-drop', message: 'suppressions-uploaded' },
@@ -375,6 +377,8 @@ function setUploadedState(type, isUploaded, file = null) {
     
     const zone = document.getElementById(config.zone);
     const message = document.getElementById(config.message);
+    
+    console.log('Found elements - zone:', !!zone, 'message:', !!message);
     
     if (isUploaded) {
         if (zone) {
@@ -406,8 +410,10 @@ function setUploadedState(type, isUploaded, file = null) {
                     displayText = `<span class="version-info">v${fileInfo.folderInfo}</span> <strong>${fileInfo.fileName}</strong>`;
                 }
                 
-                message.innerHTML = `✓ ${displayText}<br><small>📅 ${dateStr}</small>`;
-                console.log('Updated message HTML:', message.innerHTML);
+                const newHTML = `✓ ${displayText}<br><small>📅 ${dateStr}</small>`;
+                message.innerHTML = newHTML;
+                console.log('Updated message HTML:', newHTML);
+                console.log('Message element after update:', message.outerHTML);
             } else {
                 console.log('No file object provided, using default message');
                 message.innerHTML = `✓ Uploaded<br><small>📅 ${dateStr}</small>`;
