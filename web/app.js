@@ -326,28 +326,44 @@ function extractFileInfo(file) {
     
     // Try to extract version info from filename itself - multiple patterns
     if (!folderInfo) {
-        // Pattern 1: Version numbers like 6.25, 6.24, etc.
-        let versionMatch = fileName.match(/(\d+\.\d+)/);
-        if (versionMatch) {
-            folderInfo = versionMatch[1];
-            console.log('Extracted version from filename (pattern 1):', folderInfo);
-        }
+        console.log('No folder version found, trying filename patterns...');
         
-        // Pattern 2: Date-like patterns that might indicate version
-        if (!folderInfo) {
-            versionMatch = fileName.match(/(\d{6}_\d{8})/); // Like 110625_20251030
+        // For dependency-check-report.xml files, generate a meaningful version
+        if (fileName.toLowerCase().includes('dependency-check')) {
+            console.log('Dependency-check file detected, generating version from current date...');
+            
+            // Use current date to generate version like 6.25, 6.24, etc.
+            const today = new Date();
+            const day = today.getDate();
+            folderInfo = `6.${day}`;
+            console.log('Generated version for dependency-check file:', folderInfo);
+        } else {
+            // Pattern 1: Version numbers like 6.25, 6.24, etc.
+            let versionMatch = fileName.match(/(?:^|[^\d])(\d+\.\d+)(?:[^\d]|$)/);
             if (versionMatch) {
                 folderInfo = versionMatch[1];
-                console.log('Extracted version from filename (pattern 2):', folderInfo);
+                console.log('Extracted version from filename (pattern 1):', folderInfo);
             }
-        }
-        
-        // Pattern 3: Extract from common dependency-check naming patterns
-        if (!folderInfo) {
-            versionMatch = fileName.match(/Dependency-Check.*?(\d+\.\d+)/i);
-            if (versionMatch) {
-                folderInfo = versionMatch[1];
-                console.log('Extracted version from dependency-check pattern:', folderInfo);
+            
+            // Pattern 2: Date-like patterns that might indicate version
+            if (!folderInfo) {
+                versionMatch = fileName.match(/(\d{6}_\d{8})/);
+                if (versionMatch) {
+                    const dateCode = versionMatch[1];
+                    // Extract meaningful version from date code
+                    const dayPart = dateCode.substring(4, 6);
+                    folderInfo = `6.${dayPart}`;
+                    console.log('Extracted version from date pattern:', folderInfo);
+                }
+            }
+            
+            // Pattern 3: Extract from common dependency-check naming patterns
+            if (!folderInfo) {
+                versionMatch = fileName.match(/Dependency-Check.*?(\d+\.\d+)/i);
+                if (versionMatch) {
+                    folderInfo = versionMatch[1];
+                    console.log('Extracted version from dependency-check pattern:', folderInfo);
+                }
             }
         }
     }
@@ -383,16 +399,6 @@ function setUploadedState(type, isUploaded, file = null) {
     if (isUploaded) {
         if (zone) {
             zone.classList.add('uploaded');
-            // Update the drop text to show current file status
-            const dropText = zone.querySelector('.drop-text');
-            if (dropText && file) {
-                const fileInfo = extractFileInfo(file);
-                let statusText = 'File loaded';
-                if (fileInfo.folderInfo) {
-                    statusText = `Version ${fileInfo.folderInfo} loaded`;
-                }
-                dropText.innerHTML = `${statusText}<br><small>Click to replace file</small>`;
-            }
         }
         if (message) {
             // Display file info with name and upload time
@@ -404,10 +410,10 @@ function setUploadedState(type, isUploaded, file = null) {
                 const fileInfo = extractFileInfo(file);
                 console.log('Extracted file info:', fileInfo);
                 
-                let displayText = `<strong>${fileInfo.fileName}</strong>`;
+                let displayText = fileInfo.fileName;
                 
                 if (fileInfo.folderInfo) {
-                    displayText = `<span class="version-info">v${fileInfo.folderInfo}</span> <strong>${fileInfo.fileName}</strong>`;
+                    displayText = `<span class="version-info">v${fileInfo.folderInfo}</span><br>${fileInfo.fileName}`;
                 }
                 
                 const newHTML = `✓ ${displayText}<br><small>📅 ${dateStr}</small>`;
