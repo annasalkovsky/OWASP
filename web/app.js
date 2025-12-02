@@ -247,6 +247,7 @@ function handleFileUpload(file, type, progressId) {
             }
             
             // Show uploaded state
+            console.log('Calling setUploadedState for type:', type, 'with file:', file.name);
             setUploadedState(type, true, file);
             
             console.log('Successfully uploaded and parsed:', type);
@@ -301,18 +302,22 @@ function storeXMLData(xml, type) {
 }
 
 function extractFileInfo(file) {
+    console.log('Extracting file info from:', file);
+    
     // Extract folder information from file path or name
     let folderInfo = '';
-    let fileName = file.name;
+    let fileName = file.name || 'unknown-file';
     
     // Try to extract folder info from webkitRelativePath if available (drag and drop)
     if (file.webkitRelativePath) {
+        console.log('Using webkitRelativePath:', file.webkitRelativePath);
         const pathParts = file.webkitRelativePath.split('/');
         // Look for version-like folder names (e.g., 6.23, 6.24, 6.25)
         const versionPattern = /^\d+\.\d+/;
         for (let part of pathParts) {
             if (versionPattern.test(part)) {
                 folderInfo = part;
+                console.log('Found version folder:', folderInfo);
                 break;
             }
         }
@@ -324,10 +329,13 @@ function extractFileInfo(file) {
         const versionMatch = fileName.match(/(\d+\.\d+)/);
         if (versionMatch) {
             folderInfo = versionMatch[1];
+            console.log('Extracted version from filename:', folderInfo);
         }
     }
     
-    return { folderInfo, fileName };
+    const result = { folderInfo, fileName };
+    console.log('Final file info result:', result);
+    return result;
 }
 
 function setUploadedState(type, isUploaded, file = null) {
@@ -359,7 +367,10 @@ function setUploadedState(type, isUploaded, file = null) {
             const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
             
             if (file) {
+                console.log('Processing file info for:', file.name);
                 const fileInfo = extractFileInfo(file);
+                console.log('Extracted file info:', fileInfo);
+                
                 let displayText = `✓ Uploaded: <strong>${fileInfo.fileName}</strong>`;
                 
                 if (fileInfo.folderInfo) {
@@ -367,7 +378,9 @@ function setUploadedState(type, isUploaded, file = null) {
                 }
                 
                 message.innerHTML = `${displayText}<br><small>📅 ${dateStr}</small>`;
+                console.log('Updated message HTML:', message.innerHTML);
             } else {
+                console.log('No file object provided, using default message');
                 message.innerHTML = `✓ Uploaded<br><small>📅 ${dateStr}</small>`;
             }
             
