@@ -247,7 +247,7 @@ function handleFileUpload(file, type, progressId) {
             }
             
             // Show uploaded state
-            setUploadedState(type, true);
+            setUploadedState(type, true, file.name);
             
             console.log('Successfully uploaded and parsed:', type);
             
@@ -300,7 +300,7 @@ function storeXMLData(xml, type) {
     }
 }
 
-function setUploadedState(type, isUploaded) {
+function setUploadedState(type, isUploaded, fileName = null) {
     const configs = {
         'report': { zone: 'report-drop', message: 'report-uploaded' },
         'suppressions': { zone: 'suppressions-drop', message: 'suppressions-uploaded' },
@@ -324,6 +324,16 @@ function setUploadedState(type, isUploaded) {
             zone.classList.add('uploaded');
         }
         if (message) {
+            // Display file info with name and upload time
+            const now = new Date();
+            const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+            
+            if (fileName) {
+                message.innerHTML = `✓ Uploaded: <strong>${fileName}</strong><br><small>📅 ${dateStr}</small>`;
+            } else {
+                message.innerHTML = `✓ Uploaded<br><small>📅 ${dateStr}</small>`;
+            }
+            
             message.setAttribute('aria-hidden', 'false');
             message.style.display = 'block';
         }

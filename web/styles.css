@@ -101,7 +101,30 @@ body{
 }
 .dropzone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer}
 .dropzone p{margin:0;color:var(--muted)}
-.dropzone .uploaded-msg{position:absolute;left:16px;bottom:12px;color:var(--accent);font-weight:700;display:none}
+.dropzone .uploaded-msg{
+  position:absolute;
+  left:16px;
+  bottom:12px;
+  color:var(--accent);
+  font-weight:700;
+  display:none;
+  max-width: calc(100% - 32px);
+  line-height: 1.3;
+  font-size: 14px;
+}
+
+.dropzone .uploaded-msg strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  word-break: break-word;
+}
+
+.dropzone .uploaded-msg small {
+  font-size: 11px;
+  opacity: 0.8;
+  font-weight: 500;
+}
 .dropzone.uploaded{border-color:rgba(59,130,246,0.6);background:linear-gradient(180deg,#f8fbff,#ffffff)}
 .dropzone.uploaded .uploaded-msg{display:block}
 .dropzone.drag-over{border-color:var(--accent);background:rgba(59,130,246,0.1);transform:scale(1.02)}
