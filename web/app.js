@@ -324,12 +324,31 @@ function extractFileInfo(file) {
         fileName = pathParts[pathParts.length - 1]; // Get actual filename
     }
     
-    // Try to extract version info from filename itself
+    // Try to extract version info from filename itself - multiple patterns
     if (!folderInfo) {
-        const versionMatch = fileName.match(/(\d+\.\d+)/);
+        // Pattern 1: Version numbers like 6.25, 6.24, etc.
+        let versionMatch = fileName.match(/(\d+\.\d+)/);
         if (versionMatch) {
             folderInfo = versionMatch[1];
-            console.log('Extracted version from filename:', folderInfo);
+            console.log('Extracted version from filename (pattern 1):', folderInfo);
+        }
+        
+        // Pattern 2: Date-like patterns that might indicate version
+        if (!folderInfo) {
+            versionMatch = fileName.match(/(\d{6}_\d{8})/); // Like 110625_20251030
+            if (versionMatch) {
+                folderInfo = versionMatch[1];
+                console.log('Extracted version from filename (pattern 2):', folderInfo);
+            }
+        }
+        
+        // Pattern 3: Extract from common dependency-check naming patterns
+        if (!folderInfo) {
+            versionMatch = fileName.match(/Dependency-Check.*?(\d+\.\d+)/i);
+            if (versionMatch) {
+                folderInfo = versionMatch[1];
+                console.log('Extracted version from dependency-check pattern:', folderInfo);
+            }
         }
     }
     
@@ -360,6 +379,16 @@ function setUploadedState(type, isUploaded, file = null) {
     if (isUploaded) {
         if (zone) {
             zone.classList.add('uploaded');
+            // Update the drop text to show current file status
+            const dropText = zone.querySelector('.drop-text');
+            if (dropText && file) {
+                const fileInfo = extractFileInfo(file);
+                let statusText = 'File loaded';
+                if (fileInfo.folderInfo) {
+                    statusText = `Version ${fileInfo.folderInfo} loaded`;
+                }
+                dropText.innerHTML = `${statusText}<br><small>Click to replace file</small>`;
+            }
         }
         if (message) {
             // Display file info with name and upload time
@@ -371,13 +400,13 @@ function setUploadedState(type, isUploaded, file = null) {
                 const fileInfo = extractFileInfo(file);
                 console.log('Extracted file info:', fileInfo);
                 
-                let displayText = `✓ Uploaded: <strong>${fileInfo.fileName}</strong>`;
+                let displayText = `<strong>${fileInfo.fileName}</strong>`;
                 
                 if (fileInfo.folderInfo) {
-                    displayText = `✓ Uploaded from <span style="color: #FF9800; font-weight: bold;">${fileInfo.folderInfo}</span>: <strong>${fileInfo.fileName}</strong>`;
+                    displayText = `<span class="version-info">v${fileInfo.folderInfo}</span> <strong>${fileInfo.fileName}</strong>`;
                 }
                 
-                message.innerHTML = `${displayText}<br><small>📅 ${dateStr}</small>`;
+                message.innerHTML = `✓ ${displayText}<br><small>📅 ${dateStr}</small>`;
                 console.log('Updated message HTML:', message.innerHTML);
             } else {
                 console.log('No file object provided, using default message');
