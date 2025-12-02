@@ -473,6 +473,7 @@ function setUploadedState(type, isUploaded, file = null) {
                 const fileInfo = extractFileInfo(file);
                 console.log('Extracted file info:', fileInfo);
                 console.log('Full path:', fullPath);
+                console.log('Zone element before update:', zone.outerHTML);
                 
                 let versionBadge = '';
                 if (fileInfo.folderInfo) {
@@ -505,20 +506,14 @@ function setUploadedState(type, isUploaded, file = null) {
             zone.classList.remove('uploaded');
             // Reset zone content to original dropzone
             const fileInputId = config.zone.replace('-drop', '-file');
+            const progressId = config.zone.replace('-drop', '-progress');
             zone.innerHTML = `
                 <input type="file" id="${fileInputId}" accept=".xml,.html" style="position: absolute; inset: 0; opacity: 0; cursor: pointer;">
                 <p>🗂️ Drag and drop your file here or click to browse</p>
             `;
             
-            // Re-setup the file input event listener
-            const newInput = document.getElementById(fileInputId);
-            if (newInput) {
-                newInput.addEventListener('change', function(e) {
-                    if (e.target.files.length > 0) {
-                        handleFileUpload(e.target.files[0], type);
-                    }
-                });
-            }
+            // Re-setup the entire dropzone functionality
+            setupDropZone(config.zone, fileInputId, type, progressId);
         }
         console.log('Upload state reset for:', type);
     }
