@@ -247,7 +247,7 @@ function handleFileUpload(file, type, progressId) {
             }
             
             // Show uploaded state
-            setUploadedState(type, true, file.name);
+            setUploadedState(type, true, file);
             
             console.log('Successfully uploaded and parsed:', type);
             
@@ -300,7 +300,37 @@ function storeXMLData(xml, type) {
     }
 }
 
-function setUploadedState(type, isUploaded, fileName = null) {
+function extractFileInfo(file) {
+    // Extract folder information from file path or name
+    let folderInfo = '';
+    let fileName = file.name;
+    
+    // Try to extract folder info from webkitRelativePath if available (drag and drop)
+    if (file.webkitRelativePath) {
+        const pathParts = file.webkitRelativePath.split('/');
+        // Look for version-like folder names (e.g., 6.23, 6.24, 6.25)
+        const versionPattern = /^\d+\.\d+/;
+        for (let part of pathParts) {
+            if (versionPattern.test(part)) {
+                folderInfo = part;
+                break;
+            }
+        }
+        fileName = pathParts[pathParts.length - 1]; // Get actual filename
+    }
+    
+    // Try to extract version info from filename itself
+    if (!folderInfo) {
+        const versionMatch = fileName.match(/(\d+\.\d+)/);
+        if (versionMatch) {
+            folderInfo = versionMatch[1];
+        }
+    }
+    
+    return { folderInfo, fileName };
+}
+
+function setUploadedState(type, isUploaded, file = null) {
     const configs = {
         'report': { zone: 'report-drop', message: 'report-uploaded' },
         'suppressions': { zone: 'suppressions-drop', message: 'suppressions-uploaded' },
@@ -328,8 +358,15 @@ function setUploadedState(type, isUploaded, fileName = null) {
             const now = new Date();
             const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
             
-            if (fileName) {
-                message.innerHTML = `✓ Uploaded: <strong>${fileName}</strong><br><small>📅 ${dateStr}</small>`;
+            if (file) {
+                const fileInfo = extractFileInfo(file);
+                let displayText = `✓ Uploaded: <strong>${fileInfo.fileName}</strong>`;
+                
+                if (fileInfo.folderInfo) {
+                    displayText = `✓ Uploaded from <span style="color: #FF9800; font-weight: bold;">${fileInfo.folderInfo}</span>: <strong>${fileInfo.fileName}</strong>`;
+                }
+                
+                message.innerHTML = `${displayText}<br><small>📅 ${dateStr}</small>`;
             } else {
                 message.innerHTML = `✓ Uploaded<br><small>📅 ${dateStr}</small>`;
             }

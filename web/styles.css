@@ -114,16 +114,23 @@ body{
 }
 
 .dropzone .uploaded-msg strong {
-  display: block;
-  margin-bottom: 4px;
+  display: inline;
   font-size: 13px;
   word-break: break-word;
+}
+
+.dropzone .uploaded-msg span {
+  display: inline;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 .dropzone .uploaded-msg small {
   font-size: 11px;
   opacity: 0.8;
   font-weight: 500;
+  display: block;
+  margin-top: 2px;
 }
 .dropzone.uploaded{border-color:rgba(59,130,246,0.6);background:linear-gradient(180deg,#f8fbff,#ffffff)}
 .dropzone.uploaded .uploaded-msg{display:block}
