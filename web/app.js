@@ -9,6 +9,22 @@ let baselineDependencyXml = null;
 let baselineSuppressionsXml = null;
 let isDeltaMode = false;
 
+// Track file upload dates for report generation
+let fileUploadDates = {
+    currentReport: null,
+    currentSuppressions: null,
+    baselineReport: null,
+    baselineSuppressions: null
+};
+
+// Track file upload dates for report generation
+let fileUploadDates = {
+    currentReport: null,
+    currentSuppressions: null,
+    baselineReport: null,
+    baselineSuppressions: null
+};
+
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM ready - setting up application');
@@ -273,18 +289,24 @@ function handleFileUpload(file, type, progressId) {
 }
 
 function storeXMLData(xml, type) {
+    const uploadDate = new Date();
+    
     switch (type) {
         case 'report':
             dependencyXml = xml;
+            fileUploadDates.currentReport = uploadDate;
             break;
         case 'suppressions':
             suppressionsXml = xml;
+            fileUploadDates.currentSuppressions = uploadDate;
             break;
         case 'baseline-report':
             baselineDependencyXml = xml;
+            fileUploadDates.baselineReport = uploadDate;
             break;
         case 'baseline-suppressions':
             baselineSuppressionsXml = xml;
+            fileUploadDates.baselineSuppressions = uploadDate;
             break;
         case 'sonar-html':
             // Store SonarQube HTML data
@@ -299,6 +321,36 @@ function storeXMLData(xml, type) {
         default:
             console.warn('Unknown file type:', type);
     }
+}
+
+// Calculate date range from uploaded files
+function getFileDateRange() {
+    const dates = [];
+    
+    if (fileUploadDates.currentReport) dates.push(fileUploadDates.currentReport);
+    if (fileUploadDates.currentSuppressions) dates.push(fileUploadDates.currentSuppressions);
+    if (isDeltaMode) {
+        if (fileUploadDates.baselineReport) dates.push(fileUploadDates.baselineReport);
+        if (fileUploadDates.baselineSuppressions) dates.push(fileUploadDates.baselineSuppressions);
+    }
+    
+    if (dates.length === 0) {
+        return 'No files uploaded';
+    }
+    
+    if (dates.length === 1) {
+        return dates[0].toLocaleDateString();
+    }
+    
+    const sortedDates = dates.sort((a, b) => a - b);
+    const fromDate = sortedDates[0].toLocaleDateString();
+    const toDate = sortedDates[sortedDates.length - 1].toLocaleDateString();
+    
+    if (fromDate === toDate) {
+        return fromDate;
+    }
+    
+    return `${fromDate} - ${toDate}`;
 }
 
 function extractFileInfo(file) {
@@ -862,6 +914,11 @@ function displayReport(vulnerabilities, type) {
     
     const html = `
         <div class="report-container">
+            <div class="report-header">
+                <h1>🛡️ OWASP Security Report</h1>
+                <p class="timestamp">Generated: ${new Date().toLocaleString()}</p>
+                <p class="file-date-range">File Date Range: ${getFileDateRange()}</p>
+            </div>
             <div class="comprehensive-summary">
                 <h2>📊 Comprehensive Scan Summary</h2>
                 <div class="summary-grid">
@@ -964,6 +1021,7 @@ function displayDeltaReport(newVulns, fixedVulns) {
             <div class="delta-header">
                 <h1>🛡️ OWASP Delta Report</h1>
                 <p class="timestamp">Generated: ${new Date().toLocaleString()}</p>
+                <p class="file-date-range">File Date Range: ${getFileDateRange()}</p>
             </div>
             
             <div class="scan-info">

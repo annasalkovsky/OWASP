@@ -1425,3 +1425,19 @@ body{
   color: #9ca3af;
   font-size: 0.75rem;
 }
+
+/* File Date Range Styling */
+.file-date-range {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 5px 0 0 0;
+  font-weight: 500;
+}
+
+.report-header .file-date-range {
+  margin-bottom: 20px;
+}
+
+.delta-header .file-date-range {
+  margin-bottom: 20px;
+}
