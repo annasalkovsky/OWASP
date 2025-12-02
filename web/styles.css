@@ -1441,3 +1441,53 @@ body{
 .delta-header .file-date-range {
   margin-bottom: 20px;
 }
+
+/* File Info Display Styling */
+.file-info-display {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  padding: 20px;
+  text-align: center;
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  border-radius: 8px;
+}
+
+.version-badge {
+  background: linear-gradient(135deg, #FF9800, #F57C00);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.file-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #1e3a8a;
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+
+.file-path {
+  font-size: 13px;
+  color: #4b5563;
+  font-family: 'Courier New', monospace;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  word-break: break-all;
+  max-width: 100%;
+}
+
+.upload-date {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+}

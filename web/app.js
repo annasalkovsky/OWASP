@@ -451,9 +451,8 @@ function setUploadedState(type, isUploaded, file = null) {
     if (isUploaded) {
         if (zone) {
             zone.classList.add('uploaded');
-        }
-        if (message) {
-            // Display file info with name and upload time
+            
+            // Replace entire zone content with file information
             const now = new Date();
             const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
             
@@ -468,8 +467,6 @@ function setUploadedState(type, isUploaded, file = null) {
                 } else if (file.path) {
                     fullPath = file.path;
                 } else {
-                    // For files selected via file input, we can't get the full system path for security reasons
-                    // But we can show what information is available
                     fullPath = file.name;
                 }
                 
@@ -477,34 +474,53 @@ function setUploadedState(type, isUploaded, file = null) {
                 console.log('Extracted file info:', fileInfo);
                 console.log('Full path:', fullPath);
                 
-                let displayText = `<strong>Path:</strong> ${fullPath}`;
-                
+                let versionBadge = '';
                 if (fileInfo.folderInfo) {
-                    displayText = `<span class="version-info">v${fileInfo.folderInfo}</span><br><strong>Path:</strong> ${fullPath}`;
+                    versionBadge = `<div class="version-badge">v${fileInfo.folderInfo}</div>`;
                 }
                 
-                const newHTML = `✓ ${displayText}<br><small>📅 ${dateStr}</small>`;
-                message.innerHTML = newHTML;
-                console.log('Updated message HTML:', newHTML);
-                console.log('Message element after update:', message.outerHTML);
+                // Replace the entire zone content with file info
+                zone.innerHTML = `
+                    <div class="file-info-display">
+                        ${versionBadge}
+                        <div class="file-name">${fileInfo.fileName}</div>
+                        <div class="file-path">${fullPath}</div>
+                        <div class="upload-date">📅 ${dateStr}</div>
+                    </div>
+                `;
+                
+                console.log('Updated zone with file info display');
             } else {
-                console.log('No file object provided, using default message');
-                message.innerHTML = `✓ Uploaded<br><small>📅 ${dateStr}</small>`;
+                zone.innerHTML = `
+                    <div class="file-info-display">
+                        <div class="file-name">File Uploaded</div>
+                        <div class="upload-date">📅 ${dateStr}</div>
+                    </div>
+                `;
             }
-            
-            message.setAttribute('aria-hidden', 'false');
-            message.style.display = 'block';
         }
         console.log('Upload state set for:', type, '- uploaded');
     } else {
         if (zone) {
             zone.classList.remove('uploaded');
+            // Reset zone content to original dropzone
+            const fileInputId = config.zone.replace('-drop', '-file');
+            zone.innerHTML = `
+                <input type="file" id="${fileInputId}" accept=".xml,.html" style="position: absolute; inset: 0; opacity: 0; cursor: pointer;">
+                <p>🗂️ Drag and drop your file here or click to browse</p>
+            `;
+            
+            // Re-setup the file input event listener
+            const newInput = document.getElementById(fileInputId);
+            if (newInput) {
+                newInput.addEventListener('change', function(e) {
+                    if (e.target.files.length > 0) {
+                        handleFileUpload(e.target.files[0], type);
+                    }
+                });
+            }
         }
-        if (message) {
-            message.setAttribute('aria-hidden', 'true');
-            message.style.display = 'none';
-        }
-        console.log('Upload state set for:', type, '- not uploaded');
+        console.log('Upload state reset for:', type);
     }
 }
 
