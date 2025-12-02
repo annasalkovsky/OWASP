@@ -452,7 +452,17 @@ function setUploadedState(type, isUploaded, file = null) {
         if (zone) {
             zone.classList.add('uploaded');
             
-            // Replace entire zone content with file information
+            // Hide the original content and show file info overlay
+            const originalContent = zone.querySelector('.drop-text');
+            const fileInput = zone.querySelector('input[type="file"]');
+            const fileButton = zone.querySelector('button');
+            const progressBar = zone.querySelector('.progress-bar');
+            
+            if (originalContent) originalContent.style.display = 'none';
+            if (fileInput) fileInput.style.display = 'none';
+            if (fileButton) fileButton.style.display = 'none';
+            if (progressBar) progressBar.style.display = 'none';
+            
             const now = new Date();
             const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
             
@@ -480,8 +490,15 @@ function setUploadedState(type, isUploaded, file = null) {
                     versionBadge = `<div class="version-badge">v${fileInfo.folderInfo}</div>`;
                 }
                 
-                // Replace the entire zone content with file info
-                zone.innerHTML = `
+                // Add file info overlay without replacing existing content
+                let fileInfoOverlay = zone.querySelector('.file-info-overlay');
+                if (!fileInfoOverlay) {
+                    fileInfoOverlay = document.createElement('div');
+                    fileInfoOverlay.className = 'file-info-overlay';
+                    zone.appendChild(fileInfoOverlay);
+                }
+                
+                fileInfoOverlay.innerHTML = `
                     <div class="file-info-display">
                         ${versionBadge}
                         <div class="file-name">${fileInfo.fileName}</div>
@@ -490,9 +507,16 @@ function setUploadedState(type, isUploaded, file = null) {
                     </div>
                 `;
                 
-                console.log('Updated zone with file info display');
+                console.log('Updated zone with file info overlay');
             } else {
-                zone.innerHTML = `
+                let fileInfoOverlay = zone.querySelector('.file-info-overlay');
+                if (!fileInfoOverlay) {
+                    fileInfoOverlay = document.createElement('div');
+                    fileInfoOverlay.className = 'file-info-overlay';
+                    zone.appendChild(fileInfoOverlay);
+                }
+                
+                fileInfoOverlay.innerHTML = `
                     <div class="file-info-display">
                         <div class="file-name">File Uploaded</div>
                         <div class="upload-date">📅 ${dateStr}</div>
@@ -504,16 +528,17 @@ function setUploadedState(type, isUploaded, file = null) {
     } else {
         if (zone) {
             zone.classList.remove('uploaded');
-            // Reset zone content to original dropzone
-            const fileInputId = config.zone.replace('-drop', '-file');
-            const progressId = config.zone.replace('-drop', '-progress');
-            zone.innerHTML = `
-                <input type="file" id="${fileInputId}" accept=".xml,.html" style="position: absolute; inset: 0; opacity: 0; cursor: pointer;">
-                <p>🗂️ Drag and drop your file here or click to browse</p>
-            `;
             
-            // Re-setup the entire dropzone functionality
-            setupDropZone(config.zone, fileInputId, type, progressId);
+            // Show the original content and remove file info overlay
+            const originalContent = zone.querySelector('.drop-text');
+            const fileInput = zone.querySelector('input[type="file"]');
+            const fileButton = zone.querySelector('button');
+            const fileInfoOverlay = zone.querySelector('.file-info-overlay');
+            
+            if (originalContent) originalContent.style.display = '';
+            if (fileInput) fileInput.style.display = '';
+            if (fileButton) fileButton.style.display = '';
+            if (fileInfoOverlay) fileInfoOverlay.remove();
         }
         console.log('Upload state reset for:', type);
     }
