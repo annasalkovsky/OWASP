@@ -120,10 +120,14 @@ body{
 
 .dropzone .uploaded-msg strong {
   display: block;
-  font-size: 12px;
-  word-break: break-word;
+  font-size: 11px;
+  word-break: break-all;
   margin-bottom: 2px;
   color: #333;
+  font-family: 'Courier New', monospace;
+  background: #f5f5f5;
+  padding: 2px 4px;
+  border-radius: 3px;
 }
 
 .dropzone .uploaded-msg .version-info {

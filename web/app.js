@@ -407,13 +407,28 @@ function setUploadedState(type, isUploaded, file = null) {
             
             if (file) {
                 console.log('Processing file info for:', file.name);
+                console.log('File object:', file);
+                
+                // Get the full file path information
+                let fullPath = '';
+                if (file.webkitRelativePath) {
+                    fullPath = file.webkitRelativePath;
+                } else if (file.path) {
+                    fullPath = file.path;
+                } else {
+                    // For files selected via file input, we can't get the full system path for security reasons
+                    // But we can show what information is available
+                    fullPath = file.name;
+                }
+                
                 const fileInfo = extractFileInfo(file);
                 console.log('Extracted file info:', fileInfo);
+                console.log('Full path:', fullPath);
                 
-                let displayText = fileInfo.fileName;
+                let displayText = `<strong>Path:</strong> ${fullPath}`;
                 
                 if (fileInfo.folderInfo) {
-                    displayText = `<span class="version-info">v${fileInfo.folderInfo}</span><br>${fileInfo.fileName}`;
+                    displayText = `<span class="version-info">v${fileInfo.folderInfo}</span><br><strong>Path:</strong> ${fullPath}`;
                 }
                 
                 const newHTML = `✓ ${displayText}<br><small>📅 ${dateStr}</small>`;
