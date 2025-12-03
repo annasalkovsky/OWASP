@@ -1,0 +1,48 @@
+{
+  "name": "owasp-dependency-audit",
+  "version": "1.0.0",
+  "description": "OWASP Dependency Audit Tool for vulnerability scanning",
+  "main": "web/app.js",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint web/ tests/",
+    "lint:fix": "eslint web/ tests/ --fix"
+  },
+  "keywords": ["owasp", "security", "vulnerability", "audit", "dependencies"],
+  "author": "OWASP Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^9.15.0",
+    "eslint": "^9.15.0",
+    "globals": "^15.12.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "setupFilesAfterEnv": ["<rootDir>/tests/setup.js"],
+    "collectCoverageFrom": [
+      "web/**/*.js",
+      "!web/node_modules/**"
+    ],
+    "coverageReporters": ["text", "lcov", "html"],
+    "testMatch": ["<rootDir>/tests/**/*.test.js"]
+  },
+  "eslintConfig": {
+    "extends": ["@eslint/js/recommended"],
+    "env": {
+      "browser": true,
+      "es2021": true,
+      "jest": true
+    },
+    "globals": {
+      "XLSX": "readonly"
+    },
+    "rules": {
+      "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+      "no-console": "warn"
+    }
+  }
+}
