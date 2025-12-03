@@ -1,10 +1,9 @@
 name: OWASP Dependency Audit Tool - Tests Only
 
 on:
-  push:
-    branches: [ main, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
+  workflow_dispatch:  # Manual trigger only
 
 jobs:
   test:
