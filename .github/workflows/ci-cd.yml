@@ -10,6 +10,9 @@ jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./OWASP
     
     strategy:
       matrix:
@@ -24,6 +27,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
+        cache-dependency-path: './OWASP/package-lock.json'
         
     - name: Install dependencies
       run: npm ci
@@ -38,7 +42,7 @@ jobs:
       if: matrix.node-version == '18.x'
       uses: codecov/codecov-action@v3
       with:
-        file: ./coverage/lcov.info
+        file: ./OWASP/coverage/lcov.info
         flags: unittests
         name: codecov-umbrella
 
@@ -46,6 +50,9 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     needs: test
+    defaults:
+      run:
+        working-directory: ./OWASP
     
     steps:
     - name: Checkout code
@@ -56,6 +63,7 @@ jobs:
       with:
         node-version: '18.x'
         cache: 'npm'
+        cache-dependency-path: './OWASP/package-lock.json'
         
     - name: Install dependencies
       run: npm ci
@@ -83,6 +91,9 @@ jobs:
     name: Application Validation
     runs-on: ubuntu-latest
     needs: [test, security]
+    defaults:
+      run:
+        working-directory: ./OWASP
     
     steps:
     - name: Checkout code
@@ -92,6 +103,8 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18.x'
+        cache: 'npm'
+        cache-dependency-path: './OWASP/package-lock.json'
         
     - name: Install dependencies
       run: npm ci
@@ -146,6 +159,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test, security, validate]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    defaults:
+      run:
+        working-directory: ./OWASP
     
     permissions:
       contents: read
@@ -166,6 +182,7 @@ jobs:
       with:
         node-version: '18.x'
         cache: 'npm'
+        cache-dependency-path: './OWASP/package-lock.json'
         
     - name: Install dependencies
       run: npm ci
@@ -182,8 +199,8 @@ jobs:
         cp -r web/* dist/
         
         # Copy documentation
-        cp README.md dist/
-        cp LICENSE dist/ 2>/dev/null || echo "License file not found"
+        cp ../README.md dist/ 2>/dev/null || echo "README.md not found"
+        cp ../LICENSE dist/ 2>/dev/null || echo "License file not found"
         
         # Create index redirect if needed
         if [ ! -f dist/index.html ]; then
@@ -213,7 +230,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: './dist'
+        path: './OWASP/dist'
         
     - name: Deploy to GitHub Pages
       id: deployment
@@ -224,6 +241,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [deploy]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    defaults:
+      run:
+        working-directory: ./OWASP
     
     steps:
     - name: Checkout code
@@ -236,6 +256,7 @@ jobs:
       with:
         node-version: '18.x'
         cache: 'npm'
+        cache-dependency-path: './OWASP/package-lock.json'
         
     - name: Install dependencies
       run: npm ci
