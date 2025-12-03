@@ -9,9 +9,7 @@ jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./OWASP
+    # Removed working-directory - GitHub Actions already in correct path
     
     strategy:
       matrix:
@@ -43,7 +41,7 @@ jobs:
       uses: codecov/codecov-action@v3
       continue-on-error: true
       with:
-        file: ./OWASP/coverage/lcov.info
+        file: ./coverage/lcov.info
         flags: unittests
         name: codecov-umbrella
 

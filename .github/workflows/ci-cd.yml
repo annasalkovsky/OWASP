@@ -10,9 +10,7 @@ jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./OWASP
+    # Removed working-directory - GitHub Actions already in correct path
     
     strategy:
       matrix:
@@ -43,7 +41,7 @@ jobs:
       if: matrix.node-version == '18.x'
       uses: codecov/codecov-action@v3
       with:
-        file: ./OWASP/coverage/lcov.info
+        file: ./coverage/lcov.info
         flags: unittests
         name: codecov-umbrella
 
@@ -51,9 +49,7 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     needs: test
-    defaults:
-      run:
-        working-directory: ./OWASP
+    # Removed working-directory - GitHub Actions already in correct path
     
     steps:
     - name: Checkout code
@@ -93,9 +89,7 @@ jobs:
     name: Application Validation
     runs-on: ubuntu-latest
     needs: [test, security]
-    defaults:
-      run:
-        working-directory: ./OWASP
+    # Removed working-directory - GitHub Actions already in correct path
     
     steps:
     - name: Checkout code
@@ -162,9 +156,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test, security, validate]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    defaults:
-      run:
-        working-directory: ./OWASP
+    # Removed working-directory - GitHub Actions already in correct path
     
     permissions:
       contents: read
@@ -234,7 +226,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: './OWASP/dist'
+        path: './dist'
         
     - name: Deploy to GitHub Pages
       id: deployment
@@ -245,9 +237,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [deploy]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    defaults:
-      run:
-        working-directory: ./OWASP
+    # Removed working-directory - GitHub Actions already in correct path
     
     steps:
     - name: Checkout code
