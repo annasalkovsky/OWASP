@@ -31,11 +31,25 @@ jobs:
     - name: Install dependencies
       run: npm ci
       
+    - name: Debug environment
+      run: |
+        echo "Current directory: $(pwd)"
+        echo "Node version: $(node --version)"
+        echo "NPM version: $(npm --version)"
+        echo "Package.json exists: $(test -f package.json && echo 'YES' || echo 'NO')"
+        echo "Tests directory exists: $(test -d tests && echo 'YES' || echo 'NO')"
+        echo "List files:"
+        ls -la
+        echo "List test files:"
+        ls -la tests/ || echo "No tests directory"
+        
     - name: Run linting
       run: npm run lint
       
     - name: Run tests with coverage
-      run: npm run test:coverage
+      run: |
+        echo "About to run tests..."
+        npm run test:coverage || (echo "Tests failed with exit code $?" && exit 1)
       
     - name: Upload coverage reports to Codecov
       if: matrix.node-version == '18.x'
